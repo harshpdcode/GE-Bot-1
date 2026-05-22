@@ -1,0 +1,813 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>Autonomous Farm Control | Admin Portal</title>
+    <link rel="stylesheet" href="https://cdnjs.cloudflare.com/ajax/libs/font-awesome/6.4.0/css/all.min.css">
+    <link href="https://fonts.googleapis.com/css2?family=Plus+Jakarta+Sans:wght@300;400;500;600;700&display=swap" rel="stylesheet">
+    <style>
+        :root {
+            --bg-body: #f3f6f9;
+            --bg-surface: #ffffff;
+            --bg-sidebar: #ffffff;
+            --primary: #0ea5e9;
+            --primary-hover: #0284c7;
+            --success: #10b981;
+            --warning: #f59e0b;
+            --danger: #ef4444;
+            --text-main: #0f172a;
+            --text-muted: #64748b;
+            --border: #e2e8f0;
+            --shadow-sm: 0 1px 2px 0 rgb(0 0 0 / 0.05);
+            --shadow: 0 4px 6px -1px rgb(0 0 0 / 0.05), 0 2px 4px -2px rgb(0 0 0 / 0.05);
+            --shadow-lg: 0 10px 15px -3px rgb(0 0 0 / 0.1), 0 4px 6px -4px rgb(0 0 0 / 0.1);
+            --radius-md: 12px;
+            --radius-lg: 16px;
+            --radius-xl: 24px;
+            --transition: all 0.3s cubic-bezier(0.4, 0, 0.2, 1);
+            --font-main: 'Plus Jakarta Sans', sans-serif;
+        }
+
+        * { margin: 0; padding: 0; box-sizing: border-box; }
+
+        body {
+            font-family: var(--font-main); background-color: var(--bg-body);
+            color: var(--text-main); display: flex; height: 100vh; overflow: hidden;
+            -webkit-font-smoothing: antialiased;
+        }
+
+        /* --- SIDEBAR --- */
+        .sidebar {
+            width: 260px; background: var(--bg-sidebar); border-right: 1px solid var(--border);
+            display: flex; flex-direction: column; padding: 24px 16px; z-index: 10;
+        }
+        .logo-area { display: flex; align-items: center; gap: 12px; margin-bottom: 40px; padding: 0 8px; }
+        .logo-icon {
+            width: 40px; height: 40px; background: linear-gradient(135deg, var(--primary), #38bdf8);
+            border-radius: 10px; display: flex; align-items: center; justify-content: center;
+            color: white; font-size: 1.2rem; box-shadow: 0 4px 10px rgba(14, 165, 233, 0.3);
+        }
+        .logo-text { font-weight: 700; font-size: 1.1rem; line-height: 1.2; }
+        .logo-text span { color: var(--primary); }
+
+        .nav-menu { display: flex; flex-direction: column; gap: 8px; flex: 1; }
+        .nav-item {
+            display: flex; align-items: center; gap: 14px; padding: 12px 16px;
+            border-radius: var(--radius-md); color: var(--text-muted); text-decoration: none;
+            font-weight: 500; font-size: 0.95rem; transition: var(--transition); cursor: pointer;
+        }
+        .nav-item i { font-size: 1.1rem; width: 20px; text-align: center; }
+        .nav-item:hover, .nav-item.active { background: #f0f9ff; color: var(--primary); }
+        .nav-item.active { font-weight: 600; }
+
+        /* --- MAIN CONTENT --- */
+        .main-content { flex: 1; display: flex; flex-direction: column; overflow: hidden; }
+
+        /* --- HEADER --- */
+        .header {
+            height: 80px; background: var(--bg-surface); border-bottom: 1px solid var(--border);
+            display: flex; align-items: center; justify-content: space-between; padding: 0 32px;
+            z-index: 5;
+        }
+        .header-left { display: flex; align-items: center; gap: 20px; }
+        .status-badge {
+            display: inline-flex; align-items: center; gap: 8px;
+            background: #ecfdf5; color: var(--success); padding: 6px 14px;
+            border-radius: 20px; font-weight: 600; font-size: 0.85rem; border: 1px solid #d1fae5;
+            transition: var(--transition);
+        }
+        .status-badge.offline { background: #fef2f2; color: var(--danger); border-color: #fee2e2; }
+        .status-dot { width: 8px; height: 8px; border-radius: 50%; background: var(--success); }
+        .status-badge.offline .status-dot { background: var(--danger); }
+        .status-dot.pulse { animation: pulse-green 2s infinite; }
+        @keyframes pulse-green { 0% { box-shadow: 0 0 0 0 rgba(16, 185, 129, 0.4); } 70% { box-shadow: 0 0 0 6px rgba(16, 185, 129, 0); } 100% { box-shadow: 0 0 0 0 rgba(16, 185, 129, 0); } }
+
+        .header-right { display: flex; align-items: center; gap: 24px; }
+        .time-display { font-weight: 500; color: var(--text-muted); font-size: 0.95rem; }
+        .user-profile { display: flex; align-items: center; gap: 12px; cursor: pointer; }
+        .avatar { width: 40px; height: 40px; border-radius: 50%; background: #e2e8f0; display: flex; align-items: center; justify-content: center; color: var(--text-muted); font-size: 1.2rem; }
+        .user-info { display: flex; flex-direction: column; }
+        .user-name { font-weight: 600; font-size: 0.9rem; }
+        .user-role { font-size: 0.75rem; color: var(--text-muted); }
+
+        /* --- DASHBOARD SCROLL AREA --- */
+        .dashboard-scroll { flex: 1; overflow-y: auto; padding: 32px; display: flex; flex-direction: column; gap: 24px; }
+        .dashboard-scroll::-webkit-scrollbar { width: 8px; }
+        .dashboard-scroll::-webkit-scrollbar-thumb { background: #cbd5e1; border-radius: 4px; }
+
+        /* --- METRICS GRID --- */
+        .metrics-grid { display: grid; grid-template-columns: repeat(6, 1fr); gap: 20px; }
+        .metric-card {
+            background: var(--bg-surface); border-radius: var(--radius-lg); padding: 20px;
+            box-shadow: var(--shadow-sm); border: 1px solid var(--border);
+            display: flex; flex-direction: column; gap: 12px; transition: var(--transition);
+        }
+        .metric-card:hover { box-shadow: var(--shadow); transform: translateY(-2px); border-color: #cbd5e1; }
+        .metric-header { display: flex; justify-content: space-between; align-items: center; color: var(--text-muted); font-size: 0.9rem; font-weight: 500; }
+        .metric-icon { width: 36px; height: 36px; border-radius: 10px; display: flex; align-items: center; justify-content: center; font-size: 1.1rem; }
+        .icon-blue { background: #e0f2fe; color: var(--primary); }
+        .icon-green { background: #dcfce7; color: var(--success); }
+        .icon-yellow { background: #fef3c7; color: var(--warning); }
+        .icon-purple { background: #f3e8ff; color: #a855f7; }
+        .metric-value { font-size: 1.8rem; font-weight: 700; color: var(--text-main); line-height: 1.2; display: flex; align-items: baseline; gap: 4px;}
+        .metric-unit { font-size: 1rem; color: var(--text-muted); font-weight: 500; }
+        .metric-status { padding: 4px 8px; border-radius: 6px; font-size: 0.75rem; font-weight: 600; display: inline-block; align-self: flex-start; }
+        .status-good { background: #f0fdf4; color: var(--success); }
+        .status-warn { background: #fffbeb; color: var(--warning); }
+        .status-crit { background: #fef2f2; color: var(--danger); }
+        
+        /* Metric Animation */
+        .value-update { animation: highlight-value 1s ease; }
+        @keyframes highlight-value { 0%{color:var(--primary);} 100%{color:var(--text-main);} }
+
+        /* --- MAIN PANELS LAYOUT --- */
+        .panels-grid { display: grid; grid-template-columns: 2fr 1fr; gap: 24px; }
+        
+        .panel {
+            background: var(--bg-surface); border-radius: var(--radius-xl); padding: 24px;
+            box-shadow: var(--shadow-sm); border: 1px solid var(--border); display: flex; flex-direction: column;
+        }
+        .panel-header { display: flex; justify-content: space-between; align-items: center; margin-bottom: 20px; }
+        .panel-title { font-size: 1.1rem; font-weight: 600; display: flex; align-items: center; gap: 10px; }
+        .panel-title i { color: var(--primary); }
+
+        /* -- FARM SECTOR MAP -- */
+        .farm-map {
+            display: grid; grid-template-columns: 1fr 1fr; grid-template-rows: 1fr 1fr; gap: 12px;
+            background: #f8fafc; padding: 12px; border-radius: var(--radius-lg); position: relative;
+            height: 300px;
+        }
+        .map-sector {
+            border-radius: var(--radius-md); border: 2px dashed #cbd5e1; background: white;
+            display: flex; flex-direction: column; align-items: center; justify-content: center;
+            transition: var(--transition); position: relative; overflow: hidden;
+        }
+        .sec-label { font-weight: 600; color: var(--text-muted); z-index: 2; margin-bottom: 5px; }
+        .sec-status { font-size: 0.8rem; font-weight: 500; padding: 4px 10px; border-radius: 12px; z-index: 2;}
+        
+        .map-sector.healthy { border-color: #86efac; border-style: solid; background: #f0fdf4; }
+        .map-sector.healthy .sec-status { background: #dcfce7; color: var(--success); }
+        
+        .map-sector.warning { border-color: #fcd34d; border-style: solid; background: #fffbeb; }
+        .map-sector.warning .sec-status { background: #fef3c7; color: var(--warning); }
+        
+        .map-sector.alert { border-color: #fca5a5; border-style: solid; background: #fef2f2; animation: border-pulse-red 2s infinite; }
+        .map-sector.alert .sec-status { background: #fee2e2; color: var(--danger); }
+        
+        @keyframes border-pulse-red { 0% { box-shadow: inset 0 0 0 rgba(239, 68, 68, 0); } 50% { box-shadow: inset 0 0 20px rgba(239, 68, 68, 0.1); } 100% { box-shadow: inset 0 0 0 rgba(239, 68, 68, 0); } }
+
+        .map-robot {
+            position: absolute; width: 44px; height: 44px; background: white; border-radius: 50%;
+            box-shadow: 0 4px 12px rgba(0,0,0,0.15); display: flex; align-items: center; justify-content: center;
+            font-size: 1.2rem; color: var(--primary); z-index: 10; transition: all 1.2s cubic-bezier(0.34, 1.56, 0.64, 1);
+            transform: translate(-50%, -50%); border: 2px solid var(--primary);
+        }
+        .map-robot::before {
+            content: ''; position: absolute; inset: -6px; border-radius: 50%;
+            border: 2px solid var(--primary); opacity: 0; animation: radar-ping 2s infinite;
+        }
+        @keyframes radar-ping { 0% { transform: scale(0.5); opacity: 1; } 100% { transform: scale(1.5); opacity: 0; } }
+
+        /* -- SENSORS LIST -- */
+        .sensor-list { display: flex; flex-direction: column; gap: 12px; }
+        .sensor-item {
+            display: flex; align-items: center; justify-content: space-between;
+            padding: 14px 16px; background: #f8fafc; border-radius: var(--radius-md);
+            border: 1px solid var(--border); transition: var(--transition);
+        }
+        .sensor-item:hover { background: white; border-color: #cbd5e1; box-shadow: var(--shadow-sm); }
+        .sensor-info { display: flex; align-items: center; gap: 12px; }
+        .s-icon { width: 32px; height: 32px; border-radius: 8px; background: white; display: flex; align-items: center; justify-content: center; color: var(--text-muted); box-shadow: var(--shadow-sm); }
+        .s-details { display: flex; flex-direction: column; }
+        .s-name { font-weight: 600; font-size: 0.9rem; }
+        .s-time { font-size: 0.75rem; color: var(--text-muted); }
+        .sensor-val { display: flex; align-items: center; gap: 10px; font-weight: 600; }
+        .s-dot { width: 8px; height: 8px; border-radius: 50%; background: var(--success); }
+        .s-dot.warn { background: var(--warning); }
+        .s-dot.err { background: var(--danger); }
+
+        /* --- CONTROL CONSOLE SECTION --- */
+        .control-section { display: grid; grid-template-columns: 1fr 1fr; gap: 24px; }
+        
+        .btn-grid { display: grid; grid-template-columns: 1fr 1fr; gap: 12px; }
+        
+        .btn {
+            padding: 14px 16px; border-radius: var(--radius-md); font-family: var(--font-main);
+            font-weight: 600; font-size: 0.9rem; border: 1px solid var(--border); background: white;
+            color: var(--text-main); cursor: pointer; transition: var(--transition);
+            display: flex; align-items: center; justify-content: center; gap: 8px;
+            box-shadow: var(--shadow-sm);
+        }
+        .btn:hover { transform: translateY(-2px); box-shadow: var(--shadow); }
+        .btn:active { transform: translateY(0); }
+        
+        .btn-primary { background: var(--primary); color: white; border-color: var(--primary); }
+        .btn-primary:hover { background: var(--primary-hover); }
+        
+        .btn-outline-primary:hover { border-color: var(--primary); color: var(--primary); background: #f0f9ff; }
+        
+        .btn-danger-outline { border-color: #fecaca; color: var(--danger); }
+        .btn-danger-outline:hover { background: #fef2f2; border-color: #fca5a5; }
+
+        .btn-sim { border-style: dashed; border-color: #cbd5e1; color: var(--text-muted); background: #f8fafc; }
+        .btn-sim:hover { border-style: solid; border-color: var(--primary); color: var(--primary); background: white; }
+
+        /* --- HISTORY LOG --- */
+        .history-panel { flex: 1; display: flex; flex-direction: column; overflow: hidden; max-height: 400px; }
+        .history-list { flex: 1; overflow-y: auto; display: flex; flex-direction: column; gap: 0; padding-right: 8px; }
+        .history-list::-webkit-scrollbar { width: 6px; }
+        .history-list::-webkit-scrollbar-thumb { background: #cbd5e1; border-radius: 3px; }
+        
+        .log-item { display: flex; gap: 16px; padding: 16px 0; border-bottom: 1px solid #f1f5f9; animation: slideDown 0.3s ease; }
+        @keyframes slideDown { from{opacity:0; transform:translateY(-10px);} to{opacity:1; transform:translateY(0);} }
+        .log-icon { width: 32px; height: 32px; border-radius: 50%; display: flex; align-items: center; justify-content: center; flex-shrink: 0; font-size: 0.85rem;}
+        .log-icon.cmd { background: #e0f2fe; color: var(--primary); }
+        .log-icon.evt { background: #fef3c7; color: var(--warning); }
+        .log-icon.alrt { background: #fef2f2; color: var(--danger); }
+        .log-icon.sys { background: #f3f4f6; color: var(--text-muted); }
+        
+        .log-content { display: flex; flex-direction: column; gap: 4px; }
+        .log-header { justify-content: space-between; display: flex; align-items: center; width: 100%; gap: 20px;}
+        .log-title { font-weight: 600; font-size: 0.9rem; color: var(--text-main); }
+        .log-time { font-size: 0.75rem; color: var(--text-muted); white-space: nowrap;}
+        .log-desc { font-size: 0.85rem; color: var(--text-muted); line-height: 1.4; }
+
+        /* --- AI ASSISTANT & ALARMS FLOATING ELEMENTS --- */
+        .fab-container { position: fixed; bottom: 32px; right: 32px; display: flex; flex-direction: column; gap: 16px; z-index: 100; align-items: flex-end;}
+        
+        .fab-btn {
+            width: 56px; height: 56px; border-radius: 50%; border: none; cursor: pointer;
+            box-shadow: var(--shadow-lg); display: flex; align-items: center; justify-content: center;
+            font-size: 1.5rem; transition: var(--transition); color: white;
+        }
+        .fab-btn:hover { transform: scale(1.05); }
+        .fab-ai { background: linear-gradient(135deg, #8b5cf6, #c084fc); }
+        
+        /* AI POPUP */
+        .ai-popup {
+            background: white; border-radius: var(--radius-xl); box-shadow: var(--shadow-lg);
+            width: 320px; border: 1px solid var(--border); overflow: hidden;
+            transform-origin: bottom right; transform: scale(0); opacity: 0; transition: all 0.3s cubic-bezier(0.175, 0.885, 0.32, 1.275);
+            position: absolute; bottom: 70px; right: 0;
+        }
+        .ai-popup.open { transform: scale(1); opacity: 1; }
+        .ai-header { background: linear-gradient(135deg, #8b5cf6, #c084fc); color: white; padding: 16px 20px; display: flex; align-items: center; gap: 12px;}
+        .ai-avatar { width: 36px; height: 36px; background: rgba(255,255,255,0.2); border-radius: 50%; display: flex; align-items: center; justify-content: center; position: relative;}
+        .ai-avatar.speaking::after {
+            content:''; position: absolute; inset: -4px; border-radius: 50%; border: 2px solid white; opacity: 0;
+            animation: speak-pulse 1s infinite;
+        }
+        @keyframes speak-pulse { 0%{transform:scale(0.8); opacity:1;} 100%{transform:scale(1.3); opacity:0;} }
+        .ai-title { font-weight: 600; font-size: 1rem; }
+        .ai-body { padding: 20px; min-height: 100px; }
+        .ai-msg {
+            background: #f5f3ff; border: 1px solid #ede9fe; padding: 12px 16px; border-radius: 12px; border-top-left-radius: 2px;
+            font-size: 0.9rem; color: #4c1d95; line-height: 1.5; font-style: italic;
+        }
+
+        /* ALARM BANNER (Top) */
+        .alarm-banner {
+            position: fixed; top: 0; left: 260px; right: 0; background: #fef2f2; border-bottom: 1px solid #fee2e2;
+            padding: 12px 32px; display: flex; align-items: center; justify-content: space-between;
+            transform: translateY(-100%); transition: transform 0.4s cubic-bezier(0.34, 1.56, 0.64, 1); z-index: 40;
+            box-shadow: var(--shadow-md);
+        }
+        .alarm-banner.active { transform: translateY(0); }
+        .alarm-content { display: flex; align-items: center; gap: 12px; color: var(--danger); font-weight: 600; }
+        .alarm-btn { background: white; color: var(--danger); border: 1px solid #fca5a5; padding: 6px 16px; border-radius: 20px; font-weight: 600; font-size: 0.85rem; cursor: pointer; transition: all 0.2s; }
+        .alarm-btn:hover { background: var(--danger); color: white; }
+
+        /* UTILITIES */
+        .glass-badge { background: rgba(255,255,255,0.8); backdrop-filter: blur(8px); padding: 4px 10px; border-radius: 20px; font-size: 0.75rem; font-weight: 600; border: 1px solid rgba(0,0,0,0.05); }
+
+    </style>
+</head>
+<body>
+
+    <!-- SIDEBAR -->
+    <aside class="sidebar">
+        <div class="logo-area">
+            <div class="logo-icon"><i class="fa-solid fa-leaf"></i></div>
+            <div class="logo-text">Auto<span>Farm</span><br><span style="color:var(--text-muted); font-size:0.75rem; font-weight:500;">Control Center</span></div>
+        </div>
+        
+        <nav class="nav-menu">
+            <a href="#" class="nav-item active"><i class="fa-solid fa-chart-pie"></i> Dashboard</a>
+            <a href="#" class="nav-item"><i class="fa-solid fa-map-location-dot"></i> Farm Monitoring</a>
+            <a href="#" class="nav-item"><i class="fa-solid fa-gamepad"></i> Robot Commands</a>
+            <a href="#" class="nav-item"><i class="fa-solid fa-bell"></i> Alerts <span class="glass-badge" id="nav-alert-badge" style="display:none; color:var(--danger)">1</span></a>
+            <a href="#" class="nav-item"><i class="fa-solid fa-robot"></i> AI Assistant</a>
+            <a href="#" class="nav-item"><i class="fa-solid fa-clock-rotate-left"></i> History</a>
+            <div style="flex:1"></div>
+            <a href="#" class="nav-item"><i class="fa-solid fa-gear"></i> Settings</a>
+        </nav>
+    </aside>
+
+    <!-- MAIN CONTENT -->
+    <main class="main-content">
+        <!-- HEADER -->
+        <header class="header">
+            <div class="header-left">
+                <div class="status-badge" id="sys-status-badge">
+                    <div class="status-dot pulse" id="sys-status-dot"></div>
+                    <span id="sys-status-text">System Online: Auto Patrol</span>
+                </div>
+            </div>
+            
+            <div class="header-right">
+                <div class="time-display" id="clock">Loading...</div>
+                <div class="user-profile">
+                    <div class="user-info" style="text-align: right;">
+                        <span class="user-name">Alex Mercer</span>
+                        <span class="user-role">Lead Supervisor</span>
+                    </div>
+                    <div class="avatar"><i class="fa-solid fa-user"></i></div>
+                </div>
+            </div>
+        </header>
+
+        <!-- ALARM BANNER -->
+        <div class="alarm-banner" id="alarm-banner">
+            <div class="alarm-content">
+                <i class="fa-solid fa-triangle-exclamation fa-fade" style="font-size: 1.2rem;"></i>
+                <span id="alarm-text">CRITICAL ALERT DETECTED</span>
+            </div>
+            <button class="alarm-btn" onclick="resetAlarms()">Acknowledge & Reset</button>
+        </div>
+
+        <!-- DASHBOARD BODY -->
+        <div class="dashboard-scroll">
+            
+            <!-- METRICS -->
+            <div class="metrics-grid">
+                <div class="metric-card">
+                    <div class="metric-header">
+                        <span>Plant Health</span>
+                        <div class="metric-icon icon-green"><i class="fa-solid fa-leaf"></i></div>
+                    </div>
+                    <div class="metric-value"><span id="val-health">98</span><span class="metric-unit">%</span></div>
+                    <div class="metric-status status-good" id="stat-health">Optimal</div>
+                </div>
+                
+                <div class="metric-card">
+                    <div class="metric-header">
+                        <span>Soil Moisture</span>
+                        <div class="metric-icon icon-blue"><i class="fa-solid fa-droplet"></i></div>
+                    </div>
+                    <div class="metric-value"><span id="val-moisture">45</span><span class="metric-unit">%</span></div>
+                    <div class="metric-status status-good" id="stat-moisture">Normal</div>
+                </div>
+                
+                <div class="metric-card">
+                    <div class="metric-header">
+                        <span>Temperature</span>
+                        <div class="metric-icon icon-yellow"><i class="fa-solid fa-temperature-half"></i></div>
+                    </div>
+                    <div class="metric-value"><span id="val-temp">24.5</span><span class="metric-unit">°C</span></div>
+                    <div class="metric-status status-good">Stable</div>
+                </div>
+                
+                <div class="metric-card">
+                    <div class="metric-header">
+                        <span>Humidity</span>
+                        <div class="metric-icon icon-blue" style="background: #e0e7ff; color: #4f46e5;"><i class="fa-solid fa-cloud-rain"></i></div>
+                    </div>
+                    <div class="metric-value"><span>62</span><span class="metric-unit">%</span></div>
+                    <div class="metric-status status-good">Stable</div>
+                </div>
+
+                <div class="metric-card">
+                    <div class="metric-header">
+                        <span>Robot Battery</span>
+                        <div class="metric-icon icon-green" id="icon-battery"><i class="fa-solid fa-battery-full"></i></div>
+                    </div>
+                    <div class="metric-value"><span id="val-battery">88</span><span class="metric-unit">%</span></div>
+                    <div class="metric-status status-good" id="stat-battery">Discharging</div>
+                </div>
+
+                <div class="metric-card">
+                    <div class="metric-header">
+                        <span>Robot Mode</span>
+                        <div class="metric-icon icon-purple"><i class="fa-solid fa-microchip"></i></div>
+                    </div>
+                    <div class="metric-value" style="font-size: 1.3rem;" id="val-mode">Patrol</div>
+                    <div class="metric-status status-good" id="stat-mode" style="background: #f5f3ff; color: #6d28d9;">Active</div>
+                </div>
+            </div>
+
+            <!-- MAIN PANELS -->
+            <div class="panels-grid">
+                <!-- LEFT: MAP & SENSORS -->
+                <div style="display: flex; flex-direction: column; gap: 24px;">
+                    <div class="panel">
+                        <div class="panel-header">
+                            <h2 class="panel-title"><i class="fa-solid fa-map"></i> Farm Sector Overview</h2>
+                            <button class="btn btn-outline-primary" style="padding: 6px 12px; font-size: 0.8rem;" onclick="addLog('System', 'Map re-calibrated successfully.', 'sys')"><i class="fa-solid fa-rotate-right"></i> Refresh</button>
+                        </div>
+                        <div class="farm-map" id="farm-map">
+                            <div class="map-sector healthy" id="sec-A">
+                                <span class="sec-label">Sector A</span>
+                                <span class="sec-status" id="sec-A-stat">Normal</span>
+                            </div>
+                            <div class="map-sector healthy" id="sec-B">
+                                <span class="sec-label">Sector B</span>
+                                <span class="sec-status" id="sec-B-stat">Normal</span>
+                            </div>
+                            <div class="map-sector healthy" id="sec-C">
+                                <span class="sec-label">Sector C</span>
+                                <span class="sec-status" id="sec-C-stat">Normal</span>
+                            </div>
+                            <div class="map-sector healthy" id="sec-D">
+                                <span class="sec-label">Sector D</span>
+                                <span class="sec-status" id="sec-D-stat">Normal</span>
+                            </div>
+                            <!-- Moving Robot -->
+                            <div class="map-robot" id="robot-marker" style="top: 25%; left: 25%;">
+                                <i class="fa-solid fa-tractor"></i>
+                            </div>
+                        </div>
+                    </div>
+
+                    <div class="control-section">
+                        <!-- Robot Commands -->
+                        <div class="panel">
+                            <div class="panel-header">
+                                <h2 class="panel-title" style="font-size: 1rem;"><i class="fa-solid fa-terminal"></i> Direct Commands</h2>
+                            </div>
+                            <div class="btn-grid">
+                                <button class="btn btn-primary" onclick="execCmd('Start Patrol')"><i class="fa-solid fa-play"></i> Start Patrol</button>
+                                <button class="btn btn-outline-primary" onclick="execCmd('Stop Patrol')"><i class="fa-solid fa-stop"></i> Stop Patrol</button>
+                                <button class="btn btn-outline-primary" onclick="execCmd('Return to Base')"><i class="fa-solid fa-charging-station"></i> Return Home</button>
+                                <button class="btn btn-outline-primary" onclick="execCmd('Capture Image')"><i class="fa-solid fa-camera"></i> Capture Image</button>
+                                <button class="btn btn-outline-primary" style="grid-column: 1 / -1;" onclick="execCmd('Activate Irrigation')"><i class="fa-solid fa-droplet"></i> Run Irrigation Sequence</button>
+                            </div>
+                        </div>
+                        
+                        <!-- Simulations -->
+                        <div class="panel">
+                            <div class="panel-header">
+                                <h2 class="panel-title" style="font-size: 1rem; color: var(--text-muted);"><i class="fa-solid fa-flask"></i> Simulator Events</h2>
+                            </div>
+                            <div class="btn-grid">
+                                <button class="btn btn-sim" onclick="simulate('disease')">Disease Alert</button>
+                                <button class="btn btn-sim" onclick="simulate('animal')">Animal Intrusion</button>
+                                <button class="btn btn-sim" onclick="simulate('moisture')">Low Moisture</button>
+                                <button class="btn btn-sim" onclick="simulate('obstacle')">Obstacle</button>
+                                <button class="btn btn-sim" style="grid-column: 1 / -1;" onclick="simulate('battery')">Battery Critical</button>
+                            </div>
+                        </div>
+                    </div>
+                </div>
+
+                <!-- RIGHT: SENSORS & HISTORY -->
+                <div style="display: flex; flex-direction: column; gap: 24px;">
+                    <div class="panel">
+                        <div class="panel-header" style="margin-bottom: 12px;">
+                            <h2 class="panel-title" style="font-size: 1rem;"><i class="fa-solid fa-microchip"></i> Active Sensors</h2>
+                        </div>
+                        <div class="sensor-list">
+                            <div class="sensor-item">
+                                <div class="sensor-info">
+                                    <div class="s-icon"><i class="fa-solid fa-droplet" style="color:var(--primary)"></i></div>
+                                    <div class="s-details"><span class="s-name">Soil Probes Array</span><span class="s-time" id="s-time-1">Syncing...</span></div>
+                                </div>
+                                <div class="sensor-val"><div class="s-dot" id="s-dot-moist"></div> Online</div>
+                            </div>
+                            <div class="sensor-item">
+                                <div class="sensor-info">
+                                    <div class="s-icon"><i class="fa-solid fa-camera" style="color:var(--text-main)"></i></div>
+                                    <div class="s-details"><span class="s-name">Multispectral Cam</span><span class="s-time" id="s-time-2">Syncing...</span></div>
+                                </div>
+                                <div class="sensor-val"><div class="s-dot"></div> Online</div>
+                            </div>
+                            <div class="sensor-item">
+                                <div class="sensor-info">
+                                    <div class="s-icon"><i class="fa-solid fa-wind" style="color:var(--warning)"></i></div>
+                                    <div class="s-details"><span class="s-name">Weather Station</span><span class="s-time" id="s-time-3">Syncing...</span></div>
+                                </div>
+                                <div class="sensor-val"><div class="s-dot"></div> Online</div>
+                            </div>
+                        </div>
+                    </div>
+
+                    <div class="panel history-panel">
+                        <div class="panel-header">
+                            <h2 class="panel-title" style="font-size: 1rem;"><i class="fa-solid fa-clock-rotate-left"></i> Activity History</h2>
+                        </div>
+                        <div class="history-list" id="history-log">
+                            <!-- Populated by JS -->
+                        </div>
+                    </div>
+                </div>
+
+            </div>
+        </div>
+    </main>
+
+    <!-- FLOATING AI ASSISTANT -->
+    <div class="fab-container">
+        <div class="ai-popup" id="ai-popup">
+            <div class="ai-header">
+                <div class="ai-avatar" id="ai-avatar"><i class="fa-solid fa-robot"></i></div>
+                <div class="ai-title">AutoBot Assistant</div>
+            </div>
+            <div class="ai-body">
+                <div class="ai-msg" id="ai-msg-text">Hello Alex. System parameters are optimal. How can I assist with the farm management today?</div>
+            </div>
+        </div>
+        <button class="fab-btn fab-ai" onclick="toggleAI()" title="AI Assistant">
+            <i class="fa-solid fa-sparkles"></i>
+        </button>
+    </div>
+
+    <!-- JAVASCRIPT LOGIC -->
+    <script>
+        // Data State
+        let state = {
+            sysOnline: true,
+            robotMode: 'Patrol',
+            battery: 88,
+            health: 98,
+            moisture: 45,
+            loc: 'A',
+            alarmActive: false
+        };
+
+        const mapCoords = {
+            'A': { top: '25%', left: '25%' },
+            'B': { top: '25%', left: '75%' },
+            'C': { top: '75%', left: '25%' },
+            'D': { top: '75%', left: '75%' },
+            'Base': { top: '90%', left: '50%' } // Off bottom edge slightly
+        };
+
+        const sectors = ['A', 'B', 'C', 'D'];
+
+        // Util: Clock
+        const updateTime = () => {
+            const now = new Date();
+            document.getElementById('clock').innerText = now.toLocaleDateString('en-US', { weekday: 'short', month: 'short', day: 'numeric'}) + ' • ' + now.toLocaleTimeString('en-US', { hour: '2-digit', minute:'2-digit' });
+            
+            const justNow = "Just now";
+            document.getElementById('s-time-1').innerText = justNow;
+            document.getElementById('s-time-2').innerText = "2 mins ago";
+            document.getElementById('s-time-3').innerText = justNow;
+        };
+        setInterval(updateTime, 60000); updateTime();
+        
+        const getTimestamp = () => new Date().toLocaleTimeString('en-US', { hour12: false });
+
+        // Animating Values
+        const animateValue = (id, newVal) => {
+            const el = document.getElementById(id);
+            el.innerText = newVal;
+            el.classList.remove('value-update');
+            void el.offsetWidth; // trigger reflow
+            el.classList.add('value-update');
+        };
+
+        // History Logger
+        const addLog = (title, desc, type = 'sys') => {
+            const list = document.getElementById('history-log');
+            
+            let iconClass = 'fa-info';
+            if(type === 'cmd') iconClass = 'fa-terminal';
+            if(type === 'evt') iconClass = 'fa-bolt';
+            if(type === 'alrt') iconClass = 'fa-triangle-exclamation';
+            if(type === 'sys') iconClass = 'fa-gear';
+
+            const html = `
+                <div class="log-item">
+                    <div class="log-icon ${type}"><i class="fa-solid ${iconClass}"></i></div>
+                    <div class="log-content">
+                        <div class="log-header">
+                            <span class="log-title">${title}</span>
+                            <span class="log-time">${getTimestamp()}</span>
+                        </div>
+                        <div class="log-desc">${desc}</div>
+                    </div>
+                </div>
+            `;
+            list.insertAdjacentHTML('afterbegin', html);
+        };
+
+        // UI Updater
+        const updateUI = () => {
+            animateValue('val-battery', state.battery);
+            animateValue('val-health', state.health);
+            animateValue('val-moisture', state.moisture);
+            animateValue('val-mode', state.robotMode);
+            
+            // Sys Status Badge
+            const badge = document.getElementById('sys-status-badge');
+            const txt = document.getElementById('sys-status-text');
+            if(state.alarmActive) {
+                badge.className = 'status-badge offline';
+                txt.innerText = 'System Alert: Action Required';
+            } else if(!state.sysOnline) {
+                badge.className = 'status-badge offline';
+                txt.innerText = 'System Standby / Idle';
+            } else {
+                badge.className = 'status-badge';
+                txt.innerText = `System Online: ${state.robotMode}`;
+            }
+
+            // Robot Map pos
+            const robot = document.getElementById('robot-marker');
+            robot.style.top = mapCoords[state.loc].top;
+            robot.style.left = mapCoords[state.loc].left;
+            if(state.robotMode === 'Charging') {
+                robot.innerHTML = '<i class="fa-solid fa-plug"></i>';
+                robot.style.color = 'var(--success)';
+                robot.style.borderColor = 'var(--success)';
+            } else if (state.alarmActive) {
+                robot.innerHTML = '<i class="fa-solid fa-triangle-exclamation"></i>';
+                robot.style.color = 'var(--danger)';
+                robot.style.borderColor = 'var(--danger)';
+            } else {
+                robot.innerHTML = '<i class="fa-solid fa-tractor"></i>';
+                robot.style.color = 'var(--primary)';
+                robot.style.borderColor = 'var(--primary)';
+            }
+
+            // Battery Icon color
+            const bIcon = document.getElementById('icon-battery');
+            if(state.battery < 20) { bIcon.className = 'metric-icon icon-yellow'; bIcon.style.background='#fef2f2'; bIcon.style.color='var(--danger)'; document.getElementById('stat-battery').className = 'metric-status status-crit'; document.getElementById('stat-battery').innerText = 'Low'; }
+            else { bIcon.className = 'metric-icon icon-green'; document.getElementById('stat-battery').className = 'metric-status status-good'; document.getElementById('stat-battery').innerText = 'Discharging'; }
+
+        };
+
+        // AI Assistant Logic
+        let aiOpen = false;
+        const toggleAI = () => {
+            const popup = document.getElementById('ai-popup');
+            aiOpen = !aiOpen;
+            if(aiOpen) popup.classList.add('open');
+            else popup.classList.remove('open');
+        };
+
+        const speakAI = (msg) => {
+            if(!aiOpen) toggleAI();
+            const avatar = document.getElementById('ai-avatar');
+            const textEl = document.getElementById('ai-msg-text');
+            
+            avatar.classList.add('speaking');
+            textEl.innerText = msg;
+            
+            setTimeout(() => { avatar.classList.remove('speaking'); }, 2500);
+        };
+
+        // Alarm Handling
+        const triggerAlarm = (msg) => {
+            state.alarmActive = true;
+            document.getElementById('alarm-banner').classList.add('active');
+            document.getElementById('alarm-text').innerText = msg;
+            document.getElementById('nav-alert-badge').style.display = 'inline-block';
+        };
+
+        const resetAlarms = () => {
+            state.alarmActive = false;
+            document.getElementById('alarm-banner').classList.remove('active');
+            document.getElementById('nav-alert-badge').style.display = 'none';
+            
+            // Clean map sectors
+            sectors.forEach(s => {
+                const el = document.getElementById(`sec-${s}`);
+                el.className = 'map-sector healthy';
+                document.getElementById(`sec-${s}-stat`).innerText = 'Normal';
+            });
+            
+            // Reset sensor dots
+            document.getElementById('s-dot-moist').className = 's-dot';
+
+            state.robotMode = 'Idle';
+            state.sysOnline = false;
+            
+            addLog('System Override', 'Operator acknowledged alerts. Farm reset to standby.', 'sys');
+            speakAI("Alarms reset successfully. System is now standing by for operator commands.");
+            updateUI();
+        };
+
+        // Command Execution
+        const execCmd = (cmd) => {
+            addLog('Operator Command', `Initiated sequence: ${cmd}`, 'cmd');
+            
+            if(cmd === 'Start Patrol') {
+                if(state.alarmActive) { speakAI("Cannot start patrol while critical alarms are active."); return; }
+                state.sysOnline = true;
+                state.robotMode = 'Patrol';
+                state.loc = 'A';
+                speakAI("Resuming autonomous patrol sequence. Path generated.");
+            }
+            if(cmd === 'Stop Patrol') {
+                state.sysOnline = false;
+                state.robotMode = 'Standby';
+                speakAI("Patrol halted. Unit holding current position.");
+            }
+            if(cmd === 'Return to Base') {
+                state.sysOnline = true;
+                state.robotMode = 'Charging';
+                state.loc = 'Base';
+                speakAI("Navigating to docking station for recharge sequence.");
+            }
+            if(cmd === 'Capture Image') {
+                const oldMode = state.robotMode;
+                state.robotMode = 'Capturing';
+                setTimeout(() => { state.robotMode = oldMode; updateUI(); }, 2000);
+                speakAI("Multispectral image captured and uploaded to cloud storage.");
+            }
+            if(cmd === 'Activate Irrigation') {
+                state.moisture = 85;
+                document.getElementById('stat-moisture').innerText = 'Irrigating';
+                document.getElementById('stat-moisture').className = 'metric-status status-good';
+                document.getElementById('s-dot-moist').className = 's-dot'; // reset warning
+                sectors.forEach(s => {
+                    const el = document.getElementById(`sec-${s}`);
+                    if(el.classList.contains('warning')) {
+                        el.className = 'map-sector healthy';
+                        document.getElementById(`sec-${s}-stat`).innerText = 'Normal';
+                    }
+                });
+                speakAI("Irrigation valves opened. Soil moisture levels are stabilizing.");
+            }
+            
+            updateUI();
+        };
+
+        // Event Simulation
+        const simulate = (event) => {
+            const rndSector = sectors[Math.floor(Math.random() * sectors.length)];
+            const secEl = document.getElementById(`sec-${rndSector}`);
+            const secStat = document.getElementById(`sec-${rndSector}-stat`);
+            
+            state.loc = rndSector; // move robot there
+            state.sysOnline = true;
+            
+            if(event === 'disease') {
+                state.health -= 15;
+                document.getElementById('stat-health').innerText = 'Critical';
+                document.getElementById('stat-health').className = 'metric-status status-crit';
+                
+                secEl.className = 'map-sector alert'; secStat.innerText = 'Infection';
+                state.robotMode = 'Scanning';
+                
+                triggerAlarm(`Biological anomaly (fungal pattern) detected in Sector ${rndSector}`);
+                addLog('Sensor Alert', `Image analysis flagged disease in Sector ${rndSector}`, 'alrt');
+                speakAI(`Disease pattern suggests fungal infection in Sector ${rndSector}. Recommend dispatching chemical-spray drone immediately.`);
+            }
+            
+            if(event === 'animal') {
+                secEl.className = 'map-sector warning'; secStat.innerText = 'Intrusion';
+                state.robotMode = 'Deterrent Mode';
+                
+                addLog('Perimeter Event', `Large biological mass detected entering Sector ${rndSector}`, 'evt');
+                speakAI(`Animal intrusion detected near Sector ${rndSector}. Activating acoustic deterrents.`);
+            }
+
+            if(event === 'moisture') {
+                state.moisture -= 25;
+                document.getElementById('stat-moisture').innerText = 'Drought';
+                document.getElementById('stat-moisture').className = 'metric-status status-crit';
+                document.getElementById('s-dot-moist').className = 's-dot err';
+                
+                secEl.className = 'map-sector warning'; secStat.innerText = 'Dry';
+                state.robotMode = 'Probing';
+                
+                triggerAlarm(`Critical low soil moisture in Sector ${rndSector}`);
+                addLog('Sensor Alert', `Capacitive probes report dropping moisture in Sector ${rndSector}`, 'alrt');
+                speakAI(`Extremely low moisture detected in Sector ${rndSector}. Recommend activating irrigation sequence within the hour to prevent yield loss.`);
+            }
+
+            if(event === 'obstacle') {
+                secEl.className = 'map-sector alert'; secStat.innerText = 'Blocked';
+                state.robotMode = 'Blocked / Idle';
+                
+                triggerAlarm(`Navigation failure in Sector ${rndSector}: Path obstructed.`);
+                addLog('Navigation Error', `LiDAR detected immovable object blocking designated path in Sector ${rndSector}`, 'alrt');
+                speakAI(`Robot navigation blocked in Sector ${rndSector}. Unable to compute alternate route. Manual assistance required.`);
+            }
+
+            if(event === 'battery') {
+                state.battery = 12;
+                state.robotMode = 'Low Power Return';
+                state.loc = 'Base'; // Force return
+                
+                triggerAlarm(`Robot battery critical. Auto-returning to base.`);
+                addLog('System Alert', `Voltage dropped below 15% threshold. Aborting mission.`, 'alrt');
+                speakAI(`Power levels critical. Mission aborted. Returning to charging dock to prevent stranding.`);
+            }
+
+            updateUI();
+        };
+
+        // Init
+        window.onload = () => {
+            addLog('System Boot', 'Admin portal initialized. Established connection to farm sub-network.', 'sys');
+            setTimeout(() => addLog('Sync Data', 'Successfully synchronized telemetry from 4 field arrays.', 'sys'), 500);
+            updateUI();
+        };
+
+    </script>
+</body>
+</html>

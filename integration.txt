@@ -1,0 +1,1834 @@
+/*
+ * ============================================================
+ *  DynoRex X1 – Dynamic Autonomous Robotic System
+ *  ESP32-S3 | Arduino Framework | Production Firmware v4.0
+ * ============================================================
+ *  Modes:
+ *    0 – Manual       (web D-pad / WS commands)
+ *    1 – Line Follow  (dual IR, debounced)
+ *    2 – Hybrid       (line follow + ultrasonic obstacle dodge)
+ *    3 – Follow-Me    (ultrasonic distance tracking)
+ *    4 – GPS Auto     (APM 2.8 PWM steering + throttle)
+ *    5 – Obstacle Avoid (autonomous scan-and-steer, non-blocking)
+ *
+ *  Pin map – LOCKED – NEVER CHANGE:
+ *    MOTOR_A_IN1=4  MOTOR_A_IN2=5   ENA=6
+ *    MOTOR_B_IN3=7  MOTOR_B_IN4=8   ENB=9
+ *    IR_LEFT=10     IR_RIGHT=11
+ *    TRIG=12        ECHO=13
+ *    SERVO=14
+ *    DHT22=15
+ *    SOIL=GPIO1
+ *    APM_CH1=16     APM_CH2=17
+ * ============================================================
+ *  v4.0 Changes:
+ *    - Pin map corrected to locked values
+ *    - servoWrite() rewritten: direct panServo.write(), no
+ *      snap-to-3-presets quantization in normal writes
+ *    - Servo auto-return to 90° on button release (handled by WS)
+ *    - Dashboard: all commands via WebSocket (low latency)
+ *    - Dashboard: servo panel = 3 hold-buttons (L/Front/R)
+ *      Left/Right auto-return to 90° on pointer release
+ *    - Dashboard: distance gauge shows real cm prominently
+ *    - Dashboard: DHT temperature + humidity with colour bands
+ *    - Dashboard: soil moisture with wet/dry colour scale
+ *    - STA-only WiFi, no hotspot fallback
+ *    - WebSocket client cap + cleanup throttle for heap safety
+ *    - Uptime counter in telemetry
+ * ============================================================
+ */
+
+// ─── Library includes ────────────────────────────────────────
+#include <Arduino.h>
+#include <ArduinoJson.h>
+#include <AsyncTCP.h>
+#include <DHT.h>
+#include <ESP32Servo.h>
+#include <ESPAsyncWebServer.h>
+#include <WiFi.h>
+#include <math.h>
+
+#if __has_include(<esp_arduino_version.h>)
+#include <esp_arduino_version.h>
+#endif
+
+// ArduinoJson v6/v7 compat shim
+#if ARDUINOJSON_VERSION_MAJOR >= 7
+  using JsonDoc = JsonDocument;
+#else
+  template <size_t N> using JsonDoc = StaticJsonDocument<N>;
+#endif
+
+// ─── Network credentials ────────────────────────────────────
+#define WIFI_SSID      "Nothing Phone1"
+#define WIFI_PASSWORD  "00000000"
+
+// ─── Pin definitions – LOCKED – DO NOT CHANGE ────────────────
+#define MOTOR_A_IN1  4
+#define MOTOR_A_IN2  5
+#define MOTOR_A_ENA  6
+
+#define MOTOR_B_IN3  7
+#define MOTOR_B_IN4  8
+#define MOTOR_B_ENB  9
+
+#define IR_LEFT      10
+#define IR_RIGHT     11
+
+#define TRIG_PIN     12
+#define ECHO_PIN     13
+
+#define SERVO_PIN    14
+
+#define DHT_PIN      15
+#define DHT_TYPE     DHT22
+
+#define SOIL_PIN     1   // ADC GPIO1
+
+#define APM_CH1_PIN  16
+#define APM_CH2_PIN  17
+
+// ─── PWM setup (Core 3.x / legacy) ──────────────────────────
+#define PWM_FREQ  1000
+#define PWM_BITS  8
+
+#if defined(ESP_ARDUINO_VERSION_MAJOR) && ESP_ARDUINO_VERSION_MAJOR >= 3
+  static inline void setupMotorPwm() {
+    ledcAttach(MOTOR_A_ENA, PWM_FREQ, PWM_BITS);
+    ledcAttach(MOTOR_B_ENB, PWM_FREQ, PWM_BITS);
+  }
+  static inline void motorPwmWriteA(uint8_t d) { ledcWrite(MOTOR_A_ENA, d); }
+  static inline void motorPwmWriteB(uint8_t d) { ledcWrite(MOTOR_B_ENB, d); }
+#else
+  constexpr uint8_t MOTOR_A_PWM_CH = 0;
+  constexpr uint8_t MOTOR_B_PWM_CH = 1;
+  static inline void setupMotorPwm() {
+    ledcSetup(MOTOR_A_PWM_CH, PWM_FREQ, PWM_BITS);
+    ledcAttachPin(MOTOR_A_ENA, MOTOR_A_PWM_CH);
+    ledcSetup(MOTOR_B_PWM_CH, PWM_FREQ, PWM_BITS);
+    ledcAttachPin(MOTOR_B_ENB, MOTOR_B_PWM_CH);
+  }
+  static inline void motorPwmWriteA(uint8_t d) { ledcWrite(MOTOR_A_PWM_CH, d); }
+  static inline void motorPwmWriteB(uint8_t d) { ledcWrite(MOTOR_B_PWM_CH, d); }
+#endif
+
+// ─── Drive tuning ────────────────────────────────────────────
+#define LEFT_MOTOR_INVERT      1
+#define RIGHT_MOTOR_INVERT     1
+#define SWAP_LEFT_RIGHT_DRIVE  1
+#define LEFT_DRIVE_TRIM_PCT    100
+#define RIGHT_DRIVE_TRIM_PCT   100
+#define MOTOR_MIN_EFFECTIVE_PWM  72
+#define MOTOR_MAX_EFFECTIVE_PWM  255
+
+// Manual mode speeds
+#define MANUAL_DRIVE_SPD    190
+#define MANUAL_TURN_OUTER   185
+
+// Auto mode speeds
+#define SPD_FULL    210
+#define SPD_TURN    165
+#define SPD_HALF    130
+#define SPD_SLOW     90
+#define SPD_CRAWL    65
+
+// Line follow speeds
+#define LINE_FWD_SPD    150
+#define LINE_TURN_SPD   180
+
+// ─── Servo ────────────────────────────────────────────────────
+//  SERVO_FRONT = 90 (centre)
+//  SERVO_LEFT  = 60 (offset 30° left of centre)
+//  SERVO_RIGHT = 120 (offset 30° right of centre)
+#define SERVO_FRONT       90
+#define SERVO_LEFT        60
+#define SERVO_RIGHT      120
+#define SERVO_SETTLE_MS  350   // ms to wait after a move before reading US
+#define SERVO_MIN_US    1000
+#define SERVO_MAX_US    2000
+
+// ─── APM / RC ─────────────────────────────────────────────────
+#define APM_PWM_MIN     1000
+#define APM_PWM_MID     1500
+#define APM_PWM_MAX     2000
+#define APM_DEADBAND      50
+#define APM_TIMEOUT_US  ((uint32_t)500 * 1000UL)
+
+// ─── Ultrasonic ───────────────────────────────────────────────
+#define US_MAX_VALID_CM    400.0f
+#define US_ECHO_TIMEOUT_US  24000UL
+#define DIST_DANGER_CM      18.0f
+#define DIST_CLOSE_CM       35.0f
+#define DIST_OBSTACLE_CM    30.0f   // auto-mode trigger
+
+// ─── Follow-Me tuning ─────────────────────────────────────────
+#define FOLLOW_TARGET_CM    25.0f
+#define FOLLOW_DEADZONE_CM   2.0f
+#define FOLLOW_LOST_CM     140.0f
+
+// ─── Timing intervals (ms) ────────────────────────────────────
+#define T_US_POLL    120
+#define T_DHT       2000
+#define T_SOIL       500
+#define T_TELEMETRY  250
+#define T_FAILSAFE  2000
+#define T_WS_CLEAN  5000   // WebSocket cleanup interval
+
+// ─── WebSocket safety ─────────────────────────────────────────
+#define WS_MAX_CLIENTS  3
+
+// ─── Enumerations ─────────────────────────────────────────────
+enum RobotMode : uint8_t {
+  MODE_MANUAL        = 0,
+  MODE_LINE_FOLLOW   = 1,
+  MODE_HYBRID        = 2,
+  MODE_FOLLOW_ME     = 3,
+  MODE_GPS_AUTO      = 4,
+  MODE_OBSTACLE_AVOID = 5
+};
+
+enum ManualCmd : uint8_t {
+  CMD_STOP     = 0,
+  CMD_FORWARD  = 1,
+  CMD_BACKWARD = 2,
+  CMD_LEFT     = 3,
+  CMD_RIGHT    = 4
+};
+
+// Non-blocking scan state machine
+enum ScanStep : uint8_t {
+  SCAN_IDLE       = 0,
+  SCAN_GO_LEFT    = 1,
+  SCAN_WAIT_LEFT  = 2,
+  SCAN_GO_FRONT   = 3,
+  SCAN_WAIT_FRONT = 4,
+  SCAN_GO_RIGHT   = 5,
+  SCAN_WAIT_RIGHT = 6,
+  SCAN_DONE       = 7,
+  SCAN_WAIT_CENTER = 8
+};
+
+// Non-blocking obstacle-avoid state machine
+enum AvoidState : uint8_t {
+  AV_FORWARD    = 0,
+  AV_STOP1      = 1,
+  AV_REVERSE    = 2,
+  AV_STOP2      = 3,
+  AV_SCAN_START = 4,
+  AV_SCAN_WAIT  = 5,
+  AV_TURN       = 6,
+  AV_STOP3      = 7
+};
+
+// Non-blocking hybrid state machine
+enum HybridState : uint8_t {
+  HB_FOLLOW        = 0,
+  HB_AVOID_STOP1   = 1,
+  HB_AVOID_REVERSE = 2,
+  HB_AVOID_STOP2   = 3,
+  HB_SCAN_WAIT     = 4,
+  HB_TURN_AWAY     = 5,
+  HB_FORWARD_CLEAR = 6,
+  HB_RECOVER_LINE  = 7
+};
+
+// Non-blocking follow-me state machine
+enum FollowState : uint8_t {
+  FM_TRACK       = 0,
+  FM_SEARCH_WAIT = 1,
+  FM_ALIGN_TURN  = 2,
+  FM_SETTLE      = 3
+};
+
+// ─── Shared volatile state ────────────────────────────────────
+volatile RobotMode gMode    = MODE_MANUAL;
+volatile ManualCmd gManCmd  = CMD_STOP;
+portMUX_TYPE gStateMux      = portMUX_INITIALIZER_UNLOCKED;
+
+volatile float   gDistCm   = 999.0f;
+volatile float   gHumidity = 0.0f;
+volatile float   gTempC    = 0.0f;
+volatile uint8_t gSoilPct  = 0;
+volatile bool    gIrLeft   = false;
+volatile bool    gIrRight  = false;
+
+// Scan telemetry
+volatile float    gScanLeft  = 999.0f;
+volatile float    gScanFront = 999.0f;
+volatile float    gScanRight = 999.0f;
+volatile ScanStep gScanStep  = SCAN_IDLE;
+volatile bool     gScanReady = false;
+volatile uint8_t  gServoAngle = SERVO_FRONT;
+unsigned long     gScanSettleMs = 0;
+
+// APM RC channels
+struct RcChannel {
+  volatile uint32_t riseUs    = 0;
+  volatile uint16_t widthUs   = APM_PWM_MID;
+  volatile uint32_t updatedUs = 0;
+  volatile bool     active    = false;
+};
+RcChannel gApmCh1;
+RcChannel gApmCh2;
+
+// Telemetry snapshot
+struct TelemetrySnapshot {
+  RobotMode mode;
+  float     distance, humidity, tempC;
+  uint8_t   soilPct;
+  bool      irLeft, irRight;
+  float     scanLeft, scanFront, scanRight;
+  uint8_t   servoAngle;
+  uint16_t  apmCh1Us, apmCh2Us;
+  bool      apmAlive;
+  uint32_t  uptimeSec;
+};
+
+// Timing locals
+unsigned long gLastWebCmdMs = 0;
+unsigned long gTPoll   = 0;
+unsigned long gTDht    = 0;
+unsigned long gTSoil   = 0;
+unsigned long gTTelem  = 0;
+unsigned long gTWsClean = 0;
+
+// Objects
+DHT             dht(DHT_PIN, DHT_TYPE);
+Servo           panServo;
+AsyncWebServer  server(80);
+AsyncWebSocket  ws("/ws");
+
+// ─── Forward declarations ─────────────────────────────────────
+void    forward(int s);
+void    backward(int s);
+void    turnLeft(int s);
+void    turnRight(int s);
+void    stopMotors();
+void    driveLeft(int16_t s);
+void    driveRight(int16_t s);
+void    driveTank(int16_t l, int16_t r);
+int16_t shapeMotorCommand(int16_t s, bool invert, uint8_t trimPct);
+void    readIR();
+float   pingUS();
+void    pollUSFront();
+void    readDHT();
+void    readSoil();
+void    servoWrite(uint8_t deg);
+void    servoWriteRaw(uint8_t deg);
+void    setFrontDistance(float cm);
+float   measureDistanceCm(uint8_t samples);
+void    scanRequest();
+void    scanTick();
+void    handleManual();
+void    handleLineFollow();
+void    handleHybrid();
+void    handleFollowMe();
+void    handleGPS();
+void    handleObstacleAvoid();
+bool    apmAlive();
+int16_t rcToSpeed(uint16_t us);
+void    setupWeb();
+void    broadcastTelemetry();
+void    setMode(RobotMode m);
+void    snapshotTelemetry(TelemetrySnapshot &snap);
+void    onWsEvent(AsyncWebSocket *, AsyncWebSocketClient *, AwsEventType, void *, uint8_t *, size_t);
+void    handleWebCmd(const String &cmd);
+
+// ══════════════════════════════════════════════════════════════
+//  WEB DASHBOARD  (stored in flash)
+// ══════════════════════════════════════════════════════════════
+static const char DASHBOARD_HTML[] PROGMEM = R"HTML(
+<!DOCTYPE html>
+<html lang="en">
+<head>
+<meta charset="UTF-8">
+<meta name="viewport" content="width=device-width,initial-scale=1,maximum-scale=1,user-scalable=no">
+<title>DynoRex X1</title>
+<style>
+/* ── Reset & theme ── */
+:root{
+  --bg:#060c18;--surface:#0b1422;--card:#0f1b2d;--border:#1a2e4a;
+  --text:#ddeeff;--muted:#5a7a9a;--accent:#2196f3;--accent2:#00bcd4;
+  --good:#22c55e;--warn:#f59e0b;--bad:#ef4444;--purple:#9b59b6;
+  --card-r:14px;--gap:12px;
+}
+*{box-sizing:border-box;margin:0;padding:0}
+html{font-size:14px}
+body{background:var(--bg);color:var(--text);font-family:'Segoe UI',Arial,sans-serif;min-height:100vh}
+
+/* ── Topbar ── */
+.topbar{background:var(--surface);border-bottom:1px solid var(--border);
+  padding:10px 16px;display:flex;align-items:center;gap:12px;position:sticky;top:0;z-index:10;flex-wrap:wrap}
+.logo{font-size:18px;font-weight:700;letter-spacing:.04em}
+.logo span{color:var(--accent)}
+.topbar-meta{font-size:11px;color:var(--muted)}
+#connBadge{margin-left:auto;padding:4px 12px;border-radius:20px;font-size:11px;font-weight:700;
+  background:#1a2e44;color:var(--warn);transition:all .3s}
+#connBadge.online{background:#0e2e1e;color:var(--good)}
+#uptime{font-size:11px;color:var(--muted);margin-left:8px}
+
+/* ── Grid ── */
+.grid{display:grid;gap:var(--gap);padding:var(--gap);
+  grid-template-columns:repeat(auto-fit,minmax(290px,1fr))}
+.wide{grid-column:1/-1}
+.card{background:var(--card);border:1px solid var(--border);border-radius:var(--card-r);padding:14px}
+.card-title{font-size:10px;font-weight:700;color:var(--muted);text-transform:uppercase;
+  letter-spacing:.12em;margin-bottom:12px;display:flex;align-items:center;gap:6px}
+
+/* ── Gauges ── */
+.gauge{background:#08111e;border:1px solid var(--border);border-radius:12px;
+  padding:12px;text-align:center;position:relative}
+.gauge-label{font-size:10px;color:var(--muted);text-transform:uppercase;letter-spacing:.08em;margin-bottom:4px}
+.gauge-value{font-size:32px;font-weight:800;line-height:1;letter-spacing:-.02em}
+.gauge-unit{font-size:12px;color:var(--muted);margin-top:2px}
+.gauge-bar{height:5px;border-radius:3px;background:#1a2e44;margin-top:10px;overflow:hidden}
+.gauge-fill{height:100%;border-radius:3px;transition:width .5s ease}
+.g-hum  .gauge-fill{background:linear-gradient(90deg,#1565c0,#00bcd4)}
+.g-temp .gauge-fill{background:linear-gradient(90deg,#f59e0b,#ef4444)}
+.g-soil .gauge-fill{background:linear-gradient(90deg,#b45309,#22c55e)}
+.g-dist .gauge-fill{background:linear-gradient(90deg,#ef4444,#22c55e)}
+.sensor-badge{display:inline-block;padding:3px 10px;border-radius:12px;
+  font-size:10px;font-weight:700;margin-top:8px;letter-spacing:.06em}
+.badge-ok  {background:#0a2a18;color:var(--good)}
+.badge-warn{background:#2a1e00;color:var(--warn)}
+.badge-bad {background:#2a0a0a;color:var(--bad)}
+
+/* ── Sensor 2×2 grid ── */
+.sensor-2x2{display:grid;grid-template-columns:1fr 1fr;gap:10px;margin-bottom:10px}
+
+/* ── Distance prominent display ── */
+.dist-big{display:flex;align-items:baseline;justify-content:center;gap:4px;margin:4px 0}
+.dist-num{font-size:52px;font-weight:900;letter-spacing:-.04em;line-height:1}
+.dist-unit{font-size:16px;color:var(--muted);font-weight:600}
+.dist-danger .dist-num{color:var(--bad)}
+.dist-close  .dist-num{color:var(--warn)}
+.dist-clear  .dist-num{color:var(--good)}
+
+/* ── Mode buttons ── */
+.mode-grid{display:grid;grid-template-columns:repeat(3,1fr);gap:8px}
+.mode-btn{border:1px solid var(--border);border-radius:10px;padding:10px 4px;
+  background:#0b1828;color:var(--muted);cursor:pointer;font:600 11px/1.3 inherit;
+  text-align:center;transition:all .15s;user-select:none;-webkit-user-select:none}
+.mode-btn:hover{border-color:var(--accent);color:var(--text)}
+.mode-btn.active{background:var(--accent);border-color:var(--accent);color:#fff;box-shadow:0 0 12px #2196f340}
+.mode-btn .icon{font-size:18px;display:block;margin-bottom:3px}
+
+/* ── D-pad ── */
+.dpad{display:grid;grid-template-columns:repeat(3,72px);
+  grid-template-rows:repeat(3,56px);gap:8px;justify-content:center;margin:6px auto}
+.dp{border:1px solid var(--border);border-radius:10px;background:#0b1828;
+  color:var(--text);font:700 12px inherit;cursor:pointer;transition:all .08s;
+  display:flex;flex-direction:column;align-items:center;justify-content:center;
+  gap:2px;user-select:none;-webkit-user-select:none;touch-action:none}
+.dp:active,.dp.held{background:var(--accent);border-color:var(--accent);
+  transform:scale(.93);box-shadow:0 0 10px #2196f360}
+.dp-stop{background:#1a0c14;border-color:#5a1a2a;color:var(--bad)}
+.dp-stop:active,.dp-stop.held{background:#3a0010}
+.dp-icon{font-size:18px;line-height:1}
+.dp-label{font-size:9px;color:var(--muted);font-weight:600;letter-spacing:.06em}
+
+/* ── Servo panel ── */
+.servo-row{display:grid;grid-template-columns:1fr 1fr 1fr;gap:8px;margin-bottom:10px}
+.sv-btn{border:1px solid var(--border);border-radius:10px;padding:14px 4px;
+  background:#0b1828;color:var(--muted);cursor:pointer;font:700 11px inherit;
+  text-align:center;transition:all .1s;user-select:none;-webkit-user-select:none;touch-action:none}
+.sv-btn:active,.sv-btn.held{background:#7b1fa2;border-color:#ab47bc;color:#fff;
+  transform:scale(.94);box-shadow:0 0 10px #9c27b060}
+.sv-btn.center-held,.sv-btn.center-active{background:var(--accent2);border-color:var(--accent2);color:#fff}
+.sv-icon{font-size:20px;display:block;margin-bottom:3px}
+.sv-angle{font-size:10px;color:var(--muted)}
+
+/* ── Scan bars ── */
+.scan-wrap{display:flex;gap:8px;margin-top:12px}
+.scan-col{flex:1;display:flex;flex-direction:column;align-items:center}
+.scan-val{font-size:12px;font-weight:700;margin-bottom:4px;min-height:16px}
+.scan-track{width:100%;height:70px;background:#0a1620;border:1px solid var(--border);
+  border-radius:6px;position:relative;overflow:hidden}
+.scan-fill{position:absolute;bottom:0;left:0;right:0;border-radius:4px;
+  background:linear-gradient(180deg,var(--accent),var(--accent2));transition:height .4s ease}
+.scan-label{font-size:10px;color:var(--muted);margin-top:4px;font-weight:600;letter-spacing:.06em}
+
+/* ── IR ── */
+.ir-row{display:flex;gap:10px}
+.ir-box{flex:1;background:#08111e;border:1px solid var(--border);border-radius:10px;
+  padding:10px;text-align:center}
+.ir-label{font-size:9px;color:var(--muted);text-transform:uppercase;letter-spacing:.1em;margin-bottom:6px}
+.ir-val{font-size:13px;font-weight:700}
+.ir-on{color:var(--good)}
+.ir-off{color:var(--muted)}
+.ir-dot{display:inline-block;width:8px;height:8px;border-radius:50%;margin-right:4px;vertical-align:middle}
+.ir-dot-on{background:var(--good);box-shadow:0 0 6px var(--good)}
+.ir-dot-off{background:#2a3a4a}
+
+/* ── APM / GPS ── */
+.apm-row{display:flex;justify-content:space-between;align-items:center;
+  padding:8px 0;border-bottom:1px solid rgba(255,255,255,.04)}
+.apm-row:last-child{border-bottom:none}
+.ch-track{height:6px;background:#1a2e44;border-radius:3px;overflow:hidden;width:90px}
+.ch-fill{height:100%;background:var(--accent);border-radius:3px;transition:width .2s}
+.apm-label{font-size:11px;color:var(--muted)}
+.apm-val{font-size:11px;font-weight:700}
+
+/* ── Tag ── */
+.tag{display:inline-flex;align-items:center;gap:4px;padding:3px 10px;border-radius:12px;
+  font-size:11px;font-weight:700;letter-spacing:.04em}
+.tag-good{background:#0a2a18;color:var(--good)}
+.tag-bad {background:#2a0a0a;color:var(--bad)}
+.tag-warn{background:#2a1e00;color:var(--warn)}
+.tag-info{background:#0a1830;color:var(--accent)}
+.tag-purple{background:#1e0a2e;color:#bb86fc}
+
+/* ── Log ── */
+pre#tlog{background:#050d18;border:1px solid var(--border);border-radius:10px;
+  padding:12px;font-size:11px;color:#4a7a9a;max-height:180px;overflow:auto;
+  white-space:pre-wrap;word-break:break-all;font-family:'Courier New',monospace}
+
+/* ── Flex utils ── */
+.flex{display:flex;align-items:center;gap:8px}
+.flex-between{display:flex;align-items:center;justify-content:space-between}
+.mt8{margin-top:8px}
+.mt12{margin-top:12px}
+button{cursor:pointer;font:inherit}
+</style>
+</head>
+<body>
+
+<!-- ── TOPBAR ── -->
+<div class="topbar">
+  <div class="logo">Dyno<span>Rex</span> X1</div>
+  <div class="topbar-meta">ESP32-S3 · Autonomous Platform · v4.0</div>
+  <span id="uptime" style="margin-left:0"></span>
+  <div id="connBadge">● CONNECTING</div>
+</div>
+
+<div class="grid">
+
+  <!-- ══ MODE SELECTOR ══ -->
+  <div class="card">
+    <div class="card-title">⚙️ Operating Mode</div>
+    <div class="mode-grid">
+      <button class="mode-btn" id="m0" onclick="setMode(0)"><span class="icon">🕹️</span>Manual</button>
+      <button class="mode-btn" id="m1" onclick="setMode(1)"><span class="icon">📏</span>Line</button>
+      <button class="mode-btn" id="m2" onclick="setMode(2)"><span class="icon">🔀</span>Hybrid</button>
+      <button class="mode-btn" id="m3" onclick="setMode(3)"><span class="icon">🎯</span>Follow</button>
+      <button class="mode-btn" id="m4" onclick="setMode(4)"><span class="icon">🛰️</span>GPS</button>
+      <button class="mode-btn" id="m5" onclick="setMode(5)"><span class="icon">🚧</span>Avoid</button>
+    </div>
+    <div class="flex mt8">
+      <span style="font-size:10px;color:var(--muted)">ACTIVE:</span>
+      <span id="modeLabel" class="tag tag-info">MANUAL</span>
+    </div>
+  </div>
+
+  <!-- ══ MANUAL DRIVE ══ -->
+  <div class="card">
+    <div class="card-title">🕹️ Manual Drive</div>
+    <div class="dpad">
+      <div></div>
+      <button class="dp" id="btn-fwd"
+        onpointerdown="holdCmd('forward')" onpointerup="holdCmd('stop')" onpointerleave="holdCmd('stop')">
+        <span class="dp-icon">▲</span><span class="dp-label">FWD</span></button>
+      <div></div>
+
+      <button class="dp" id="btn-left"
+        onpointerdown="holdCmd('left')" onpointerup="holdCmd('stop')" onpointerleave="holdCmd('stop')">
+        <span class="dp-icon">◀</span><span class="dp-label">LEFT</span></button>
+      <button class="dp dp-stop" id="btn-stop"
+        onpointerdown="holdCmd('stop')">
+        <span class="dp-icon">⬛</span><span class="dp-label">STOP</span></button>
+      <button class="dp" id="btn-right"
+        onpointerdown="holdCmd('right')" onpointerup="holdCmd('stop')" onpointerleave="holdCmd('stop')">
+        <span class="dp-icon">▶</span><span class="dp-label">RIGHT</span></button>
+
+      <div></div>
+      <button class="dp" id="btn-bwd"
+        onpointerdown="holdCmd('backward')" onpointerup="holdCmd('stop')" onpointerleave="holdCmd('stop')">
+        <span class="dp-icon">▼</span><span class="dp-label">BACK</span></button>
+      <div></div>
+    </div>
+  </div>
+
+  <!-- ══ ULTRASONIC DISTANCE ══ -->
+  <div class="card">
+    <div class="card-title">📡 Ultrasonic Distance (HC-SR04)</div>
+
+    <!-- Big distance readout -->
+    <div id="distContainer" class="dist-clear" style="text-align:center;padding:8px 0">
+      <div class="dist-big">
+        <div class="dist-num" id="distNum">---</div>
+        <div class="dist-unit">cm</div>
+      </div>
+      <div id="distBadge" class="sensor-badge badge-ok">CLEAR</div>
+    </div>
+
+    <!-- Gauge bar -->
+    <div class="gauge-bar g-dist mt8">
+      <div class="gauge-fill" id="distBar" style="width:100%"></div>
+    </div>
+
+    <!-- Scan results -->
+    <div class="scan-wrap">
+      <div class="scan-col">
+        <div class="scan-val" id="scanLval">---</div>
+        <div class="scan-track"><div class="scan-fill" id="scanLbar" style="height:5%"></div></div>
+        <div class="scan-label">◀ LEFT</div>
+      </div>
+      <div class="scan-col">
+        <div class="scan-val" id="scanFval">---</div>
+        <div class="scan-track"><div class="scan-fill" id="scanFbar" style="height:5%"></div></div>
+        <div class="scan-label">▲ FRONT</div>
+      </div>
+      <div class="scan-col">
+        <div class="scan-val" id="scanRval">---</div>
+        <div class="scan-track"><div class="scan-fill" id="scanRbar" style="height:5%"></div></div>
+        <div class="scan-label">RIGHT ▶</div>
+      </div>
+    </div>
+  </div>
+
+  <!-- ══ ENVIRONMENT SENSORS ══ -->
+  <div class="card">
+    <div class="card-title">🌡️ Environment (DHT22 + Soil)</div>
+    <div class="sensor-2x2">
+
+      <!-- Humidity -->
+      <div class="gauge g-hum">
+        <div class="gauge-label">💧 Humidity</div>
+        <div class="gauge-value" id="humVal" style="color:#00bcd4">--</div>
+        <div class="gauge-unit">% RH</div>
+        <div class="gauge-bar"><div class="gauge-fill" id="humBar" style="width:0%"></div></div>
+        <div id="humBadge" class="sensor-badge badge-ok">NORMAL</div>
+      </div>
+
+      <!-- Temperature -->
+      <div class="gauge g-temp">
+        <div class="gauge-label">🌡️ Temperature</div>
+        <div class="gauge-value" id="tmpVal" style="color:#f59e0b">--</div>
+        <div class="gauge-unit">°C</div>
+        <div class="gauge-bar"><div class="gauge-fill" id="tmpBar" style="width:0%"></div></div>
+        <div id="tmpBadge" class="sensor-badge badge-ok">NORMAL</div>
+      </div>
+    </div>
+
+    <!-- Soil moisture full-width -->
+    <div class="gauge g-soil">
+      <div class="gauge-label">🌱 Soil Moisture</div>
+      <div style="display:flex;align-items:baseline;justify-content:center;gap:5px">
+        <div class="gauge-value" id="soilVal" style="color:#22c55e">--</div>
+        <div class="gauge-unit">%</div>
+      </div>
+      <div class="gauge-bar" style="max-width:240px;margin:8px auto 0">
+        <div class="gauge-fill" id="soilBar" style="width:0%"></div>
+      </div>
+      <div id="soilBadge" class="sensor-badge badge-ok">MOIST</div>
+    </div>
+  </div>
+
+  <!-- ══ IR LINE SENSORS ══ -->
+  <div class="card">
+    <div class="card-title">〰️ IR Line Sensors</div>
+    <div class="ir-row">
+      <div class="ir-box">
+        <div class="ir-label">Left IR</div>
+        <div class="ir-val" id="irLval"><span class="ir-dot ir-dot-off" id="irLdot"></span>--</div>
+      </div>
+      <div class="ir-box">
+        <div class="ir-label">Right IR</div>
+        <div class="ir-val" id="irRval"><span class="ir-dot ir-dot-off" id="irRdot"></span>--</div>
+      </div>
+    </div>
+    <div class="flex mt8">
+      <span style="font-size:10px;color:var(--muted)">STATUS:</span>
+      <span id="irStatus" class="tag tag-warn">WAITING</span>
+    </div>
+  </div>
+
+  <!-- ══ PAN SERVO ══ -->
+  <div class="card">
+    <div class="card-title">🔄 Pan Servo (Manual Mode)</div>
+    <div class="servo-row">
+      <!-- LEFT: hold moves to 60°, release returns to 90° -->
+      <button class="sv-btn" id="sv-left"
+        onpointerdown="servoHold(60)" onpointerup="servoRelease()" onpointerleave="servoRelease()">
+        <span class="sv-icon">◀</span>
+        <span style="font-size:11px;font-weight:700">LEFT</span>
+        <span class="sv-angle">60°</span>
+      </button>
+      <!-- FRONT: click locks to 90° -->
+      <button class="sv-btn" id="sv-front" onclick="servoCenter()">
+        <span class="sv-icon">▲</span>
+        <span style="font-size:11px;font-weight:700">FRONT</span>
+        <span class="sv-angle">90°</span>
+      </button>
+      <!-- RIGHT: hold moves to 120°, release returns to 90° -->
+      <button class="sv-btn" id="sv-right"
+        onpointerdown="servoHold(120)" onpointerup="servoRelease()" onpointerleave="servoRelease()">
+        <span class="sv-icon">▶</span>
+        <span style="font-size:11px;font-weight:700">RIGHT</span>
+        <span class="sv-angle">120°</span>
+      </button>
+    </div>
+    <div class="flex-between">
+      <div class="flex">
+        <span style="font-size:10px;color:var(--muted)">ANGLE:</span>
+        <span id="servoLabel" class="tag tag-purple">90°</span>
+      </div>
+      <button class="tag tag-info" style="border:none;cursor:pointer" onclick="triggerScan()">
+        🔍 Scan Now
+      </button>
+    </div>
+  </div>
+
+  <!-- ══ APM 2.8 GPS SIGNALS ══ -->
+  <div class="card">
+    <div class="card-title">🛰️ APM 2.8 GPS Signals</div>
+    <div class="apm-row">
+      <span class="apm-label">CH1 Steering</span>
+      <div class="ch-track"><div class="ch-fill" id="ch1bar" style="width:50%"></div></div>
+      <span id="ch1val" class="apm-val">1500 µs</span>
+    </div>
+    <div class="apm-row">
+      <span class="apm-label">CH2 Throttle</span>
+      <div class="ch-track"><div class="ch-fill" id="ch2bar" style="width:50%"></div></div>
+      <span id="ch2val" class="apm-val">1500 µs</span>
+    </div>
+    <div class="apm-row">
+      <span class="apm-label">APM Link</span>
+      <span id="apmStatus" class="tag tag-bad">ABSENT</span>
+    </div>
+  </div>
+
+  <!-- ══ LIVE TELEMETRY ══ -->
+  <div class="card wide">
+    <div class="card-title">📶 Live Telemetry JSON (WebSocket)</div>
+    <pre id="tlog">Connecting to WebSocket...</pre>
+  </div>
+
+</div><!-- /grid -->
+
+<script>
+// ══════════════════════════════════════════════════════════════
+//  WebSocket engine
+// ══════════════════════════════════════════════════════════════
+let ws, wsReady = false, currentMode = 0;
+
+function connect() {
+  ws = new WebSocket('ws://' + location.host + '/ws');
+  ws.onopen  = () => { wsReady = true;  setBadge(true);  };
+  ws.onclose = () => { wsReady = false; setBadge(false); setTimeout(connect, 2500); };
+  ws.onerror = () => ws.close();
+  ws.onmessage = e => { try { render(JSON.parse(e.data)); } catch(_){} };
+}
+
+function send(obj) {
+  if (wsReady && ws.readyState === 1) {
+    try { ws.send(JSON.stringify(obj)); } catch(e){}
+  }
+}
+
+function setBadge(ok) {
+  const b = document.getElementById('connBadge');
+  b.textContent = ok ? '● ONLINE' : '● OFFLINE';
+  b.className   = ok ? 'online' : '';
+}
+
+// ══════════════════════════════════════════════════════════════
+//  Mode control
+// ══════════════════════════════════════════════════════════════
+const MODES = ['MANUAL','LINE','HYBRID','FOLLOW','GPS','AVOID'];
+function setMode(id) { send({mode: id}); }
+
+// ══════════════════════════════════════════════════════════════
+//  Drive commands
+// ══════════════════════════════════════════════════════════════
+let driveInterval = null;
+function holdCmd(action) {
+  if (currentMode !== 0 && action !== 'stop') return;
+  // Visual feedback
+  ['fwd','bwd','left','right','stop'].forEach(k => {
+    const el = document.getElementById('btn-' + k);
+    if (el) el.classList.toggle('held', k === action.replace('ward','').replace('back','bwd').replace('forward','fwd'));
+  });
+  send({cmd: action});
+  // Repeat every 100ms for responsive hold
+  clearInterval(driveInterval);
+  if (action !== 'stop') {
+    driveInterval = setInterval(() => send({cmd: action}), 100);
+  }
+}
+
+// Simpler hold handler
+function pressStart(action) {
+  if (currentMode !== 0 && action !== 'stop') return;
+  send({cmd: action});
+  clearInterval(driveInterval);
+  driveInterval = setInterval(() => send({cmd: action}), 100);
+}
+function pressEnd() {
+  clearInterval(driveInterval);
+  driveInterval = null;
+  send({cmd: 'stop'});
+}
+
+// Override the dpad buttons to use cleaner handlers
+document.addEventListener('DOMContentLoaded', () => {
+  const mapping = {
+    'btn-fwd':   'forward',
+    'btn-bwd':   'backward',
+    'btn-left':  'left',
+    'btn-right': 'right',
+  };
+  Object.entries(mapping).forEach(([id, action]) => {
+    const el = document.getElementById(id);
+    if (!el) return;
+    el.onpointerdown = () => { el.classList.add('held');    pressStart(action); };
+    el.onpointerup   = () => { el.classList.remove('held'); pressEnd(); };
+    el.onpointerleave = () => { el.classList.remove('held'); pressEnd(); };
+  });
+  const stopBtn = document.getElementById('btn-stop');
+  if (stopBtn) {
+    stopBtn.onpointerdown = () => { clearInterval(driveInterval); send({cmd:'stop'}); };
+  }
+});
+
+// ══════════════════════════════════════════════════════════════
+//  Servo control
+//  Left/Right: hold → move, release → return to 90°
+//  Front: always 90°
+// ══════════════════════════════════════════════════════════════
+function servoHold(angle) {
+  if (currentMode !== 0) return;
+  send({servo: angle});
+  updateServoLabel(angle);
+  // Visual
+  document.getElementById('sv-left').classList.toggle('held', angle === 60);
+  document.getElementById('sv-right').classList.toggle('held', angle === 120);
+}
+function servoRelease() {
+  if (currentMode !== 0) return;
+  // Auto-return to 90° centre
+  send({servo: 90});
+  updateServoLabel(90);
+  document.getElementById('sv-left').classList.remove('held');
+  document.getElementById('sv-right').classList.remove('held');
+}
+function servoCenter() {
+  if (currentMode !== 0) return;
+  send({servo: 90});
+  updateServoLabel(90);
+}
+function triggerScan() {
+  if (currentMode !== 0) return;
+  send({scan: true});
+}
+function updateServoLabel(angle) {
+  const el = document.getElementById('servoLabel');
+  if (el) el.textContent = angle + '°';
+}
+
+// ══════════════════════════════════════════════════════════════
+//  Render telemetry
+// ══════════════════════════════════════════════════════════════
+function render(d) {
+  currentMode = d.mode || 0;
+
+  // Mode buttons
+  MODES.forEach((_, i) => {
+    const b = document.getElementById('m' + i);
+    if (b) b.className = 'mode-btn' + (d.mode === i ? ' active' : '');
+  });
+  setText('modeLabel', MODES[d.mode] || '?');
+
+  // Uptime
+  if (d.uptime !== undefined) {
+    const s = d.uptime;
+    const h = Math.floor(s/3600), m = Math.floor((s%3600)/60), ss = s%60;
+    setText('uptime', `⏱ ${h}h ${m}m ${ss}s`);
+  }
+
+  // ── Distance ──────────────────────────────────────────────
+  const dist = parseFloat(d.distance);
+  const distValid = dist < 400;
+  const distTxt = distValid ? dist.toFixed(1) : '---';
+
+  setText('distNum', distTxt);
+
+  let distClass = 'dist-clear', badgeTxt = 'CLEAR', badgeCls = 'badge-ok';
+  if (distValid) {
+    if (dist < 18)      { distClass='dist-danger'; badgeTxt='DANGER!'; badgeCls='badge-bad'; }
+    else if (dist < 35) { distClass='dist-close';  badgeTxt='CLOSE';   badgeCls='badge-warn'; }
+  }
+  const dc = document.getElementById('distContainer');
+  if (dc) dc.className = distClass;
+  const db = document.getElementById('distBadge');
+  if (db) { db.textContent=badgeTxt; db.className='sensor-badge '+badgeCls; }
+
+  // Distance bar: 0cm=full red, 200cm=full green, >200=full green
+  const distBarPct = distValid ? clamp((dist / 200) * 100, 2, 100) : 100;
+  setBarW('distBar', distBarPct);
+
+  // Scan bars
+  setScanBar('scanL', d.scanL);
+  setScanBar('scanF', d.scanF);
+  setScanBar('scanR', d.scanR);
+
+  // ── Humidity ──────────────────────────────────────────────
+  const hum = parseFloat(d.humidity) || 0;
+  setText('humVal', hum.toFixed(1));
+  setBarW('humBar', clamp(hum, 0, 100));
+  const humBadge = hum > 80 ? ['HIGH','badge-warn'] : hum < 20 ? ['LOW','badge-warn'] : ['NORMAL','badge-ok'];
+  setBadge2('humBadge', ...humBadge);
+
+  // ── Temperature ───────────────────────────────────────────
+  const tmp = parseFloat(d.temp) || 0;
+  setText('tmpVal', tmp.toFixed(1));
+  setBarW('tmpBar', clamp(((tmp + 10) / 75) * 100, 0, 100));
+  const tmpBadge = tmp > 45 ? ['HOT','badge-bad'] : tmp > 35 ? ['WARM','badge-warn']
+                 : tmp < 0  ? ['COLD','badge-warn'] : ['NORMAL','badge-ok'];
+  setBadge2('tmpBadge', ...tmpBadge);
+
+  // ── Soil ──────────────────────────────────────────────────
+  const soil = parseInt(d.soil) || 0;
+  setText('soilVal', soil);
+  setBarW('soilBar', soil);
+  const soilBadge = soil < 20 ? ['DRY','badge-bad'] : soil > 80 ? ['WET','badge-warn'] : ['MOIST','badge-ok'];
+  setBadge2('soilBadge', ...soilBadge);
+
+  // ── IR sensors ────────────────────────────────────────────
+  setIR('irLval', 'irLdot', d.ir_left);
+  setIR('irRval', 'irRdot', d.ir_right);
+  const iL = d.ir_left, iR = d.ir_right;
+  const irTxt = ( iL &&  iR) ? 'CENTERED'
+              : (!iL &&  iR) ? 'DRIFT LEFT'
+              : ( iL && !iR) ? 'DRIFT RIGHT'
+              : 'LINE LOST';
+  const irEl = document.getElementById('irStatus');
+  if (irEl) { irEl.textContent=irTxt; irEl.className='tag '+(iL||iR?'tag-good':'tag-warn'); }
+
+  // ── Servo angle ───────────────────────────────────────────
+  if (d.servoAngle !== undefined && d.servoAngle !== 255) {
+    updateServoLabel(d.servoAngle);
+    // Highlight active servo button
+    const a = d.servoAngle;
+    document.getElementById('sv-left').classList.toggle('center-active', a === 60);
+    document.getElementById('sv-front').classList.toggle('center-active', a === 90);
+    document.getElementById('sv-right').classList.toggle('center-active', a === 120);
+  }
+
+  // ── APM ───────────────────────────────────────────────────
+  const w1 = parseInt(d.apmCh1Us) || 1500;
+  const w2 = parseInt(d.apmCh2Us) || 1500;
+  setText('ch1val', w1 + ' µs');
+  setText('ch2val', w2 + ' µs');
+  setBarW('ch1bar', clamp(((w1 - 1000) / 1000) * 100, 0, 100));
+  setBarW('ch2bar', clamp(((w2 - 1000) / 1000) * 100, 0, 100));
+  const aEl = document.getElementById('apmStatus');
+  if (aEl) { aEl.textContent=d.apmAlive?'ACTIVE':'ABSENT'; aEl.className='tag '+(d.apmAlive?'tag-good':'tag-bad'); }
+
+  // ── Telemetry log ─────────────────────────────────────────
+  setText('tlog', JSON.stringify(d, null, 2));
+}
+
+// ══════════════════════════════════════════════════════════════
+//  DOM helpers
+// ══════════════════════════════════════════════════════════════
+function setText(id, v) { const e=document.getElementById(id); if(e) e.textContent=v; }
+function setBarW(id, pct) { const e=document.getElementById(id); if(e) e.style.width=clamp(pct,0,100)+'%'; }
+function setBarH(id, pct) { const e=document.getElementById(id); if(e) e.style.height=clamp(pct,0,100)+'%'; }
+function clamp(v,lo,hi)  { return Math.max(lo,Math.min(hi,v)); }
+
+function setBadge2(id, txt, cls) {
+  const e = document.getElementById(id);
+  if (!e) return;
+  e.textContent = txt;
+  e.className   = 'sensor-badge ' + cls;
+}
+
+function setIR(valId, dotId, on) {
+  const ve = document.getElementById(valId);
+  const de = document.getElementById(dotId);
+  if (ve) { ve.className='ir-val '+(on?'ir-on':'ir-off'); }
+  if (de) { de.className='ir-dot '+(on?'ir-dot-on':'ir-dot-off'); }
+  // Set text node (after the dot span)
+  if (ve) {
+    const dot = ve.querySelector('.ir-dot');
+    // Update only the text content after the dot
+    const nodes = ve.childNodes;
+    for (let n of nodes) {
+      if (n.nodeType === 3) { n.textContent = on ? ' LINE' : ' NONE'; break; }
+    }
+  }
+}
+
+function setScanBar(prefix, v) {
+  const dist = parseFloat(v);
+  if (isNaN(dist) || dist >= 400) {
+    setText(prefix + 'val', 'CLR');
+    setBarH(prefix + 'bar', 3);
+    return;
+  }
+  setText(prefix + 'val', dist.toFixed(1) + ' cm');
+  // Shorter distance = taller bar (obstacle closer = bigger visual warning)
+  const pct = clamp((1 - dist / 150) * 100, 3, 97);
+  setBarH(prefix + 'bar', pct);
+}
+
+connect();
+</script>
+</body>
+</html>
+)HTML";
+
+// ══════════════════════════════════════════════════════════════
+//  ISR – APM PWM capture
+// ══════════════════════════════════════════════════════════════
+void IRAM_ATTR isrCh1() {
+  const uint32_t now = micros();
+  if (digitalRead(APM_CH1_PIN) == HIGH) {
+    gApmCh1.riseUs = now;
+  } else {
+    uint32_t w = now - gApmCh1.riseUs;
+    if (w >= 800 && w <= 2200) {
+      portENTER_CRITICAL_ISR(&gStateMux);
+      gApmCh1.widthUs   = (uint16_t)w;
+      gApmCh1.updatedUs = now;
+      gApmCh1.active    = true;
+      portEXIT_CRITICAL_ISR(&gStateMux);
+    }
+  }
+}
+
+void IRAM_ATTR isrCh2() {
+  const uint32_t now = micros();
+  if (digitalRead(APM_CH2_PIN) == HIGH) {
+    gApmCh2.riseUs = now;
+  } else {
+    uint32_t w = now - gApmCh2.riseUs;
+    if (w >= 800 && w <= 2200) {
+      portENTER_CRITICAL_ISR(&gStateMux);
+      gApmCh2.widthUs   = (uint16_t)w;
+      gApmCh2.updatedUs = now;
+      gApmCh2.active    = true;
+      portEXIT_CRITICAL_ISR(&gStateMux);
+    }
+  }
+}
+
+// ══════════════════════════════════════════════════════════════
+//  SETUP
+// ══════════════════════════════════════════════════════════════
+void setup() {
+  Serial.begin(115200);
+  delay(300);
+  Serial.println("\n[DynoRex X1] Firmware v4.0 booting...");
+
+  // ── Motor direction pins ──
+  const uint8_t dirPins[] = {MOTOR_A_IN1, MOTOR_A_IN2, MOTOR_B_IN3, MOTOR_B_IN4};
+  for (uint8_t p : dirPins) { pinMode(p, OUTPUT); digitalWrite(p, LOW); }
+  setupMotorPwm();
+  stopMotors();
+  Serial.println("[Motor] OK");
+
+  // ── IR sensors ──
+  pinMode(IR_LEFT,  INPUT_PULLUP);
+  pinMode(IR_RIGHT, INPUT_PULLUP);
+  Serial.println("[IR] OK");
+
+  // ── Ultrasonic ──
+  pinMode(TRIG_PIN, OUTPUT);
+  digitalWrite(TRIG_PIN, LOW);
+  pinMode(ECHO_PIN, INPUT);
+  Serial.println("[US] OK");
+
+  // ── Pan servo ──
+  panServo.setPeriodHertz(50);
+  panServo.attach(SERVO_PIN, SERVO_MIN_US, SERVO_MAX_US);
+  servoWriteRaw(SERVO_FRONT);
+  delay(500);
+  Serial.println("[Servo] OK → 90°");
+
+  // ── DHT22 ──
+  dht.begin();
+  Serial.println("[DHT22] OK");
+
+  // ── Soil moisture ADC ──
+  pinMode(SOIL_PIN, INPUT);
+  analogReadResolution(12);
+#if defined(ADC_11db)
+  analogSetPinAttenuation(SOIL_PIN, ADC_11db);
+#endif
+  Serial.println("[Soil] OK");
+
+  // ── APM interrupts ──
+  pinMode(APM_CH1_PIN, INPUT);
+  pinMode(APM_CH2_PIN, INPUT);
+  attachInterrupt(digitalPinToInterrupt(APM_CH1_PIN), isrCh1, CHANGE);
+  attachInterrupt(digitalPinToInterrupt(APM_CH2_PIN), isrCh2, CHANGE);
+  Serial.println("[APM] Interrupts attached");
+
+  // ── WiFi – STA only, no hotspot fallback ──
+  WiFi.mode(WIFI_STA);
+  WiFi.setSleep(false);
+  WiFi.begin(WIFI_SSID, WIFI_PASSWORD);
+  Serial.printf("[WiFi] Connecting to %s", WIFI_SSID);
+  for (uint8_t i = 0; i < 40 && WiFi.status() != WL_CONNECTED; i++) {
+    delay(500);
+    Serial.print(".");
+  }
+  if (WiFi.status() == WL_CONNECTED) {
+    Serial.printf("\n[WiFi] Connected → http://%s\n", WiFi.localIP().toString().c_str());
+  } else {
+    Serial.println("\n[WiFi] Not connected – retrying in background (check SSID/password)");
+    // Stays in STA mode; WiFi stack will auto-reconnect when the AP comes online
+  }
+
+  setupWeb();
+  gLastWebCmdMs = millis();
+  Serial.println("[DynoRex X1] Ready!");
+}
+
+// ══════════════════════════════════════════════════════════════
+//  MAIN LOOP
+// ══════════════════════════════════════════════════════════════
+void loop() {
+  unsigned long now = millis();
+
+  // Always update sensors
+  readIR();
+  scanTick();
+
+  // Poll ultrasonic front distance only when scan machine is idle
+  if (gScanStep == SCAN_IDLE && gMode != MODE_FOLLOW_ME && now - gTPoll >= T_US_POLL) {
+    gTPoll = now;
+    pollUSFront();
+  }
+
+  if (now - gTDht >= T_DHT) {
+    gTDht = now;
+    readDHT();
+  }
+  if (now - gTSoil >= T_SOIL) {
+    gTSoil = now;
+    readSoil();
+  }
+
+  // Mode dispatch
+  switch (gMode) {
+    case MODE_MANUAL:         handleManual();        break;
+    case MODE_LINE_FOLLOW:    handleLineFollow();    break;
+    case MODE_HYBRID:         handleHybrid();        break;
+    case MODE_FOLLOW_ME:      handleFollowMe();      break;
+    case MODE_GPS_AUTO:       handleGPS();           break;
+    case MODE_OBSTACLE_AVOID: handleObstacleAvoid(); break;
+    default: stopMotors(); break;
+  }
+
+  // Telemetry broadcast
+  if (now - gTTelem >= T_TELEMETRY) {
+    gTTelem = now;
+    broadcastTelemetry();
+  }
+
+  // WebSocket cleanup (throttled)
+  if (now - gTWsClean >= T_WS_CLEAN) {
+    gTWsClean = now;
+    ws.cleanupClients(WS_MAX_CLIENTS);
+  }
+}
+
+// ══════════════════════════════════════════════════════════════
+//  MOTOR CONTROL LAYER
+// ══════════════════════════════════════════════════════════════
+int16_t shapeMotorCommand(int16_t s, bool invert, uint8_t trimPct) {
+  s = constrain(s, -255, 255);
+  if (s == 0) return 0;
+  uint16_t mag  = (uint16_t)abs(s);
+  uint16_t duty = (uint16_t)map((long)mag, 1L, 255L,
+                                (long)MOTOR_MIN_EFFECTIVE_PWM,
+                                (long)MOTOR_MAX_EFFECTIVE_PWM);
+  duty = (uint16_t)((duty * trimPct + 50U) / 100U);
+  duty = (uint16_t)constrain((int)duty, 0, 255);
+  int16_t shaped = (s < 0) ? -(int16_t)duty : (int16_t)duty;
+  return invert ? -shaped : shaped;
+}
+
+void driveLeft(int16_t s) {
+  int16_t c = shapeMotorCommand(s, LEFT_MOTOR_INVERT, LEFT_DRIVE_TRIM_PCT);
+  digitalWrite(MOTOR_A_IN1, c > 0 ? HIGH : LOW);
+  digitalWrite(MOTOR_A_IN2, c < 0 ? HIGH : LOW);
+  motorPwmWriteA((uint8_t)abs(c));
+}
+
+void driveRight(int16_t s) {
+  int16_t c = shapeMotorCommand(s, RIGHT_MOTOR_INVERT, RIGHT_DRIVE_TRIM_PCT);
+  digitalWrite(MOTOR_B_IN3, c > 0 ? HIGH : LOW);
+  digitalWrite(MOTOR_B_IN4, c < 0 ? HIGH : LOW);
+  motorPwmWriteB((uint8_t)abs(c));
+}
+
+void driveTank(int16_t l, int16_t r) {
+#if SWAP_LEFT_RIGHT_DRIVE
+  driveLeft(r);
+  driveRight(l);
+#else
+  driveLeft(l);
+  driveRight(r);
+#endif
+}
+
+void forward(int s)   { driveTank(s, s);   }
+void backward(int s)  { driveTank(-s, -s); }
+void turnLeft(int s)  { driveTank(-s, s);  }
+void turnRight(int s) { driveTank(s, -s);  }
+void stopMotors()     { driveTank(0, 0);   }
+
+// ══════════════════════════════════════════════════════════════
+//  SERVO
+// ══════════════════════════════════════════════════════════════
+
+/* servoWriteRaw – writes any angle 0-180° directly to hardware.
+   Used internally by the scan machine and by user commands.
+   Always clamp to [SERVO_LEFT, SERVO_RIGHT] = [60, 120].          */
+void servoWriteRaw(uint8_t deg) {
+  deg = constrain(deg, (uint8_t)SERVO_LEFT, (uint8_t)SERVO_RIGHT);
+  if (!panServo.attached())
+    panServo.attach(SERVO_PIN, SERVO_MIN_US, SERVO_MAX_US);
+  panServo.write(deg);
+  portENTER_CRITICAL(&gStateMux);
+  gServoAngle = deg;
+  portEXIT_CRITICAL(&gStateMux);
+}
+
+/* servoWrite – public API; clamps to safe range and writes.       */
+void servoWrite(uint8_t deg) {
+  servoWriteRaw(deg);
+}
+
+// ══════════════════════════════════════════════════════════════
+//  ULTRASONIC SENSING
+// ══════════════════════════════════════════════════════════════
+float pingUS() {
+  digitalWrite(TRIG_PIN, LOW);
+  delayMicroseconds(2);
+  digitalWrite(TRIG_PIN, HIGH);
+  delayMicroseconds(10);
+  digitalWrite(TRIG_PIN, LOW);
+  long us = pulseIn(ECHO_PIN, HIGH, US_ECHO_TIMEOUT_US);
+  if (us == 0) return 999.0f;
+  return (float)us * 0.01715f;
+}
+
+float measureDistanceCm(uint8_t samples) {
+  float sum = 0.0f;
+  uint8_t cnt = 0;
+  for (uint8_t i = 0; i < samples; ++i) {
+    float s = pingUS();
+    if (s < US_MAX_VALID_CM) { sum += s; ++cnt; }
+    if (i + 1u < samples) delayMicroseconds(600);
+  }
+  return cnt ? sum / (float)cnt : 999.0f;
+}
+
+/* Non-blocking EMA filter for background front-distance polling */
+void pollUSFront() {
+  static float    filtered   = 999.0f;
+  static unsigned long lastValidMs = 0;
+  unsigned long now = millis();
+  float s = pingUS();
+  if (s < US_MAX_VALID_CM) {
+    filtered     = (filtered >= US_MAX_VALID_CM) ? s : filtered * 0.65f + s * 0.35f;
+    lastValidMs  = now;
+  } else if (now - lastValidMs > 300) {
+    filtered = 999.0f;
+  }
+  portENTER_CRITICAL(&gStateMux);
+  gDistCm = filtered;
+  portEXIT_CRITICAL(&gStateMux);
+}
+
+void setFrontDistance(float cm) {
+  portENTER_CRITICAL(&gStateMux);
+  gDistCm = cm;
+  portEXIT_CRITICAL(&gStateMux);
+}
+
+// ──────────────────────────────────────────────────────────────
+//  NON-BLOCKING SCAN STATE MACHINE
+// ──────────────────────────────────────────────────────────────
+void scanRequest() {
+  portENTER_CRITICAL(&gStateMux);
+  bool busy = (gScanStep != SCAN_IDLE);
+  if (!busy) {
+    gScanReady = false;
+    gScanStep  = SCAN_GO_LEFT;
+  }
+  portEXIT_CRITICAL(&gStateMux);
+}
+
+void scanTick() {
+  unsigned long now = millis();
+  switch (gScanStep) {
+    case SCAN_IDLE: break;
+
+    case SCAN_GO_LEFT:
+      servoWriteRaw(SERVO_LEFT);
+      gScanSettleMs = now;
+      portENTER_CRITICAL(&gStateMux); gScanStep = SCAN_WAIT_LEFT; portEXIT_CRITICAL(&gStateMux);
+      break;
+
+    case SCAN_WAIT_LEFT:
+      if (now - gScanSettleMs >= SERVO_SETTLE_MS) {
+        float v = measureDistanceCm(3);
+        portENTER_CRITICAL(&gStateMux); gScanLeft = v; gScanStep = SCAN_GO_FRONT; portEXIT_CRITICAL(&gStateMux);
+      }
+      break;
+
+    case SCAN_GO_FRONT:
+      servoWriteRaw(SERVO_FRONT);
+      gScanSettleMs = now;
+      portENTER_CRITICAL(&gStateMux); gScanStep = SCAN_WAIT_FRONT; portEXIT_CRITICAL(&gStateMux);
+      break;
+
+    case SCAN_WAIT_FRONT:
+      if (now - gScanSettleMs >= SERVO_SETTLE_MS) {
+        float v = measureDistanceCm(3);
+        portENTER_CRITICAL(&gStateMux); gScanFront = v; gDistCm = v; gScanStep = SCAN_GO_RIGHT; portEXIT_CRITICAL(&gStateMux);
+      }
+      break;
+
+    case SCAN_GO_RIGHT:
+      servoWriteRaw(SERVO_RIGHT);
+      gScanSettleMs = now;
+      portENTER_CRITICAL(&gStateMux); gScanStep = SCAN_WAIT_RIGHT; portEXIT_CRITICAL(&gStateMux);
+      break;
+
+    case SCAN_WAIT_RIGHT:
+      if (now - gScanSettleMs >= SERVO_SETTLE_MS) {
+        float v = measureDistanceCm(3);
+        portENTER_CRITICAL(&gStateMux); gScanRight = v; gScanStep = SCAN_DONE; portEXIT_CRITICAL(&gStateMux);
+      }
+      break;
+
+    case SCAN_DONE:
+      servoWriteRaw(SERVO_FRONT);   // ← always return to centre after scan
+      gScanSettleMs = now;
+      portENTER_CRITICAL(&gStateMux); gScanStep = SCAN_WAIT_CENTER; portEXIT_CRITICAL(&gStateMux);
+      break;
+
+    case SCAN_WAIT_CENTER:
+      if (now - gScanSettleMs >= SERVO_SETTLE_MS) {
+        portENTER_CRITICAL(&gStateMux);
+        gScanReady = true;
+        gScanStep  = SCAN_IDLE;
+        portEXIT_CRITICAL(&gStateMux);
+      }
+      break;
+  }
+}
+
+// ══════════════════════════════════════════════════════════════
+//  IR SENSORS  (debounced sliding window)
+// ══════════════════════════════════════════════════════════════
+void readIR() {
+  static uint8_t lHist = 0, rHist = 0;
+  lHist = (uint8_t)((lHist << 1) | (digitalRead(IR_LEFT)  == LOW ? 1u : 0u));
+  rHist = (uint8_t)((rHist << 1) | (digitalRead(IR_RIGHT) == LOW ? 1u : 0u));
+  bool iL = (__builtin_popcount((unsigned)(lHist & 0x0F)) >= 3);
+  bool iR = (__builtin_popcount((unsigned)(rHist & 0x0F)) >= 3);
+  portENTER_CRITICAL(&gStateMux);
+  gIrLeft  = iL;
+  gIrRight = iR;
+  portEXIT_CRITICAL(&gStateMux);
+}
+
+// ══════════════════════════════════════════════════════════════
+//  DHT22 & SOIL
+// ══════════════════════════════════════════════════════════════
+void readDHT() {
+  float h = dht.readHumidity();
+  float t = dht.readTemperature();
+  if (!isnan(h) && !isnan(t)) {
+    portENTER_CRITICAL(&gStateMux);
+    gHumidity = h;
+    gTempC    = t;
+    portEXIT_CRITICAL(&gStateMux);
+    Serial.printf("[DHT22] T=%.1f°C  H=%.1f%%\n", t, h);
+  }
+}
+
+void readSoil() {
+  uint32_t acc = 0;
+  for (uint8_t i = 0; i < 4; ++i) { acc += (uint32_t)analogRead(SOIL_PIN); delayMicroseconds(120); }
+  int raw = (int)(acc >> 2);
+  // 4095 = fully dry (0%), 0 = fully wet (100%)
+  uint8_t pct = (uint8_t)constrain(map((long)raw, 4095L, 0L, 0L, 100L), 0L, 100L);
+  portENTER_CRITICAL(&gStateMux);
+  gSoilPct = (uint8_t)((((uint16_t)gSoilPct * 3U) + pct) >> 2);
+  portEXIT_CRITICAL(&gStateMux);
+}
+
+// ══════════════════════════════════════════════════════════════
+//  APM HELPERS
+// ══════════════════════════════════════════════════════════════
+bool apmAlive() {
+  uint32_t now = micros();
+  portENTER_CRITICAL(&gStateMux);
+  bool ok = gApmCh1.active && gApmCh2.active &&
+            ((uint32_t)(now - gApmCh1.updatedUs) < APM_TIMEOUT_US) &&
+            ((uint32_t)(now - gApmCh2.updatedUs) < APM_TIMEOUT_US);
+  portEXIT_CRITICAL(&gStateMux);
+  return ok;
+}
+
+int16_t rcToSpeed(uint16_t us) {
+  us = (uint16_t)constrain((int)us, APM_PWM_MIN, APM_PWM_MAX);
+  if (us >= APM_PWM_MID - APM_DEADBAND && us <= APM_PWM_MID + APM_DEADBAND) return 0;
+  return (int16_t)(us < APM_PWM_MID
+    ? map((long)us, APM_PWM_MIN, APM_PWM_MID, -255L, 0L)
+    : map((long)us, APM_PWM_MID, APM_PWM_MAX,    0L, 255L));
+}
+
+// ══════════════════════════════════════════════════════════════
+//  MODE 0 – MANUAL
+// ══════════════════════════════════════════════════════════════
+void handleManual() {
+  if (millis() - gLastWebCmdMs > T_FAILSAFE) gManCmd = CMD_STOP;
+  switch (gManCmd) {
+    case CMD_FORWARD:  forward(MANUAL_DRIVE_SPD);   break;
+    case CMD_BACKWARD: backward(MANUAL_DRIVE_SPD);  break;
+    case CMD_LEFT:     turnLeft(MANUAL_TURN_OUTER);  break;
+    case CMD_RIGHT:    turnRight(MANUAL_TURN_OUTER); break;
+    default:           stopMotors(); break;
+  }
+}
+
+// ══════════════════════════════════════════════════════════════
+//  MODE 1 – LINE FOLLOW
+// ══════════════════════════════════════════════════════════════
+void handleLineFollow() {
+  static int lastLinePos = 0;
+
+  // gIrLeft/Right = true when sensor sees the line (LOW signal)
+  bool rSees = gIrRight;
+  bool lSees = gIrLeft;
+
+  if (rSees && !lSees) {
+    // Drifted left → turn right
+    driveTank(LINE_TURN_SPD, 0);
+    lastLinePos = 1;
+  } else if (!rSees && lSees) {
+    // Drifted right → turn left
+    driveTank(0, LINE_TURN_SPD);
+    lastLinePos = -1;
+  } else if (rSees && lSees) {
+    // Both on line = intersection → stop
+    stopMotors();
+    lastLinePos = 0;
+  } else {
+    // Line lost – gentle recovery based on last known direction
+    if      (lastLinePos ==  1) driveTank(LINE_FWD_SPD, LINE_FWD_SPD / 3);
+    else if (lastLinePos == -1) driveTank(LINE_FWD_SPD / 3, LINE_FWD_SPD);
+    else                        forward(LINE_FWD_SPD);
+  }
+}
+
+// ══════════════════════════════════════════════════════════════
+//  MODE 5 – OBSTACLE AVOIDANCE
+// ══════════════════════════════════════════════════════════════
+void handleObstacleAvoid() {
+  static AvoidState avSt   = AV_FORWARD;
+  static unsigned long tPh = 0;
+  static bool turnLeft_    = true;
+  static RobotMode lastMode = MODE_MANUAL;
+
+  if (gMode != lastMode) { lastMode=gMode; avSt=AV_FORWARD; servoWriteRaw(SERVO_FRONT); stopMotors(); return; }
+
+  unsigned long now = millis();
+
+  switch (avSt) {
+    case AV_FORWARD: {
+      float d = gDistCm;
+      if (d < DIST_OBSTACLE_CM && d > 0.5f) { stopMotors(); tPh=now; avSt=AV_STOP1; }
+      else { forward(SPD_HALF); }
+      break;
+    }
+    case AV_STOP1:
+      stopMotors();
+      if (now - tPh >= 500) { backward(SPD_TURN); tPh=now; avSt=AV_REVERSE; }
+      break;
+
+    case AV_REVERSE:
+      if (now - tPh >= 250) { stopMotors(); tPh=now; avSt=AV_STOP2; }
+      else { backward(SPD_TURN); }
+      break;
+
+    case AV_STOP2:
+      stopMotors();
+      if (now - tPh >= 400 && gScanStep == SCAN_IDLE) { scanRequest(); avSt=AV_SCAN_START; }
+      break;
+
+    case AV_SCAN_START:
+      avSt = AV_SCAN_WAIT;
+      break;
+
+    case AV_SCAN_WAIT:
+      stopMotors();
+      if (gScanReady) {
+        float sL, sR;
+        portENTER_CRITICAL(&gStateMux); sL=gScanLeft; sR=gScanRight; gScanReady=false; portEXIT_CRITICAL(&gStateMux);
+        servoWriteRaw(SERVO_FRONT);   // always return to front after scan decision
+        turnLeft_ = (sL > sR);
+        tPh = now; avSt = AV_TURN;
+      }
+      break;
+
+    case AV_TURN:
+      if (turnLeft_) turnLeft(SPD_TURN); else turnRight(SPD_TURN);
+      if (now - tPh >= 500) { stopMotors(); tPh=now; avSt=AV_STOP3; }
+      break;
+
+    case AV_STOP3:
+      stopMotors();
+      servoWriteRaw(SERVO_FRONT);
+      if (now - tPh >= 200) avSt = AV_FORWARD;
+      break;
+  }
+}
+
+// ══════════════════════════════════════════════════════════════
+//  MODE 2 – HYBRID
+// ══════════════════════════════════════════════════════════════
+void handleHybrid() {
+  static HybridState hbSt  = HB_FOLLOW;
+  static unsigned long tPh = 0;
+  static bool turnLeft_     = true;
+  static RobotMode lastMode = MODE_MANUAL;
+
+  if (gMode != lastMode) { lastMode=gMode; hbSt=HB_FOLLOW; stopMotors(); return; }
+
+  unsigned long now = millis();
+
+  switch (hbSt) {
+    case HB_FOLLOW: {
+      float d = gDistCm;
+      if (d < DIST_OBSTACLE_CM && d > 0.5f) { stopMotors(); tPh=now; hbSt=HB_AVOID_STOP1; }
+      else handleLineFollow();
+      break;
+    }
+    case HB_AVOID_STOP1:
+      stopMotors();
+      if (now - tPh >= 500) { backward(SPD_TURN); tPh=now; hbSt=HB_AVOID_REVERSE; }
+      break;
+
+    case HB_AVOID_REVERSE:
+      if (now - tPh >= 250) { stopMotors(); tPh=now; hbSt=HB_AVOID_STOP2; }
+      else backward(SPD_TURN);
+      break;
+
+    case HB_AVOID_STOP2:
+      stopMotors();
+      if (now - tPh >= 400 && gScanStep == SCAN_IDLE) { scanRequest(); hbSt=HB_SCAN_WAIT; }
+      break;
+
+    case HB_SCAN_WAIT:
+      stopMotors();
+      if (gScanReady) {
+        float sL, sR;
+        portENTER_CRITICAL(&gStateMux); sL=gScanLeft; sR=gScanRight; gScanReady=false; portEXIT_CRITICAL(&gStateMux);
+        servoWriteRaw(SERVO_FRONT);
+        turnLeft_ = (sL > sR);
+        tPh=now; hbSt=HB_TURN_AWAY;
+      }
+      break;
+
+    case HB_TURN_AWAY:
+      if (turnLeft_) turnLeft(SPD_TURN); else turnRight(SPD_TURN);
+      if (now - tPh >= 500) { tPh=now; hbSt=HB_FORWARD_CLEAR; }
+      break;
+
+    case HB_FORWARD_CLEAR:
+      forward(SPD_TURN);
+      if (now - tPh >= 800) { tPh=now; hbSt=HB_RECOVER_LINE; }
+      break;
+
+    case HB_RECOVER_LINE: {
+      float d = gDistCm;
+      if (d < DIST_OBSTACLE_CM && d > 0.5f) { stopMotors(); tPh=now; hbSt=HB_AVOID_STOP1; break; }
+      bool rSees = gIrRight, lSees = gIrLeft;
+      if (rSees || lSees) { stopMotors(); hbSt=HB_FOLLOW; }
+      else {
+        if (turnLeft_) driveTank(LINE_FWD_SPD, LINE_FWD_SPD/2);
+        else           driveTank(LINE_FWD_SPD/2, LINE_FWD_SPD);
+        if (now - tPh >= 4000) stopMotors();
+      }
+      break;
+    }
+  }
+}
+
+// ══════════════════════════════════════════════════════════════
+//  MODE 3 – FOLLOW-ME  (scan → decide → execute loop)
+// ══════════════════════════════════════════════════════════════
+void handleFollowMe() {
+  static unsigned long tPhase = 0;
+  static RobotMode lastMode   = MODE_MANUAL;
+  static float dL=999, dC=999, dR=999;
+  static uint8_t sweepState = 0;  // 0=C 1=L 2=C 3=R
+
+  if (gMode != lastMode) {
+    lastMode=gMode; sweepState=0;
+    servoWriteRaw(SERVO_FRONT); tPhase=millis(); stopMotors();
+    dL=dC=dR=999;
+    return;
+  }
+
+  unsigned long now = millis();
+
+  // ── Servo sweep task ──────────────────────────────────────
+  if (now - tPhase >= 160) {
+    float dist = measureDistanceCm(2);
+    if      (sweepState == 0 || sweepState == 2) { dC=dist; setFrontDistance(dC); }
+    else if (sweepState == 1) dL = dist;
+    else if (sweepState == 3) dR = dist;
+
+    float minAll = min(dL, min(dC, dR));
+    if (minAll > FOLLOW_LOST_CM) {
+      sweepState = 0;
+      servoWriteRaw(SERVO_FRONT);
+      dL = dR = 999;
+    } else {
+      sweepState = (sweepState + 1) % 4;
+      if      (sweepState == 0 || sweepState == 2) servoWriteRaw(SERVO_FRONT);
+      else if (sweepState == 1)                    servoWriteRaw(SERVO_LEFT);
+      else if (sweepState == 3)                    servoWriteRaw(SERVO_RIGHT);
+    }
+    tPhase = millis();
+  }
+
+  // ── Motor driving task ────────────────────────────────────
+  float minD = min(dL, min(dC, dR));
+  if (minD > FOLLOW_LOST_CM) {
+    stopMotors();
+  } else {
+    int dir = 0;
+    if (dC <= minD + 10.0f && dC < FOLLOW_LOST_CM) { dir=0; minD=dC; }
+    else if (dL < dR)                                { dir=1; minD=dL; }
+    else                                             { dir=2; minD=dR; }
+
+    float error = minD - FOLLOW_TARGET_CM;
+    if (fabsf(error) <= FOLLOW_DEADZONE_CM) {
+      stopMotors();
+    } else if (error < 0) {
+      int spd = constrain((int)(-error * 10.0f), SPD_SLOW, SPD_FULL);
+      backward(spd);
+    } else {
+      int spd = constrain((int)(error * 10.0f), SPD_SLOW, SPD_FULL);
+      if      (dir == 0) forward(spd);
+      else if (dir == 1) turnLeft(SPD_TURN);
+      else               turnRight(SPD_TURN);
+    }
+  }
+}
+
+// ══════════════════════════════════════════════════════════════
+//  MODE 4 – GPS AUTO (APM 2.8 PWM INPUT)
+// ══════════════════════════════════════════════════════════════
+void handleGPS() {
+  if (!apmAlive()) { stopMotors(); return; }
+  uint16_t w1, w2;
+  portENTER_CRITICAL(&gStateMux); w1=gApmCh1.widthUs; w2=gApmCh2.widthUs; portEXIT_CRITICAL(&gStateMux);
+  int16_t steering = rcToSpeed(w1);
+  int16_t throttle = rcToSpeed(w2);
+  int16_t lSpd = (int16_t)constrain((int32_t)throttle + steering, -255, 255);
+  int16_t rSpd = (int16_t)constrain((int32_t)throttle - steering, -255, 255);
+  driveTank(lSpd, rSpd);
+}
+
+// ══════════════════════════════════════════════════════════════
+//  WEB SERVER  setup & handlers
+// ══════════════════════════════════════════════════════════════
+void setupWeb() {
+  ws.onEvent(onWsEvent);
+  server.addHandler(&ws);
+
+  server.on("/", HTTP_GET, [](AsyncWebServerRequest *req) {
+    req->send_P(200, "text/html", DASHBOARD_HTML);
+  });
+
+  server.on("/mode", HTTP_GET, [](AsyncWebServerRequest *req) {
+    if (!req->hasParam("id")) { req->send(400,"text/plain","?id= required"); return; }
+    int id = req->getParam("id")->value().toInt();
+    if (id < 0 || id > 5)    { req->send(400,"text/plain","id 0-5"); return; }
+    setMode((RobotMode)id);
+    req->send(200,"text/plain","OK");
+  });
+
+  server.on("/cmd", HTTP_GET, [](AsyncWebServerRequest *req) {
+    if (!req->hasParam("action")) { req->send(400,"text/plain","?action= required"); return; }
+    handleWebCmd(req->getParam("action")->value());
+    req->send(200,"text/plain","OK");
+  });
+
+  server.on("/servo", HTTP_GET, [](AsyncWebServerRequest *req) {
+    if (!req->hasParam("angle")) { req->send(400,"text/plain","?angle= required"); return; }
+    if (gMode != MODE_MANUAL)    { req->send(409,"text/plain","Manual mode only"); return; }
+    uint8_t a = (uint8_t)constrain(req->getParam("angle")->value().toInt(), 0, 180);
+    servoWriteRaw(a);
+    req->send(200,"text/plain","OK");
+  });
+
+  server.on("/scan", HTTP_GET, [](AsyncWebServerRequest *req) {
+    if (gMode != MODE_MANUAL) { req->send(409,"text/plain","Manual mode only"); return; }
+    scanRequest();
+    req->send(200,"text/plain","OK");
+  });
+
+  server.on("/telemetry", HTTP_GET, [](AsyncWebServerRequest *req) {
+    TelemetrySnapshot snap;
+    snapshotTelemetry(snap);
+#if ARDUINOJSON_VERSION_MAJOR >= 7
+    JsonDocument d;
+#else
+    StaticJsonDocument<400> d;
+#endif
+    d["mode"]      = (uint8_t)snap.mode;
+    d["distance"]  = roundf(snap.distance * 10.0f) / 10.0f;
+    d["humidity"]  = snap.humidity;
+    d["temp"]      = snap.tempC;
+    d["soil"]      = snap.soilPct;
+    d["ir_left"]   = snap.irLeft  ? 1 : 0;
+    d["ir_right"]  = snap.irRight ? 1 : 0;
+    d["scanL"]     = snap.scanLeft;
+    d["scanF"]     = snap.scanFront;
+    d["scanR"]     = snap.scanRight;
+    d["servoAngle"]= snap.servoAngle;
+    d["apmCh1Us"]  = snap.apmCh1Us;
+    d["apmCh2Us"]  = snap.apmCh2Us;
+    d["apmAlive"]  = snap.apmAlive;
+    d["uptime"]    = snap.uptimeSec;
+    String out; serializeJson(d, out);
+    req->send(200,"application/json",out);
+  });
+
+  server.begin();
+  Serial.println("[Web] Server started");
+}
+
+// ─── WebSocket event handler ──────────────────────────────────
+void onWsEvent(AsyncWebSocket *s, AsyncWebSocketClient *c, AwsEventType type,
+               void *arg, uint8_t *data, size_t len) {
+  (void)s;
+  if (type == WS_EVT_CONNECT) {
+    Serial.printf("[WS] #%u connected (total %u)\n", c->id(), ws.count());
+  } else if (type == WS_EVT_DISCONNECT) {
+    Serial.printf("[WS] #%u disconnected\n", c->id());
+  } else if (type == WS_EVT_DATA) {
+    AwsFrameInfo *inf = (AwsFrameInfo *)arg;
+    if (!inf || !inf->final || inf->index != 0 || inf->len != len ||
+        inf->opcode != WS_TEXT || len == 0) return;
+
+#if ARDUINOJSON_VERSION_MAJOR >= 7
+    JsonDocument doc;
+#else
+    StaticJsonDocument<256> doc;
+#endif
+    if (deserializeJson(doc, data, len)) return;  // parse error
+
+    if (doc.containsKey("cmd")) {
+      handleWebCmd(doc["cmd"].as<String>());
+    } else if (doc.containsKey("mode")) {
+      int id = doc["mode"].as<int>();
+      if (id >= 0 && id <= 5) setMode((RobotMode)id);
+    } else if (doc.containsKey("servo")) {
+      if (gMode == MODE_MANUAL) {
+        uint8_t a = (uint8_t)constrain(doc["servo"].as<int>(), 0, 180);
+        servoWriteRaw(a);
+      }
+    } else if (doc.containsKey("scan")) {
+      if (gMode == MODE_MANUAL) scanRequest();
+    }
+  }
+}
+
+// ─── Mode switch ─────────────────────────────────────────────
+void setMode(RobotMode m) {
+  stopMotors();
+  servoWriteRaw(SERVO_FRONT);   // always centre servo on mode change
+  portENTER_CRITICAL(&gStateMux);
+  gManCmd    = CMD_STOP;
+  gScanReady = false;
+  gScanStep  = SCAN_IDLE;
+  gMode      = m;
+  portEXIT_CRITICAL(&gStateMux);
+  Serial.printf("[Mode] → %d (%s)\n", (int)m,
+    m==0?"MANUAL":m==1?"LINE":m==2?"HYBRID":m==3?"FOLLOW":m==4?"GPS":"AVOID");
+}
+
+// ─── Web command handler ──────────────────────────────────────
+void handleWebCmd(const String &cmd) {
+  gLastWebCmdMs = millis();
+  if (gMode != MODE_MANUAL && cmd != "stop") return;
+  portENTER_CRITICAL(&gStateMux);
+  if      (cmd == "forward")  gManCmd = CMD_FORWARD;
+  else if (cmd == "backward") gManCmd = CMD_BACKWARD;
+  else if (cmd == "left")     gManCmd = CMD_LEFT;
+  else if (cmd == "right")    gManCmd = CMD_RIGHT;
+  else                        gManCmd = CMD_STOP;
+  portEXIT_CRITICAL(&gStateMux);
+}
+
+// ─── Telemetry snapshot ───────────────────────────────────────
+void snapshotTelemetry(TelemetrySnapshot &snap) {
+  uint32_t nowUs = micros();
+  portENTER_CRITICAL(&gStateMux);
+  snap.mode       = gMode;
+  snap.distance   = gDistCm;
+  snap.humidity   = gHumidity;
+  snap.tempC      = gTempC;
+  snap.soilPct    = gSoilPct;
+  snap.irLeft     = gIrLeft;
+  snap.irRight    = gIrRight;
+  snap.scanLeft   = gScanLeft;
+  snap.scanFront  = gScanFront;
+  snap.scanRight  = gScanRight;
+  snap.servoAngle = gServoAngle;
+  snap.apmCh1Us   = gApmCh1.widthUs;
+  snap.apmCh2Us   = gApmCh2.widthUs;
+  snap.apmAlive   = gApmCh1.active && gApmCh2.active &&
+                    ((uint32_t)(nowUs - gApmCh1.updatedUs) < APM_TIMEOUT_US) &&
+                    ((uint32_t)(nowUs - gApmCh2.updatedUs) < APM_TIMEOUT_US);
+  portEXIT_CRITICAL(&gStateMux);
+  snap.uptimeSec  = (uint32_t)(millis() / 1000UL);
+}
+
+// ─── WebSocket broadcast ─────────────────────────────────────
+void broadcastTelemetry() {
+  if (ws.count() == 0) return;
+  TelemetrySnapshot snap;
+  snapshotTelemetry(snap);
+
+#if ARDUINOJSON_VERSION_MAJOR >= 7
+  JsonDocument d;
+#else
+  StaticJsonDocument<400> d;
+#endif
+  d["mode"]       = (uint8_t)snap.mode;
+  d["distance"]   = roundf(snap.distance  * 10.0f) / 10.0f;
+  d["humidity"]   = roundf(snap.humidity  * 10.0f) / 10.0f;
+  d["temp"]       = roundf(snap.tempC     * 10.0f) / 10.0f;
+  d["soil"]       = snap.soilPct;
+  d["ir_left"]    = snap.irLeft  ? 1 : 0;
+  d["ir_right"]   = snap.irRight ? 1 : 0;
+  d["scanL"]      = roundf(snap.scanLeft  * 10.0f) / 10.0f;
+  d["scanF"]      = roundf(snap.scanFront * 10.0f) / 10.0f;
+  d["scanR"]      = roundf(snap.scanRight * 10.0f) / 10.0f;
+  d["servoAngle"] = snap.servoAngle;
+  d["apmCh1Us"]   = snap.apmCh1Us;
+  d["apmCh2Us"]   = snap.apmCh2Us;
+  d["apmAlive"]   = snap.apmAlive;
+  d["uptime"]     = snap.uptimeSec;
+
+  String out;
+  serializeJson(d, out);
+  ws.textAll(out);
+}

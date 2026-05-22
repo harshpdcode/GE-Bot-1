@@ -1,0 +1,110 @@
+================================================================================
+DynoRex X1 - The Multilingual Autonomous Robotic Ecosystem
+================================================================================
+
+1. PROJECT SUMMARY
+DynoRex X1 is a cutting-edge, professional-grade robotic platform designed for 
+multifaceted autonomous operations. It transitions seamlessly between smart 
+farming, logistics, and interactive guiding, providing a high-performance 
+dashboard that bridges the gap between hardware telemetry and user experience.
+
+2. CORE FEATURES & CAPABILITIES
+--------------------------------------------------------------------------------
+A. MULTILINGUAL INTELLIGENCE (8 LANGUAGES)
+   - Supports: EN, HI, MR, GU, PA, TA, TE, BN.
+   - Professional "Bilingual" Display: Regional (English) labels for maximum 
+     contextual understanding.
+   - Offline i18n Engine: Instantly switch languages without page reloads.
+
+B. TRIPLE-MODE ADAPTIVITY
+   - Farmer Mode: Monitors soil PH, moisture (HC-SR04), and climate data.
+   - Delivery Mode: Managed logistics, route tracking, and "Initiate Push".
+   - Campus Guide: Guided tours with location-aware voice interaction.
+
+C. REXAI ASSISTANT
+   - Voice-active AI assistant integrated with Google Gemini.
+   - Provides operation safety checks, weather advice, and guided navigation.
+
+D. ADMIN CONTROL CENTER
+   - Live User Overview: Track all connected robots/farmers in a real-time table.
+   - System Diagnostics: Battery health tracking, motor driver (L298N) health, 
+     and ultrasonic obstacle detection.
+
+E. PREMIUM RESPONSIVE UI/UX
+   - Slider Menu: Seamless smooth-drawer navigation on mobile devices.
+   - FAB Navigation: Interactive floating language buttons for instant access.
+   - Glassmorphism Design: Modern SaaS aesthetic with blur effects and 
+     micro-animations.
+
+3. HOW IT WORKS (TECHNICAL STACK)
+--------------------------------------------------------------------------------
+A. THE CORE (BACKEND)
+   - Node.js & Express: Powers the secure API and session management.
+   - SQLite Database: Reliable, local file-based database (using better-sqlite3).
+   - Socket.io: Enables real-time, low-latency communication between the 
+     dashboard and the robot (ESP32-S3/APM 2.8).
+
+B. THE BRAINS (FRONTEND)
+   - Vanilla JS Engine: Custom-built logic for mode switching and i18n.
+   - CSS Hierarchy: Modern design system using HSL color tokens, backdrop 
+     filters, and CSS variables for instant theme switching.
+   - AI Integration: Uses a streaming-capable interface to render AI responses 
+     in real-time.
+
+C. HARDWARE LAYER (SIMULATED & PHYSICAL)
+   - ESP32-S3: Handles the primary server and camera stream (simulated).
+   - APM 2.8: Manages GPS navigation and MavLink telemetry protocols.
+   - HC-SR04 & IR Array: Used for autonomous obstacle avoidance and line tracking.
+
+4. HOW TO RUN THE PROJECT
+--------------------------------------------------------------------------------
+A. PREREQUISITES
+   - Install Node.js (v18 or higher recommended).
+
+B. INSTALLATION (ONE-CLICK)
+   1. Extract the project files.
+   2. Locate and Double-Click on the 'SETUP.bat' file in the root directory.
+   3. This will automatically install dependencies and initialize the system.
+
+C. MANUAL INSTALLATION (OPTIONAL)
+   1. Open a terminal in the root directory.
+   2. Install dependencies: `npm install`
+   3. Initialize database: `node scripts/setup_project.js`
+   4. Start the server: `npm start`
+
+C. CONFIGURATION
+   1. Create/Check the `.env` file in the root directory.
+   2. Ensure your DB_HOST, DB_USER, DB_PASS, and GEMINI_API_KEY are correct.
+
+D. STARTING THE PLATFORM
+   1. Start the server:
+      npm start
+   2. Open your browser and visit:
+      http://localhost:3000
+
+E. MOBILE ACCESS
+   - To view on your mobile device, ensure your phone is on the same WiFi as 
+     your PC and use your PC's IP address (e.g., http://192.168.x.x:3000).
+
+================================================================================
+Designed by DSR Dynamics - Smart Revolution
+================================================================================
+
+================================================================================
+5. ACCESS CREDENTIALS
+--------------------------------------------------------------------------------
+ADMIN ACCOUNT:
+   Username: admin
+   Password: admin123
+   Role: Admin
+
+TEST USER 1:
+   Username: user
+   Password: user123
+   Role: User/Farmer
+
+TEST USER 2:
+   Username: user2
+   Password: user123
+   Role: User/Farmer
+================================================================================

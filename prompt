@@ -1,0 +1,358 @@
+Act as an Expert Full-Stack Developer, UI/UX Designer, and IoT Systems Architect specializing in Smart Agriculture Platforms.
+
+I am building a complete Smart Farm Autonomous System using:
+
+- Frontend: Pure HTML, CSS, JavaScript (NO frameworks)
+- Backend: Node.js (Express)
+- Real-time: Socket.io
+- Database: SQLite (better-sqlite3)
+- Hardware: ESP32-S3 (NOT connected yet)
+
+You are given two base HTML files:
+
+1. Admin Portal (admin-portal.html)
+2. Farmer Dashboard (Dashboard.html)
+
+Your task is to transform this into a COMPLETE, WORKING, PRODUCTION-READY SYSTEM with the following requirements:
+
+---
+
+🌾 1. ROLE-BASED SYSTEM (VERY IMPORTANT)
+
+Create a complete authentication and role system:
+
+ROLES:
+
+- Admin
+- Farmer/User
+
+LOGIN SYSTEM:
+
+- Create a login page (login.html)
+- Fields: username, password
+- Store users in database
+- Passwords should be hashed (bcrypt)
+
+AFTER LOGIN:
+
+- If role = Admin → redirect to admin-portal.html
+- If role = Farmer → redirect to Dashboard.html
+
+SESSION MANAGEMENT:
+
+- Use express-session or JWT
+- Protect routes (unauthorized users cannot access pages)
+
+---
+
+👨‍🌾 2. DUAL MODE DASHBOARD (VERY IMPORTANT - CORE FEATURE)
+
+The Dashboard.html MUST remain the SAME professional UI by default.
+
+ADD a button in header:
+👉 "🌾 Farmer Mode"
+
+WHEN CLICKED:
+
+- DO NOT navigate to another page
+- DO NOT reload page
+- Instead, SHOW a FULL-SCREEN OVERLAY called "Farmer Mode"
+
+FARMER MODE RULES:
+
+- It must visually REPLACE the dashboard (overlay on top)
+- When exited → return to same professional dashboard state
+
+IMPLEMENTATION REQUIREMENTS:
+
+- Use a hidden div overlay (position: fixed; inset: 0;)
+- Toggle using JavaScript (add/remove class like "hidden")
+- Maintain a boolean state: isFarmerMode = true/false
+
+---
+
+🌿 FARMER MODE UI (ULTRA SIMPLE)
+
+Design a completely simplified interface for non-tech Indian farmers:
+
+UI RULES:
+
+- Large touch-friendly cards (minimum 60px height)
+- Big fonts
+- Minimal English text
+- Use icons + Hindi labels
+
+COLOR SYSTEM:
+🟢 Green → Good
+🟡 Yellow → Warning
+🔴 Red → Danger
+
+SHOW ONLY THESE 4 METRICS:
+
+- Plant Health 🌱
+- Soil Moisture 💧
+- Temperature 🌡
+- Battery 🔋
+
+DISPLAY FORMAT:
+
+- Big card
+- Value in large font (e.g., 45%)
+- Color-coded background
+
+---
+
+🎤 VOICE ASSISTANT
+
+ADD:
+
+- "🔊 Suno" button
+
+FUNCTION:
+
+- Uses Web Speech API
+- Speaks in Hindi
+
+Example:
+"Khet ki sthiti theek hai. Mitti ki nami 45 pratishat hai."
+
+---
+
+🎮 CONTROL BUTTONS (BIG SIZE)
+
+Add 3 large buttons:
+
+- 💧 Start Irrigation (Sinchai Shuru)
+- 🚜 Start Patrol
+- 🔋 Go Home (Charging)
+
+Buttons must:
+
+- Be full-width
+- Highly visible
+- Have click animations
+
+---
+
+🔁 EXIT FARMER MODE
+
+Add:
+
+- "⬅ Back to Dashboard" button
+
+FUNCTION:
+
+- Hides overlay
+- Returns to professional UI
+
+---
+
+🔄 DATA SYNC BETWEEN MODES
+
+IMPORTANT:
+
+- Farmer Mode must use SAME data as dashboard
+- When backend updates data → both modes update
+
+Create function:
+updateFarmerUI(data)
+
+---
+
+🚨 ERROR HANDLING (USER FRIENDLY)
+
+If data not available:
+"⚠️ Data nahi mil raha. Kripya robot check karein."
+
+If network fails:
+"📡 Connection toot gaya hai. Kripya internet check karein."
+
+If server fails:
+"Server down hai. Thodi der baad try karein."
+
+DO NOT show technical errors.
+
+---
+
+🧑‍💻 3. ADMIN USER MANAGEMENT SYSTEM
+
+Create new page:
+user-management.html
+
+ADMIN CAN:
+
+- View all users
+- See:
+  - Name
+  - Role
+  - Last Login
+  - Farm Data Snapshot
+
+- Add user
+- Edit user
+- Delete user
+
+Add:
+
+- Search
+- Filters
+- Status indicators
+
+---
+
+🗄️ 4. DATABASE DESIGN (SQLite)
+
+TABLE: users
+
+- id (PK)
+- username
+- password (hashed)
+- role (admin/user)
+- created_at
+
+TABLE: sensor_data
+
+- id
+- user_id
+- temperature
+- moisture
+- battery
+- health
+- timestamp
+
+TABLE: logs
+
+- id
+- user_id
+- action
+- type (command/event/alert/system)
+- message
+- timestamp
+
+TABLE: robot_state
+
+- id
+- robotX
+- robotY
+- mode
+- updated_at
+
+---
+
+🔌 5. BACKEND (Node.js + Express)
+
+CREATE FULL SERVER:
+
+APIs:
+POST /api/login
+POST /api/register
+GET /api/data
+POST /api/command
+GET /api/users
+PUT /api/users/:id
+DELETE /api/users/:id
+GET /api/logs
+
+REAL-TIME:
+
+- Use socket.io
+- Emit updates every 3 seconds
+
+---
+
+🤖 6. ESP32 INTEGRATION (COMMENTED)
+
+WRITE ALL CODE BUT COMMENT IT:
+
+/_ ================================
+ESP32 INTEGRATION (UNCOMMENT WHEN READY)
+================================== _/
+
+Include:
+
+- fetch("http://<ESP_IP>/data")
+- POST commands
+
+Explain clearly:
+
+- Where to replace IP
+- JSON format expected
+
+Fallback:
+
+- Use mock data if ESP32 not connected
+
+---
+
+⚙️ 7. FRONTEND FUNCTIONALITY
+
+MAKE EVERYTHING WORK:
+
+- Fetch data
+- Update dashboard
+- Update farmer mode
+- Move robot on map
+- Trigger logs
+- Button actions working
+
+---
+
+🎨 8. UI ENHANCEMENT
+
+- Keep current UI
+- Add smooth animations
+- Add hover effects
+- Add loading states
+
+---
+
+📱 9. RESPONSIVENESS
+
+- Farmer Mode → Mobile-first
+- Admin → Desktop-first
+
+---
+
+📂 10. FINAL PROJECT STRUCTURE
+
+/project
+├── /frontend
+│ ├── login.html
+│ ├── dashboard.html
+│ ├── admin-portal.html
+│ ├── user-management.html
+│ ├── styles.css
+│ ├── app.js
+│
+├── /backend
+│ ├── server.js
+│ ├── database.js
+│ ├── routes/
+│ ├── models/
+│
+├── /database
+│ ├── schema.sql
+
+---
+
+⚠️ IMPORTANT RULES:
+
+- DO NOT skip anything
+- DO NOT give partial code
+- EVERYTHING must be working
+- Add detailed comments
+- NO frameworks
+
+---
+
+🎯 FINAL GOAL:
+
+- One dashboard → two modes (Professional + Farmer)
+- Admin controls everything
+- Farmer gets simple UI
+- System works without hardware
+- Easy ESP32 integration later
+
+---
+
+Now build the COMPLETE system step-by-step with FULL CODE.
