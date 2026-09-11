@@ -89,24 +89,28 @@ class RobotBridge {
         });
 
         this.ws.on('close', () => {
-            this.connected    = false;
-            console.warn('[Robot] ⚠️  Disconnected from ESP32-S3. Retrying...');
+            if (this.connected) {
+                console.warn('[Robot] ⚠️  Disconnected from ESP32-S3. Retrying...');
+            }
+            this.connected = false;
             if (this.io) this.io.emit('robotConnectionStatus', { connected: false });
             this._scheduleReconnect();
         });
 
         this.ws.on('error', (err) => {
-            console.warn('[Robot] Connection error:', err.message);
+            // Non-fatal: physical robot is offline or not reachable on local LAN
+            console.log(`[Robot] ESP32 not detected on ws://${ESP32_IP}:${ESP32_PORT} (${err.code || err.message}). Operating in Autonomous Simulation Mode.`);
             // 'close' event will fire after error → triggers reconnect
         });
     }
 
     _scheduleReconnect() {
+        if (this._reconnectTimer) clearTimeout(this._reconnectTimer);
         this.reconnecting = true;
-        setTimeout(() => {
+        this._reconnectTimer = setTimeout(() => {
             this.reconnecting = false;
             this.connect();
-        }, 5000);
+        }, 10000);
     }
 
     /**
@@ -375,11 +379,23 @@ app.get('/api/data/history', requireAuth, (req, res) => {
 });
 
 // =============================================
-// FARM SECTORS API
+// FARM SECTORS & SPATIAL SOIL ANALYSIS API
 // =============================================
 app.get('/api/farm/sectors', requireAuth, (req, res) => {
     try { res.json(database.getFarmSectors()); }
     catch (err) { res.status(500).json({ error: 'Failed to get farm sectors' }); }
+});
+
+app.post('/api/farm/sectors/:id/scan', requireAuth, (req, res) => {
+    try {
+        const updated = database.scanFarmSector(req.params.id);
+        if (!updated) return res.status(404).json({ error: 'Sector not found' });
+        
+        database.addLog(req.session.userId, 'Soil Probe Scan', 'event', `Scanned ${updated.name}: N=${updated.soil_nitrogen}, P=${updated.soil_phosphorus}, K=${updated.soil_potassium}, pH=${updated.soil_ph}`, 'farmer');
+        io.emit('sectorScanned', updated);
+        io.emit('farmAlert', { type: updated.status, message: `Sector ${updated.sector_id}: ${updated.recommended_fertilizer}` });
+        res.json({ success: true, sector: updated });
+    } catch (err) { res.status(500).json({ error: 'Failed to scan sector' }); }
 });
 
 app.put('/api/farm/sectors/:id', requireAuth, (req, res) => {
@@ -387,6 +403,475 @@ app.put('/api/farm/sectors/:id', requireAuth, (req, res) => {
         database.updateFarmSector(req.params.id, req.body);
         res.json({ success: true });
     } catch (err) { res.status(500).json({ error: 'Failed to update sector' }); }
+});
+
+// =============================================
+// FARM PATROL MILEAGE & SUMMARY REPORT
+// =============================================
+app.get('/api/farm/reports', requireAuth, (req, res) => {
+    try {
+        const stats = database.getFarmStats();
+        const sectors = database.getFarmSectors();
+        const schedules = database.getFarmSchedules();
+        const invaders = database.getInvaderAlerts(5);
+        const laserTargets = database.getLaserTargets(5);
+
+        // Calculate summary metrics
+        const totalAcreage = 6.0;
+        const healthySectors = sectors.filter(s => s.status === 'healthy').length;
+        const warningSectors = sectors.filter(s => s.status === 'warning').length;
+        const criticalSectors = sectors.filter(s => s.status === 'critical').length;
+        const avgMoisture = Math.round(sectors.reduce((acc, s) => acc + s.moisture, 0) / (sectors.length || 1));
+
+        res.json({
+            stats,
+            summary: {
+                total_acreage: totalAcreage,
+                healthy_sectors: healthySectors,
+                warning_sectors: warningSectors,
+                critical_sectors: criticalSectors,
+                avg_moisture: avgMoisture,
+                active_invader_count: invaders.filter(i => i.is_active === 1).length
+            },
+            schedules,
+            recent_invaders: invaders,
+            recent_laser_kills: laserTargets
+        });
+    } catch (err) { res.status(500).json({ error: 'Failed to get farm reports' }); }
+});
+
+app.get('/api/farm/stats', requireAuth, (req, res) => {
+    try { res.json(database.getFarmStats()); }
+    catch (err) { res.status(500).json({ error: 'Failed to get stats' }); }
+});
+
+// =============================================
+// ROBOTIC LASER WEED & PEST DEFENSE API
+// =============================================
+app.get('/api/farm/laser-targets', requireAuth, (req, res) => {
+    try { res.json(database.getLaserTargets(parseInt(req.query.limit) || 20)); }
+    catch (err) { res.status(500).json({ error: 'Failed to get laser history' }); }
+});
+
+app.post('/api/farm/laser-fire', requireAuth, (req, res) => {
+    try {
+        const { target_type, species_name, sector_id, wattage, pulse_ms, coord_x, coord_y, coord_z } = req.body;
+        const energyJoules = parseFloat((((wattage || 12) * (pulse_ms || 350)) / 1000).toFixed(2));
+        
+        const record = {
+            target_type: target_type || 'weed',
+            species_name: species_name || 'Unclassified Weed/Pest',
+            sector_id: sector_id || 'A',
+            coord_x: coord_x || parseFloat((Math.random() * 20).toFixed(1)),
+            coord_y: coord_y || parseFloat((Math.random() * 20).toFixed(1)),
+            coord_z: coord_z || parseFloat((0.2 + Math.random() * 0.5).toFixed(2)),
+            laser_wattage: wattage || 12.0,
+            pulse_ms: pulse_ms || 350,
+            energy_joules: energyJoules,
+            status: 'neutralized',
+            kill_confidence: parseFloat((97.0 + Math.random() * 2.8).toFixed(1))
+        };
+
+        const result = database.logLaserTarget(record);
+        // Update stats
+        const col = record.target_type === 'weed' ? 'weeds_killed' : 'pests_killed';
+        const currentStats = database.getFarmStats();
+        database.updateFarmStats({ [col]: (currentStats[col] || 0) + 1 });
+
+        database.addLog(req.session.userId, 'Laser Zap', 'event', `Laser beam neutralized ${record.species_name} in Sector ${record.sector_id} (${energyJoules} J)`, 'farmer');
+        io.emit('laserFired', { ...record, id: result.id });
+        io.emit('statsUpdated', database.getFarmStats());
+
+        res.json({ success: true, target: record, stats: database.getFarmStats() });
+    } catch (err) { res.status(500).json({ error: 'Laser command failed' }); }
+});
+
+// Autonomous Laser Auto-Zap Patrol Toggle
+let laserAutoZapEnabled = true;
+app.post('/api/farm/laser-auto-zap', requireAuth, (req, res) => {
+    try {
+        laserAutoZapEnabled = Boolean(req.body.enabled);
+        io.emit('laserAutoZapStatus', { enabled: laserAutoZapEnabled });
+        res.json({ success: true, enabled: laserAutoZapEnabled });
+    } catch (err) { res.status(500).json({ error: 'Failed to toggle auto zap' }); }
+});
+
+// =============================================
+// UNAUTHORIZED INVADER / PERIMETER SECURITY API
+// =============================================
+app.get('/api/farm/invaders', requireAuth, (req, res) => {
+    try { res.json(database.getInvaderAlerts()); }
+    catch (err) { res.status(500).json({ error: 'Failed to get invader alerts' }); }
+});
+
+app.post('/api/farm/invader-deter', requireAuth, (req, res) => {
+    try {
+        const { id, action } = req.body;
+        database.triggerInvaderDeterrent(id);
+        database.addLog(req.session.userId, 'Invader Deterred', 'system', `Deterrent triggered: ${action || '110dB Siren & Strobe'}`, 'farmer');
+        io.emit('invaderResolved', { id, action });
+        res.json({ success: true });
+    } catch (err) { res.status(500).json({ error: 'Failed to trigger deterrent' }); }
+});
+
+app.post('/api/farm/invader-simulate', requireAuth, (req, res) => {
+    try {
+        const invaders = [
+            { type: 'Wild Boar (Sus scrofa Sounder)', sector: 'C', sev: 'high', action: 'Acoustic Siren 110dB + High-Lux Strobe' },
+            { type: 'Stray Cattle (Bos taurus)', sector: 'B', sev: 'medium', action: 'Ultrasonic Deterrent Frequency' },
+            { type: 'Unauthorized Human Intruder', sector: 'E', sev: 'critical', action: 'Security Floodlight + Voice Warning + Guard Dispatch' },
+            { type: 'Blue Bull (Nilgai)', sector: 'F', sev: 'high', action: 'High-Decibel Air Horn Sweep' }
+        ];
+        const pick = invaders[Math.floor(Math.random() * invaders.length)];
+        const result = database.addInvaderAlert({
+            invader_type: pick.type,
+            sector_id: pick.sector,
+            severity: pick.sev,
+            deterrent_action: pick.action
+        });
+        io.emit('invaderAlert', { id: result.id, invader_type: pick.type, sector_id: pick.sector, severity: pick.sev, deterrent_action: pick.action });
+        res.json({ success: true, alert: pick });
+    } catch (err) { res.status(500).json({ error: 'Failed to simulate invader' }); }
+});
+
+// =============================================
+// FARM SCHEDULES API (Harvest, Drip, Fertilizer, Maintenance)
+// =============================================
+app.get('/api/farm/schedules', requireAuth, (req, res) => {
+    try { res.json(database.getFarmSchedules()); }
+    catch (err) { res.status(500).json({ error: 'Failed to get schedules' }); }
+});
+
+app.put('/api/farm/schedules/:id', requireAuth, (req, res) => {
+    try {
+        database.updateFarmSchedule(req.params.id, req.body);
+        res.json({ success: true });
+    } catch (err) { res.status(500).json({ error: 'Failed to update schedule' }); }
+});
+
+// =============================================
+// PROBLEM P25: ORGANIC FERTILIZER & COMPOST COMPOSITE CALCULATOR
+// =============================================
+// Standard nutrient profiles of locally available organic materials in India:
+const ORGANIC_MATERIALS_DB = {
+    'fym':           { name: 'Cow Dung / Farmyard Manure (FYM)', N: 0.5, P: 0.25, K: 0.5, CN: 25, moisture: 65, costPerKg: 3.5,  releaseSpeed: 'medium' },
+    'vermicompost':  { name: 'Vermicompost (Earthworm Castings)', N: 1.8, P: 1.2,  K: 1.5, CN: 15, moisture: 30, costPerKg: 8.0,  releaseSpeed: 'fast' },
+    'neem_cake':     { name: 'Neem Cake (De-oiled)',             N: 5.2, P: 1.0,  K: 1.4, CN: 10, moisture: 10, costPerKg: 26.0, releaseSpeed: 'slow', pestRepellent: true },
+    'poultry_manure':{ name: 'Poultry Manure (Decomposed)',     N: 3.2, P: 2.4,  K: 1.8, CN: 12, moisture: 38, costPerKg: 6.5,  releaseSpeed: 'fast', highSalinityRisk: true },
+    'mustard_cake':  { name: 'Mustard Oil Cake',                 N: 4.8, P: 1.8,  K: 1.3, CN: 11, moisture: 12, costPerKg: 22.0, releaseSpeed: 'medium' },
+    'wood_ash':      { name: 'Hardwood Biomass Ash',             N: 0.1, P: 1.6,  K: 6.8, CN: 50, moisture: 5,  costPerKg: 3.0,  releaseSpeed: 'fast', alkaline: true },
+    'bone_meal':     { name: 'Steamed Bone Meal',                N: 3.5, P: 20.0, K: 0.2, CN: 8,  moisture: 8,  costPerKg: 28.0, releaseSpeed: 'very_slow' },
+    'biochar':       { name: 'Activated Agricultural Biochar',   N: 0.2, P: 0.1,  K: 0.5, CN: 160,moisture: 15, costPerKg: 18.0, releaseSpeed: 'permanent_carbon' },
+    'green_manure':  { name: 'Green Manure (Dhaincha/Sesbania)', N: 2.8, P: 0.6,  K: 1.6, CN: 18, moisture: 75, costPerKg: 4.0,  releaseSpeed: 'medium' }
+};
+
+// Crop nutrient requirements (kg/ha for typical yield target)
+const CROP_REQUIREMENTS = {
+    'wheat':     { name: 'Wheat',     N: 120, P: 60, K: 40,  stages: { 'Vegetative': [0.5, 0.3, 0.2], 'Tillering': [0.3, 0.4, 0.4], 'Flowering': [0.15, 0.2, 0.3], 'Maturity': [0.05, 0.1, 0.1] } },
+    'paddy':     { name: 'Paddy/Rice',N: 100, P: 50, K: 50,  stages: { 'Transplanting': [0.4, 0.5, 0.3], 'Tillering': [0.4, 0.3, 0.4], 'Panicle': [0.2, 0.2, 0.3] } },
+    'cotton':    { name: 'Cotton',    N: 120, P: 60, K: 60,  stages: { 'Vegetative': [0.3, 0.3, 0.2], 'Square': [0.3, 0.4, 0.3], 'Boll Formation': [0.4, 0.3, 0.5] } },
+    'soybean':   { name: 'Soybean',   N: 30,  P: 60, K: 40,  stages: { 'Vegetative': [0.4, 0.4, 0.3], 'Flowering': [0.4, 0.4, 0.4], 'Pod Fill': [0.2, 0.2, 0.3] } }, // Legume: fixes own N
+    'maize':     { name: 'Maize',     N: 150, P: 60, K: 50,  stages: { 'Knee-high': [0.4, 0.4, 0.3], 'Tasseling': [0.4, 0.4, 0.4], 'Grain Fill': [0.2, 0.2, 0.3] } },
+    'tomato':    { name: 'Tomato',    N: 140, P: 80, K: 120, stages: { 'Vegetative': [0.3, 0.4, 0.2], 'Flowering': [0.3, 0.4, 0.4], 'Fruiting': [0.4, 0.2, 0.4] } }
+};
+
+app.post('/api/farm/organic-calculator', requireAuth, (req, res) => {
+    try {
+        const { crop_name = 'wheat', growth_stage = 'Vegetative', acreage = 1.0, selected_materials = ['fym', 'vermicompost', 'neem_cake'], decomp_stage = 'semi_decomposed', moisture_pct = 35 } = req.body;
+
+        const cropReq = CROP_REQUIREMENTS[crop_name.toLowerCase()] || CROP_REQUIREMENTS['wheat'];
+        const stageFractions = (cropReq.stages && cropReq.stages[growth_stage]) || [0.4, 0.4, 0.3];
+
+        // Net requirements for specified acreage
+        const targetN = (cropReq.N * acreage * stageFractions[0]);
+        const targetP = (cropReq.P * acreage * stageFractions[1]);
+        const targetK = (cropReq.K * acreage * stageFractions[2]);
+
+        // Decomposition stage modifier factor (mineralization efficiency)
+        let decompEfficiency = 0.55;
+        let lossFactor = 0.15; // 15% volatilization/leaching
+        let decompLabel = 'Semi-Decomposed (Moderate mineralization, 55% released first season)';
+        if (decomp_stage === 'raw') {
+            decompEfficiency = 0.30;
+            lossFactor = 0.30;
+            decompLabel = 'Raw / Uncomposted (Slow release: ~30% first season, high odor/weed seed risk)';
+        } else if (decomp_stage === 'mature') {
+            decompEfficiency = 0.85;
+            lossFactor = 0.05;
+            decompLabel = 'Fully Mature Humified / Vermicompost (Rapid availability: 85% first season)';
+        }
+
+        // Calculate material weights & blend proportions
+        const materials = selected_materials.map(id => ORGANIC_MATERIALS_DB[id] || ORGANIC_MATERIALS_DB['fym']);
+        
+        // Formulate recipe: default proportion weighting
+        let totalWeightKg = 0;
+        let weightedN = 0, weightedP = 0, weightedK = 0, weightedCN = 0;
+
+        // Balance recipe to supply target Nitrogen primarily while augmenting P and K
+        const blend = [];
+        let remainingN = targetN / (decompEfficiency * (1 - lossFactor));
+
+        materials.forEach((m, idx) => {
+            let sharePct = 0;
+            if (materials.length === 1) sharePct = 1.0;
+            else if (idx === 0) sharePct = 0.55; // Base bulk amendment (e.g. FYM)
+            else if (idx === 1) sharePct = 0.30; // Bioactive amendment (e.g. Vermicompost)
+            else sharePct = 0.15 / (materials.length - 2 || 1); // Booster / cake / ash
+
+            const dryMatterFraction = (1 - (m.moisture / 100));
+            const effectiveN_pct = (m.N / 100) * dryMatterFraction;
+            
+            // Weight allocation
+            let kg = (remainingN * sharePct) / Math.max(0.005, effectiveN_pct);
+            kg = Math.round(Math.max(25, Math.min(3000, kg)));
+
+            const cost = Math.round(kg * m.costPerKg);
+            totalWeightKg += kg;
+
+            weightedN += (kg * (m.N / 100) * dryMatterFraction);
+            weightedP += (kg * (m.P / 100) * dryMatterFraction);
+            weightedK += (kg * (m.K / 100) * dryMatterFraction);
+            weightedCN += (kg * m.CN);
+
+            blend.push({
+                material_id: selected_materials[idx],
+                name: m.name,
+                kg: kg,
+                percentage: 0, // computed below
+                cost_inr: cost,
+                moisture: m.moisture,
+                c_n_ratio: m.CN,
+                npk_ratio: `${m.N}-${m.P}-${m.K}`
+            });
+        });
+
+        // Compute blend percentages
+        blend.forEach(b => {
+            b.percentage = Math.round((b.kg / (totalWeightKg || 1)) * 100);
+        });
+
+        const overallCN = parseFloat((weightedCN / (totalWeightKg || 1)).toFixed(1));
+        const totalCost = blend.reduce((acc, b) => acc + b.cost_inr, 0);
+
+        // C:N Ratio Diagnostic according to P25 spec
+        let cnDiagnosis = { status: 'optimal', title: 'Balanced C:N Ratio (20:1 - 30:1)', message: 'Optimal microbial mineralization. Nutrients will be steadily released without robbing soil nitrogen.' };
+        if (overallCN > 32) {
+            cnDiagnosis = {
+                status: 'warning_high_cn',
+                title: 'High C:N Ratio (> 30:1) — Nitrogen Immobilization Risk!',
+                message: 'Warning: Soil microorganisms will consume available nitrogen to break down excessive carbon, causing temporary nitrogen deficiency (yellowing) in crops. Recommendation: Add nitrogen-rich greens like Poultry Manure, Neem Cake, or Green Manure to balance.'
+            };
+        } else if (overallCN < 16) {
+            cnDiagnosis = {
+                status: 'warning_low_cn',
+                title: 'Low C:N Ratio (< 16:1) — Volatilization / Leaching Risk!',
+                message: 'Warning: Nitrogen mineralization is too rapid. Excess ammonia may volatilize into the air or leach into groundwater before crop root uptake. Recommendation: Blend with carbon-rich browns such as Biochar or mature compost residue.'
+            };
+        }
+
+        // 12-Week Usable Nutrient Release Timeline (Curve)
+        const timeline = [];
+        for (let week = 1; week <= 12; week++) {
+            // Sigmoid / saturation mineralization model
+            let weekPct = 0;
+            if (decomp_stage === 'raw') {
+                weekPct = Math.min(100, Math.round(100 / (1 + Math.exp(-0.4 * (week - 7)))));
+            } else if (decomp_stage === 'mature') {
+                weekPct = Math.min(100, Math.round(100 / (1 + Math.exp(-0.7 * (week - 3)))));
+            } else {
+                weekPct = Math.min(100, Math.round(100 / (1 + Math.exp(-0.5 * (week - 5)))));
+            }
+            const releasedN = parseFloat(((weightedN * decompEfficiency * (weekPct / 100))).toFixed(1));
+            const releasedP = parseFloat(((weightedP * decompEfficiency * (weekPct / 100))).toFixed(1));
+            const releasedK = parseFloat(((weightedK * decompEfficiency * (weekPct / 100))).toFixed(1));
+
+            timeline.push({ week, availability_pct: weekPct, usable_n_kg: releasedN, usable_p_kg: releasedP, usable_k_kg: releasedK });
+        }
+
+        const result = {
+            crop: cropReq.name,
+            growth_stage,
+            acreage,
+            decomposition_stage: decompLabel,
+            calculated_cn_ratio: overallCN,
+            cn_diagnosis: cnDiagnosis,
+            total_recipe_kg: totalWeightKg,
+            total_estimated_cost_inr: totalCost,
+            blend_materials: blend,
+            usable_nutrients_delivered: {
+                total_nitrogen_kg: parseFloat((weightedN * decompEfficiency).toFixed(1)),
+                total_phosphorus_kg: parseFloat((weightedP * decompEfficiency).toFixed(1)),
+                total_potassium_kg: parseFloat((weightedK * decompEfficiency).toFixed(1)),
+                target_demand: { n: targetN.toFixed(1), p: targetP.toFixed(1), k: targetK.toFixed(1) }
+            },
+            application_guidance: {
+                basal_application_kg: Math.round(totalWeightKg * 0.65),
+                top_dressing_kg: Math.round(totalWeightKg * 0.35),
+                timing: 'Apply 65% as basal dressing during land prep / furrow opening. Top-dress remaining 35% at 30-40 days after sowing before irrigation.'
+            },
+            release_timeline: timeline
+        };
+
+        // Save to DB
+        database.saveFertilizerRecipe({
+            crop_name: cropReq.name,
+            growth_stage,
+            acreage,
+            calculated_cn: overallCN,
+            decomp_stage,
+            moisture_pct,
+            recipe_json: blend,
+            total_kg: totalWeightKg,
+            estimated_cost: totalCost,
+            release_timeline_json: timeline
+        });
+
+        res.json({ success: true, calculation: result });
+    } catch (err) {
+        console.error('Organic calculator error:', err);
+        res.status(500).json({ error: 'Calculation failed: ' + err.message });
+    }
+});
+
+// =============================================
+// NEXT CROP RECOMMENDATION ENGINE (Crop Rotation AI)
+// =============================================
+app.get('/api/farm/crop-recommendation', requireAuth, (req, res) => {
+    try {
+        const sectors = database.getFarmSectors();
+        // Analyze current soil state
+        const avgN = sectors.reduce((a, s) => a + s.soil_nitrogen, 0) / (sectors.length || 1);
+        const avgP = sectors.reduce((a, s) => a + s.soil_phosphorus, 0) / (sectors.length || 1);
+        const avgK = sectors.reduce((a, s) => a + s.soil_potassium, 0) / (sectors.length || 1);
+        const avgPh = sectors.reduce((a, s) => a + s.soil_ph, 0) / (sectors.length || 1);
+
+        // Smart Crop Rotation recommendations:
+        // If soil has low Nitrogen or after cereal/cotton, legumes (Chickpea, Moong, Soybean) restore soil!
+        const recommendations = [
+            {
+                crop: 'Chickpea / Gram (Cicer arietinum)',
+                category: 'Legume / Pulse (Rabi)',
+                suitability_score: avgN < 140 ? 96 : 88,
+                soil_benefit: 'Atmospheric Nitrogen Fixation (+35 to 50 kg N/ha natural enrichment). Breaks pest cycle of previous cereals.',
+                water_requirement: 'Low (2-3 irrigations, drought resilient)',
+                estimated_yield: '1.8 - 2.2 Tonnes/ha',
+                expected_profit: '₹55,000 - ₹72,000 / ha',
+                rotation_reason: 'Highly recommended following Nitrogen-depleting crops (Wheat/Cotton). Restores biological soil fertility.'
+            },
+            {
+                crop: 'Yellow Mustard / Rapeseed (Brassica napus)',
+                category: 'Oilseed (Rabi / Winter)',
+                suitability_score: 91,
+                soil_benefit: 'Deep taproot penetrates hardpan, brings subsoil nutrients. Glucosinolate root exudates suppress soil-borne fungal pathogens (bio-fumigation).',
+                water_requirement: 'Low-Medium (3 irrigations)',
+                estimated_yield: '1.6 - 2.0 Tonnes/ha',
+                expected_profit: '₹48,000 - ₹65,000 / ha',
+                rotation_reason: 'Natural soil pest disinfectant and low moisture consumer.'
+            },
+            {
+                crop: 'Green Gram / Moong (Vigna radiata)',
+                category: 'Short Duration Legume (Zaid / Summer)',
+                suitability_score: 87,
+                soil_benefit: '60-day catch crop. Leaves 1.5 - 2.0 tonnes of green biomass as green manure after harvest.',
+                water_requirement: 'Medium',
+                estimated_yield: '1.2 - 1.5 Tonnes/ha',
+                expected_profit: '₹42,000 - ₹58,000 / ha',
+                rotation_reason: 'Fastest turnaround cover crop; increases organic carbon by 0.25% in 60 days.'
+            },
+            {
+                crop: 'Barley (Hordeum vulgare)',
+                category: 'Cereal / Fodder',
+                suitability_score: avgPh > 7.5 ? 94 : 82,
+                soil_benefit: 'Highest salinity and alkalinity tolerance among cereals (thrives in EC up to 8 dS/m).',
+                water_requirement: 'Very Low',
+                estimated_yield: '3.5 - 4.2 Tonnes/ha',
+                expected_profit: '₹38,000 - ₹50,000 / ha',
+                rotation_reason: 'Ideal for slightly saline or high pH sectors (Sector C & E).'
+            }
+        ];
+
+        res.json({
+            current_soil_assessment: {
+                avg_nitrogen: Math.round(avgN),
+                avg_phosphorus: Math.round(avgP),
+                avg_potassium: Math.round(avgK),
+                avg_ph: parseFloat(avgPh.toFixed(1)),
+                primary_deficiency: avgN < 130 ? 'Nitrogen (Depleted)' : (avgK < 150 ? 'Potassium' : 'Balanced')
+            },
+            recommended_rotation: recommendations
+        });
+    } catch (err) { res.status(500).json({ error: 'Failed to generate crop recommendation' }); }
+});
+
+// =============================================
+// WEATHER FORECASTING & SMART IRRIGATION API
+// =============================================
+let irrigationValveActive = false;
+app.get('/api/farm/weather-irrigation', requireAuth, (req, res) => {
+    try {
+        const sectors = database.getFarmSectors();
+        const avgMoist = Math.round(sectors.reduce((a, s) => a + s.moisture, 0) / (sectors.length || 1));
+
+        // Simulated high-precision agro-meteorological forecast
+        const weather = {
+            current: {
+                temperature_c: 27.4,
+                humidity_pct: 64,
+                wind_speed_kmh: 11.2,
+                rainfall_prob_12h: 68, // High rain probability!
+                evapotranspiration_et0: 4.2, // mm/day
+                solar_radiation_wm2: 680,
+                uv_index: 6,
+                barometer_hpa: 1012,
+                condition: 'Scattered Clouds & Approaching Monsoon Front'
+            },
+            forecast_5day: [
+                { day: 'Today', temp_max: 29, temp_min: 22, rain_prob: 68, condition: 'Light Rain Showers (4-8mm)' },
+                { day: 'Tomorrow', temp_max: 28, temp_min: 21, rain_prob: 85, condition: 'Moderate Rainfall (18-25mm)' },
+                { day: 'Friday', temp_max: 30, temp_min: 23, rain_prob: 30, condition: 'Partly Cloudy' },
+                { day: 'Saturday', temp_max: 31, temp_min: 24, rain_prob: 15, condition: 'Sunny & Dry' },
+                { day: 'Sunday', temp_max: 32, temp_min: 24, rain_prob: 20, condition: 'Clear Sky' }
+            ],
+            irrigation_status: {
+                valve_active: irrigationValveActive,
+                field_avg_moisture: avgMoist,
+                critical_threshold: 35,
+                optimal_target: 65,
+                rain_delay_active: true,
+                rain_delay_reason: '🌧️ Rain predicted in next 12h (68% chance, 18-25mm rainfall expected). Irrigation paused automatically to conserve water and prevent root waterlogging.',
+                next_filtration_flush: 'Tomorrow 06:30 AM (Disc Filter #2)'
+            },
+            crop_health_condition: {
+                overall_ndvi_index: 0.78, // 0.0 - 1.0 (Healthy green biomass)
+                chlorosis_risk: 'Low (Sector C has slight nitrogen chlorosis)',
+                fungal_blight_risk: 'Moderate (Warm humidity triggers fungal spore germination: avoid evening sprinkler irrigation)'
+            }
+        };
+
+        res.json(weather);
+    } catch (err) { res.status(500).json({ error: 'Failed to get weather data' }); }
+});
+
+app.post('/api/farm/irrigation/toggle', requireAuth, (req, res) => {
+    try {
+        const { active, sector_id } = req.body;
+        irrigationValveActive = Boolean(active);
+        
+        if (irrigationValveActive) {
+            database.addLog(req.session.userId, 'Smart Irrigation', 'event', `Solenoid Valve Activated for Sector ${sector_id || 'All'} (Flow Rate: 42 L/min)`, 'farmer');
+            // Increase moisture in sectors
+            if (sector_id) {
+                const s = database.getFarmSectorById(sector_id);
+                if (s) database.updateFarmSector(sector_id, { moisture: Math.min(85, s.moisture + 20) });
+            }
+        } else {
+            database.addLog(req.session.userId, 'Smart Irrigation', 'event', 'Irrigation Solenoid Valve Closed', 'farmer');
+        }
+
+        io.emit('irrigationUpdate', { valve_active: irrigationValveActive, sector_id: sector_id || 'All' });
+        res.json({ success: true, valve_active: irrigationValveActive });
+    } catch (err) { res.status(500).json({ error: 'Failed to toggle irrigation' }); }
 });
 
 // =============================================
@@ -562,15 +1047,19 @@ app.post('/api/ai-chat', requireAuth, async (req, res) => {
         const promptText = req.body.prompt || "Hello RexAI";
 
         // Enhanced System Instructions (The "Training" for RexAI)
-        const systemInstruction = `You are RexAI, the advanced intelligence system controlling the DynoRex X1 Autonomous Robotic Platform. 
-        Detailed Project Context:
-        - The DynoRex X1 is a professional multi-mode autonomous robot based on the ESP32-S3 and APM 2.8.
-        - Modes: Farmer Mode (Patrol/Irrigation), Delivery Mode (Logistics/Orders), and Campus Guide (Tours).
-        - Technical Stack: HTML/JS frontend, Node.js/Express backend, Socket.io for real-time telemetry, SQLite for data logging.
-        - Capabilities: Manual remote control, Line Following, Object Avoidance, GPS Navigation (Simulated), and AI Voice Control.
-        - Your Personality: Professional, technical, yet helpful.
-        - Language Logic: Respond in the EXACT SAME language that the user uses (e.g., if asked in Hindi, respond in Hindi; if in Marathi, respond in Marathi, etc.). Ensure fluency and proper grammar in any language.
-        - Goal: Assist the pilot in monitoring the robot's health (battery, temperature, location) and executing operational tasks.`;
+        const systemInstruction = `You are RexAI, the advanced intelligence system controlling the DynoRex X1 Autonomous Smart Farming & Robotic Platform.
+        Detailed Agricultural & Robotic Context:
+        - The DynoRex X1 is a high-precision autonomous agro-robot equipped with ESP32-S3, APM 2.8, soil NPK probes, an active laser pest/weed turret, and smart irrigation valves.
+        - Core Modules & Capabilities:
+          1. Field Soil & Spatial Zoning: Real-time analysis of Sectors A-F for Nitrogen (N), Phosphorus (P), Potassium (K), Soil pH, Moisture %, and Organic Matter. Pinpoints fertilizer deficiency zones.
+          2. Robotic Laser Weed & Pest Defense: High-energy targeted laser beam (5W-20W) that neutralizes weed species (Parthenium, Cyperus, Amaranthus) and insect pests (Fall Armyworm, Cotton Bollworm, Aphids) with optical lock-on and safety interlocks.
+          3. Organic Fertilizer & Compost Ratio Calculator (Problem Statement P25): Calculates C:N ratio balance (target 25:1 to 30:1), decomposition stage modifiers (raw vs semi vs vermicompost), moisture content compensation, usable nutrient release timeline over 12 weeks, and custom recipes using local manure (FYM, Vermicompost, Neem Cake, Poultry Manure, Wood Ash, Bone Meal).
+          4. Next Crop Recommendation: Analyzes current soil depletion and season to suggest optimal successor crops (e.g., Chickpea, Moong, Mustard) for biological nitrogen fixation and pest break.
+          5. Perimeter Security: Ultrasonic/optical detection of unauthorized invaders (Wild Boars, Stray Cattle, Intruders) with 110dB acoustic siren & strobe deterrents.
+          6. Weather & Smart Irrigation: Real-time agro-meteorological forecasting with rain-delay intelligence (delays watering if rain >60%).
+        - Your Personality: Highly knowledgeable agronomist and robotic co-pilot, professional, clear, and encouraging.
+        - Language Logic: Respond in the EXACT SAME language that the user uses (e.g., if asked in Hindi, respond in fluent Hindi; if in Marathi, respond in Marathi; Gujarati, Tamil, etc.).
+        - Goal: Assist the farmer or pilot in monitoring robot health, optimizing organic fertilizer recipes, targeting weeds/pests with the laser, and executing farm operations.`;
 
         const result = await model.generateContent(systemInstruction + "\n\nUser Query: " + promptText);
         res.json({ answer: result.response.text() });
@@ -761,25 +1250,40 @@ setInterval(() => {
 }, 3000);
 
 // =============================================
-// START SERVER
+// START SERVER WITH RESILIENT PORT FALLBACK
 // =============================================
-const PORT = process.env.PORT || 3000;
-server.listen(PORT, () => {
-    console.log('');
-    console.log('╔══════════════════════════════════════════════╗');
-    console.log('║   🤖 DynoRex X1 – Autonomous Robot Server    ║');
-    console.log('╠══════════════════════════════════════════════╣');
-    console.log(`║   🌐 http://localhost:${PORT}                   ║`);
-    console.log('║   📡 Socket.io: Active                       ║');
-    console.log('║   🗄️  Database: SQLite (Connected)            ║');
-    console.log('║   🕹️  ESP32-S3: Mock Mode (Commented)         ║');
-    console.log('║   🧭 APM 2.8: Simulated                      ║');
-    console.log('╠══════════════════════════════════════════════╣');
-    console.log('║   🔑 Accounts:                               ║');
-    console.log('║   👨‍💼 Admin  → admin / admin123             ║');
-    console.log('║   👤 User   → user  / user123                ║');
-    console.log('╠══════════════════════════════════════════════╣');
-    console.log('║   🌾 Modes: Farmer | Delivery | Campus Guide ║');
-    console.log('╚══════════════════════════════════════════════╝');
-    console.log('');
-});
+const INITIAL_PORT = parseInt(process.env.PORT, 10) || 5000;
+
+function startServer(portToTry) {
+    const srv = server.listen(portToTry, () => {
+        console.log('');
+        console.log('╔═════════════════════════════════════════════════════════╗');
+        console.log('║   🤖 DynoRex X1 – Autonomous Smart Farm Ecosystem       ║');
+        console.log('╠═════════════════════════════════════════════════════════╣');
+        console.log(`║   🌐 Dashboard: http://localhost:${portToTry}                     ║`);
+        console.log('║   📡 Socket.io: Real-time Telemetry & HUD Active         ║');
+        console.log('║   🗄️  Database: SQLite (dynorex.db Initialized)         ║');
+        console.log('║   🌾 Soil Zoning: Sectors A-F NPK Analysis Ready        ║');
+        console.log('║   ⚡ Laser Defense: Weed & Pest Neutralization Online    ║');
+        console.log('║   🧪 P25 Engine: Organic Fertilizer & C:N Balanced       ║');
+        console.log('║   🚨 Perimeter Security: Invader Deterrent Active        ║');
+        console.log('╠═════════════════════════════════════════════════════════╣');
+        console.log('║   🔑 Accounts:                                          ║');
+        console.log('║   👨‍💼 Admin  → admin / admin123                        ║');
+        console.log('║   👤 User   → user  / user123                           ║');
+        console.log('╚═════════════════════════════════════════════════════════╝');
+        console.log('');
+    });
+
+    srv.on('error', (err) => {
+        if (err.code === 'EADDRINUSE') {
+            console.warn(`⚠️ [Server] Port ${portToTry} is already in use. Auto-switching to port ${portToTry + 1}...`);
+            setTimeout(() => startServer(portToTry + 1), 250);
+        } else {
+            console.error('❌ [Server] Fatal listen error:', err.message);
+        }
+    });
+}
+
+startServer(INITIAL_PORT);
+

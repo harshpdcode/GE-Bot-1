@@ -24,7 +24,7 @@ const TRANSLATIONS = {
     preferences: 'Preferences', select_lang: 'Select Language', close: 'Close',
     detected: 'DETECTED', speed: 'Speed', battery: 'Battery', heading: 'Heading', location: 'Location',
     admin_users: 'Users Overview', live_map: 'Live Map', sys_alerts: 'System Alerts', history: 'History', portal_mgmt: 'Portal Management', admin_panel: 'Admin Control Center', administrator: 'Administrator',
-    login_title: 'DynoRex X1 Login', username: 'Username', password: 'Password', sign_in: 'Sign In', forgot_pw: 'Forgot Password?', create_acc: 'Create Account',
+    login_title: 'GE-Bot-1 Login', username: 'Username', password: 'Password', sign_in: 'Sign In', forgot_pw: 'Forgot Password?', create_acc: 'Create Account',
     fullname: 'Full Name', email: 'Email', register: 'Register', back_to_login: 'Back to Login', reset_pw: 'Reset Password', send_otp: 'Send OTP',
     enter_otp: 'Enter OTP Code', verify_otp: 'Verify OTP', resend: 'Resend', new_pw: 'New Password', confirm_pw: 'Confirm Password',
     lang_updated: 'Language updated to {lang}', ai_status: 'Powered by RexAI Architecture'

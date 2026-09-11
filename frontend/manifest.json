@@ -1,6 +1,6 @@
 {
-  "name": "DynoRex X1 Autonomous System",
-  "short_name": "DynoRex",
+  "name": "GE-Bot-1 Autonomous System",
+  "short_name": "GE-Bot-1",
   "description": "Smart Farm & Autonomous Delivery UI",
   "start_url": "/dashboard.html",
   "display": "standalone",

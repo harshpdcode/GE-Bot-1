@@ -3,8 +3,8 @@
 <head>
     <meta charset="UTF-8">
     <meta name="viewport" content="width=device-width, initial-scale=1.0">
-    <title>DynoRex X1 | Login</title>
-    <meta name="description" content="Login to DynoRex X1 Dynamic Autonomous Robotic System">
+    <title>GE-Bot-1 | Go Earth Organic</title>
+    <meta name="description" content="GE-Bot-1 - Go Earth Organic Autonomous Robotic Farm Ecosystem">
     <link href="https://fonts.googleapis.com/css2?family=Outfit:wght@300;400;500;600;700;800&display=swap" rel="stylesheet">
     <link rel="stylesheet" href="https://cdnjs.cloudflare.com/ajax/libs/font-awesome/6.4.0/css/all.min.css">
     <script src="./i18n.js"></script>
@@ -46,46 +46,51 @@
         .bg-glow:nth-child(3) { bottom: -150px; left: -100px; }
         @keyframes glowFloat { 0%{transform:translate(0,0) scale(1)} 100%{transform:translate(30px,-20px) scale(1.1)} }
 
-        .login-container { position: relative; z-index: 10; width: 100%; max-width: 440px; margin: auto; padding: 20px; }
+        .login-container { 
+            position: relative; z-index: 10; width: 100%; max-width: 420px; margin: auto; padding: 10px;
+            max-height: 98vh; display: flex; flex-direction: column; justify-content: center;
+        }
         .login-card {
             background: var(--card); backdrop-filter: blur(40px);
             border: 1px solid var(--card-border); border-radius: var(--radius);
-            padding: 48px 40px; box-shadow: 0 25px 60px rgba(0,0,0,0.4);
+            padding: clamp(20px, 3.2vh, 32px) clamp(18px, 3.2vw, 32px); box-shadow: 0 25px 60px rgba(0,0,0,0.4);
             animation: cardEnter 0.6s cubic-bezier(0.16,1,0.3,1);
+            max-height: 94vh; overflow-y: auto;
         }
-        @keyframes cardEnter { from{opacity:0;transform:translateY(30px) scale(0.96)} to{opacity:1;transform:translateY(0) scale(1)} }
+        .login-card::-webkit-scrollbar { width: 4px; }
+        .login-card::-webkit-scrollbar-thumb { background: rgba(255,255,255,0.2); border-radius: 4px; }
+        @keyframes cardEnter { from{opacity:0;transform:translateY(20px) scale(0.97)} to{opacity:1;transform:translateY(0) scale(1)} }
 
-        .logo-section { text-align: center; margin-bottom: 36px; }
-        .logo-icon {
-            width: 72px; height: 72px; margin: 0 auto 16px;
-            background: linear-gradient(135deg, var(--primary), #0891b2);
-            border-radius: 20px; display: flex; align-items: center; justify-content: center;
-            font-size: 2rem; color: white;
-            box-shadow: 0 12px 30px var(--primary-glow);
+        .logo-section { text-align: center; margin-bottom: 20px; }
+        .logo-img {
+            width: 70px; height: 70px; margin: 0 auto 10px;
+            border-radius: 50%; object-fit: cover; display: block;
+            box-shadow: 0 8px 24px rgba(34, 197, 94, 0.35);
+            border: 2.5px solid #22c55e;
             animation: logoPulse 3s ease-in-out infinite;
         }
-        @keyframes logoPulse { 0%,100%{box-shadow:0 12px 30px var(--primary-glow)} 50%{box-shadow:0 16px 45px rgba(6,182,212,0.4)} }
-        .logo-title { font-size: 1.6rem; font-weight: 800; color: var(--text); letter-spacing: -0.5px; }
-        .logo-sub { font-size: 0.85rem; color: var(--text-sub); font-weight: 500; margin-top: 4px; letter-spacing: 0.5px; }
+        @keyframes logoPulse { 0%,100%{box-shadow:0 8px 24px rgba(34, 197, 94, 0.35)} 50%{box-shadow:0 12px 35px rgba(34, 197, 94, 0.6)} }
+        .logo-title { font-size: 1.55rem; font-weight: 800; color: var(--text); letter-spacing: -0.5px; }
+        .logo-sub { font-size: 0.78rem; color: #22c55e; font-weight: 700; margin-top: 3px; letter-spacing: 0.8px; }
 
-        .form-group { margin-bottom: 20px; position: relative; }
-        .form-label { display: block; font-size: 0.8rem; font-weight: 700; color: var(--text-sub); margin-bottom: 8px; letter-spacing: 0.5px; }
+        .form-group { margin-bottom: 14px; position: relative; }
+        .form-label { display: block; font-size: 0.78rem; font-weight: 700; color: var(--text-sub); margin-bottom: 6px; letter-spacing: 0.5px; }
         .input-wrap { position: relative; display: flex; align-items: center; }
-        .input-wrap i.field-icon { position: absolute; left: 16px; color: var(--text-sub); font-size: 1rem; transition: color 0.3s; pointer-events: none; }
+        .input-wrap i.field-icon { position: absolute; left: 14px; color: var(--text-sub); font-size: 0.95rem; transition: color 0.3s; pointer-events: none; }
         .form-input {
-            width: 100%; padding: 16px 16px 16px 48px;
+            width: 100%; padding: 12px 14px 12px 42px;
             background: rgba(255,255,255,0.05); border: 1.5px solid rgba(255,255,255,0.1);
-            border-radius: 14px; color: var(--text); font-size: 1rem; font-weight: 500;
+            border-radius: 12px; color: var(--text); font-size: 0.95rem; font-weight: 500;
             font-family: 'Outfit', sans-serif; outline: none; transition: all 0.3s;
         }
-        .form-input:focus { border-color: var(--primary); background: rgba(6,182,212,0.05); box-shadow: 0 0 0 3px var(--primary-glow); }
-        .form-input:focus ~ i.field-icon { color: var(--primary); }
+        .form-input:focus { border-color: #22c55e; background: rgba(34, 197, 94, 0.05); box-shadow: 0 0 0 3px rgba(34, 197, 94, 0.25); }
+        .form-input:focus ~ i.field-icon { color: #22c55e; }
         .form-input::placeholder { color: rgba(148,163,184,0.5); }
         .form-input:autofill { background: rgba(255,255,255,0.05) !important; color: var(--text) !important; }
         .form-input:autofill::first-line { color: var(--text) !important; }
         
         /* Light Mode Synced Overrides */
-        body.light-mode { --bg: #f1f5f9; --card: rgba(255,255,255,0.9); --card-border: rgba(0,0,0,0.1); --text: #0f172a; --text-sub: #475569; --primary: #0ea5e9; --primary-glow: rgba(14,165,233,0.25); }
+        body.light-mode { --bg: #f1f5f9; --card: rgba(255,255,255,0.9); --card-border: rgba(0,0,0,0.1); --text: #0f172a; --text-sub: #475569; --primary: #16a34a; --primary-glow: rgba(22,163,74,0.25); }
         body.light-mode .form-input { background: white; border-color: #cbd5e1; color: var(--text); }
         body.light-mode .form-input:autofill { background: white !important; }
         body.light-mode .otp-input { background: white; border-color: #cbd5e1; color: var(--text); }
@@ -94,21 +99,21 @@
         body.light-mode .login-card { box-shadow: 0 25px 60px rgba(0,0,0,0.1); }
         body.light-mode .step-dot:not(.active):not(.done) { background: #e2e8f0; }
         body.light-mode .step-line { background: #e2e8f0; }
-        .toggle-pw { position: absolute; right: 16px; background: none; border: none; color: var(--text-sub); cursor: pointer; font-size: 1rem; padding: 4px; transition: color 0.2s; }
+        .toggle-pw { position: absolute; right: 14px; background: none; border: none; color: var(--text-sub); cursor: pointer; font-size: 0.95rem; padding: 4px; transition: color 0.2s; }
         .toggle-pw:hover { color: var(--text); }
 
         .login-btn {
-            width: 100%; padding: 18px;
-            background: linear-gradient(135deg, var(--primary), #0891b2);
-            border: none; border-radius: 14px; color: white; font-size: 1.05rem; font-weight: 700;
+            width: 100%; padding: 14px;
+            background: linear-gradient(135deg, #16a34a, #0d9488);
+            border: none; border-radius: 12px; color: white; font-size: 1rem; font-weight: 700;
             font-family: 'Outfit', sans-serif; cursor: pointer; transition: all 0.3s;
-            box-shadow: 0 8px 24px var(--primary-glow);
+            box-shadow: 0 8px 24px rgba(22,163,74,0.3);
             display: flex; align-items: center; justify-content: center; gap: 10px;
-            position: relative; overflow: hidden; min-height: 52px;
+            position: relative; overflow: hidden; min-height: 48px;
             -webkit-tap-highlight-color: transparent;
         }
-        .login-btn:hover { transform: translateY(-2px); box-shadow: 0 12px 32px rgba(6,182,212,0.4); }
-        .login-btn:active { transform: scale(0.95) !important; }
+        .login-btn:hover { transform: translateY(-2px); box-shadow: 0 12px 32px rgba(22,163,74,0.45); }
+        .login-btn:active { transform: scale(0.96) !important; }
         .login-btn.loading { pointer-events: none; opacity: 0.8; }
         .login-btn .spinner { display: none; width: 20px; height: 20px; border: 2.5px solid rgba(255,255,255,0.3); border-top-color: white; border-radius: 50%; animation: spin 0.6s linear infinite; }
         .login-btn.loading .spinner { display: block; }
@@ -225,9 +230,9 @@
     <div class="login-container">
         <div class="login-card">
             <div class="logo-section">
-                <div class="logo-icon"><i class="fa-solid fa-robot"></i></div>
-                <div class="logo-title" data-i18n="login_title">DynoRex X1 Login</div>
-                <div class="logo-sub">Dynamic Autonomous Robotic System</div>
+                <img src="assets/logo.png" alt="Go Earth Organic" class="logo-img">
+                <div class="logo-title">GE-Bot-1</div>
+                <div class="logo-sub">GO EARTH ORGANIC ROBOTICS</div>
             </div>
 
             <div class="msg-box" id="msg-box">
@@ -260,13 +265,13 @@
                         <span class="btn-text" data-i18n="sign_in"><i class="fa-solid fa-right-to-bracket"></i> Sign In</span>
                     </button>
                 </form>
-                <div style="text-align:center; margin-top:16px;">
+                <div style="text-align:center; margin-top:14px;">
                     <button class="link-btn" onclick="showView('view-forgot')" data-i18n="forgot_pw"><i class="fa-solid fa-key"></i> Forgot Password?</button>
                     &nbsp;&nbsp;|&nbsp;&nbsp;
                     <button class="link-btn" onclick="showView('view-register')" data-i18n="create_acc"><i class="fa-solid fa-user-plus"></i> Create Account</button>
                 </div>
                 <div class="login-footer">
-                    <p>DynoRex X1 – Hybrid Navigation & AI Interaction</p>
+                    <p>GE-Bot-1 – Go Earth Organic Smart Farm Robotic Ecosystem</p>
                     <div class="creds">
                         Demo Credentials:
                         <span>Admin: admin / admin123</span>
@@ -278,7 +283,7 @@
             <!-- REGISTER VIEW -->
             <div class="view-section" id="view-register">
                 <h2 style="color:var(--text); font-size:1.3rem; font-weight:700; text-align:center; margin-bottom:8px;" data-i18n="create_acc">📝 Create Account</h2>
-                <p style="color:var(--text-sub); font-size:0.9rem; text-align:center; margin-bottom:24px;">Join DynoRex X1 Control System</p>
+                <p style="color:var(--text-sub); font-size:0.9rem; text-align:center; margin-bottom:24px;">Join GE-Bot-1 Go Earth Control System</p>
                 <form id="register-form" onsubmit="handleRegister(event)">
                     <div class="form-group" style="margin-bottom:12px;">
                         <label class="form-label" data-i18n="fullname">Full Name</label>

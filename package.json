@@ -1,7 +1,7 @@
 {
-  "name": "meo-vb1-smart-farm",
+  "name": "go-earth-bot-1",
   "version": "1.0.0",
-  "description": "MEO VB1 Smart Farm Autonomous System",
+  "description": "GE-Bot-1 Go Earth Organic Autonomous Robotic Farming System",
   "main": "backend/server.js",
   "scripts": {
     "start": "node backend/server.js",

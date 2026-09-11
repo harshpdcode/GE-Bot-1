@@ -173,10 +173,118 @@ function initDatabase() {
             name TEXT NOT NULL,
             status TEXT DEFAULT 'healthy',
             crop TEXT DEFAULT '',
+            crop_stage TEXT DEFAULT 'Vegetative',
+            days_to_harvest INTEGER DEFAULT 45,
             moisture REAL DEFAULT 50,
             health REAL DEFAULT 95,
+            soil_nitrogen REAL DEFAULT 140,
+            soil_phosphorus REAL DEFAULT 24,
+            soil_potassium REAL DEFAULT 160,
+            soil_ph REAL DEFAULT 6.5,
+            organic_matter REAL DEFAULT 1.8,
+            ec_salinity REAL DEFAULT 0.8,
+            fertilizer_status TEXT DEFAULT 'optimal',
+            recommended_fertilizer TEXT DEFAULT 'Compost + Neem Cake (2:1)',
             last_irrigated DATETIME,
             last_patrolled DATETIME
+        )
+    `);
+
+    // Ensure columns exist if table was already created earlier
+    const sectorCols = [
+        ['crop_stage', "TEXT DEFAULT 'Vegetative'"],
+        ['days_to_harvest', 'INTEGER DEFAULT 45'],
+        ['soil_nitrogen', 'REAL DEFAULT 140'],
+        ['soil_phosphorus', 'REAL DEFAULT 24'],
+        ['soil_potassium', 'REAL DEFAULT 160'],
+        ['soil_ph', 'REAL DEFAULT 6.5'],
+        ['organic_matter', 'REAL DEFAULT 1.8'],
+        ['ec_salinity', 'REAL DEFAULT 0.8'],
+        ['fertilizer_status', "TEXT DEFAULT 'optimal'"],
+        ['recommended_fertilizer', "TEXT DEFAULT 'Compost + Neem Cake'"]
+    ];
+    for (const [col, def] of sectorCols) {
+        try { db.exec(`ALTER TABLE farm_sectors ADD COLUMN ${col} ${def}`); } catch (_) {}
+    }
+
+    // Farm Robot Patrol & Cleaning Stats
+    db.exec(`
+        CREATE TABLE IF NOT EXISTS farm_stats (
+            id INTEGER PRIMARY KEY AUTOINCREMENT,
+            distance_km REAL DEFAULT 6.4,
+            cleared_acres REAL DEFAULT 3.2,
+            weeds_killed INTEGER DEFAULT 89,
+            pests_killed INTEGER DEFAULT 53,
+            battery_soh REAL DEFAULT 98.4,
+            battery_voltage REAL DEFAULT 12.4,
+            battery_temp REAL DEFAULT 29.5,
+            energy_efficiency REAL DEFAULT 1.85,
+            updated_at DATETIME DEFAULT CURRENT_TIMESTAMP
+        )
+    `);
+
+    // Laser Weed & Pest Targeting Table
+    db.exec(`
+        CREATE TABLE IF NOT EXISTS laser_targets (
+            id INTEGER PRIMARY KEY AUTOINCREMENT,
+            target_type TEXT NOT NULL,
+            species_name TEXT NOT NULL,
+            sector_id TEXT DEFAULT 'A',
+            coord_x REAL DEFAULT 0,
+            coord_y REAL DEFAULT 0,
+            coord_z REAL DEFAULT 0,
+            laser_wattage REAL DEFAULT 12.0,
+            pulse_ms INTEGER DEFAULT 350,
+            energy_joules REAL DEFAULT 4.2,
+            status TEXT DEFAULT 'neutralized',
+            kill_confidence REAL DEFAULT 98.5,
+            created_at DATETIME DEFAULT CURRENT_TIMESTAMP
+        )
+    `);
+
+    // Unauthorized Invader / Perimeter Security Table
+    db.exec(`
+        CREATE TABLE IF NOT EXISTS invader_alerts (
+            id INTEGER PRIMARY KEY AUTOINCREMENT,
+            invader_type TEXT NOT NULL,
+            sector_id TEXT DEFAULT 'B',
+            severity TEXT DEFAULT 'high',
+            deterrent_action TEXT DEFAULT 'Acoustic Siren (110dB) + Strobe Sweep',
+            is_active INTEGER DEFAULT 1,
+            detected_at DATETIME DEFAULT CURRENT_TIMESTAMP,
+            resolved_at DATETIME
+        )
+    `);
+
+    // Farm Schedules (Harvest, Drip Filtration, Fertilizer Dumping, Maintenance)
+    db.exec(`
+        CREATE TABLE IF NOT EXISTS farm_schedules (
+            id INTEGER PRIMARY KEY AUTOINCREMENT,
+            schedule_type TEXT NOT NULL,
+            title TEXT NOT NULL,
+            due_date TEXT NOT NULL,
+            target_sector TEXT DEFAULT 'All',
+            details TEXT DEFAULT '',
+            status TEXT DEFAULT 'pending',
+            created_at DATETIME DEFAULT CURRENT_TIMESTAMP
+        )
+    `);
+
+    // Problem P25: Saved Organic Fertilizer & Compost Calculations
+    db.exec(`
+        CREATE TABLE IF NOT EXISTS fertilizer_recipes (
+            id INTEGER PRIMARY KEY AUTOINCREMENT,
+            crop_name TEXT NOT NULL,
+            growth_stage TEXT NOT NULL,
+            acreage REAL DEFAULT 1.0,
+            calculated_cn REAL DEFAULT 26.5,
+            decomp_stage TEXT DEFAULT 'Semi-decomposed',
+            moisture_pct REAL DEFAULT 35,
+            recipe_json TEXT NOT NULL,
+            total_kg REAL NOT NULL,
+            estimated_cost REAL NOT NULL,
+            release_timeline_json TEXT NOT NULL,
+            created_at DATETIME DEFAULT CURRENT_TIMESTAMP
         )
     `);
 
@@ -202,17 +310,81 @@ function seedDefaults() {
         db.prepare('INSERT INTO robot_state (active_mode, operating_mode, robot_x, robot_y, location, battery) VALUES (?, ?, ?, ?, ?, ?)').run('farmer', 'Manual', 25, 25, 'A', 100);
     }
 
-    // Default farm sectors
+    // Default farm sectors (6 rich sectors with realistic NPK, pH, organic matter, and deficits)
     const sectorCount = db.prepare('SELECT COUNT(*) as c FROM farm_sectors').get();
-    if (sectorCount.c === 0) {
+    if (sectorCount.c < 6) {
+        db.prepare('DELETE FROM farm_sectors').run();
         const sectors = [
-            ['A', 'Sector Alpha', 'healthy', 'Wheat', 55, 96],
-            ['B', 'Sector Bravo', 'healthy', 'Rice', 62, 92],
-            ['C', 'Sector Charlie', 'warning', 'Cotton', 28, 78],
-            ['D', 'Sector Delta', 'healthy', 'Soybean', 48, 94]
+            ['A', 'Sector Alpha (North-East)', 'healthy', 'Wheat (HD-2967)', 'Vegetative', 42, 58, 96, 175, 26, 185, 6.7, 2.1, 0.65, 'optimal', 'Balanced Vermicompost (200 kg/ha)'],
+            ['B', 'Sector Bravo (North-West)', 'warning', 'Paddy (Basmati 1121)', 'Tillering', 65, 42, 82, 110, 18, 140, 6.2, 1.4, 0.72, 'needs_nitrogen', 'High-N Poultry Manure + Neem Cake (60:40) - 350 kg/ha'],
+            ['C', 'Sector Charlie (Central)', 'critical', 'Cotton (Bt-II)', 'Flowering', 52, 26, 68, 85, 14, 115, 7.8, 1.1, 1.25, 'critical_deficit', 'Rapid Organic Booster: FYM + Mustard Cake + Bone Meal (500 kg/ha)'],
+            ['D', 'Sector Delta (South-East)', 'healthy', 'Soybean (JS-335)', 'Pod Formation', 38, 54, 94, 160, 24, 170, 6.5, 2.4, 0.58, 'optimal', 'Rhizobium Bio-fertilizer + Compost (150 kg/ha)'],
+            ['E', 'Sector Echo (South-West)', 'warning', 'Maize (HQPM-1)', 'Silking', 48, 34, 79, 125, 16, 130, 6.9, 1.3, 0.85, 'needs_potassium', 'Wood Ash (Potash Rich) + Vermicompost (250 kg/ha)'],
+            ['F', 'Sector Foxtrot (Perimeter Ridge)', 'healthy', 'Chickpea / Gram', 'Vegetative', 75, 48, 91, 150, 28, 195, 7.1, 1.9, 0.60, 'optimal', 'Decomposed Farmyard Manure (FYM) Maintenance']
         ];
-        const stmt = db.prepare('INSERT INTO farm_sectors (sector_id, name, status, crop, moisture, health) VALUES (?, ?, ?, ?, ?, ?)');
+        const stmt = db.prepare(`
+            INSERT INTO farm_sectors (
+                sector_id, name, status, crop, crop_stage, days_to_harvest, moisture, health,
+                soil_nitrogen, soil_phosphorus, soil_potassium, soil_ph, organic_matter, ec_salinity,
+                fertilizer_status, recommended_fertilizer, last_irrigated, last_patrolled
+            ) VALUES (?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, CURRENT_TIMESTAMP, CURRENT_TIMESTAMP)
+        `);
         sectors.forEach(s => stmt.run(...s));
+    }
+
+    // Default Farm Robot Stats
+    const statsCount = db.prepare('SELECT COUNT(*) as c FROM farm_stats').get();
+    if (statsCount.c === 0) {
+        db.prepare(`
+            INSERT INTO farm_stats (distance_km, cleared_acres, weeds_killed, pests_killed, battery_soh, battery_voltage, battery_temp, energy_efficiency)
+            VALUES (6.84, 3.45, 142, 67, 98.4, 12.55, 28.4, 1.72)
+        `).run();
+    }
+
+    // Default Laser Targets History
+    const laserCount = db.prepare('SELECT COUNT(*) as c FROM laser_targets').get();
+    if (laserCount.c === 0) {
+        const targets = [
+            ['weed', 'Parthenium hysterophorus (Congress Grass)', 'C', 14.2, 8.5, 0.35, 15.0, 420, 6.3, 'neutralized', 99.1],
+            ['pest', 'Spodoptera frugiperda (Fall Armyworm)', 'B', 8.7, 12.3, 0.82, 10.0, 280, 2.8, 'neutralized', 97.8],
+            ['weed', 'Cyperus rotundus (Nut Grass)', 'C', 22.1, 19.4, 0.28, 12.5, 360, 4.5, 'neutralized', 98.4],
+            ['pest', 'Helicoverpa armigera (Cotton Bollworm)', 'C', 18.3, 14.6, 0.75, 14.0, 310, 4.3, 'neutralized', 96.9],
+            ['pest', 'Aphis gossypii (Cotton Aphid Colony)', 'E', 5.6, 21.0, 0.45, 8.5, 190, 1.6, 'neutralized', 99.4]
+        ];
+        const stmt = db.prepare(`
+            INSERT INTO laser_targets (target_type, species_name, sector_id, coord_x, coord_y, coord_z, laser_wattage, pulse_ms, energy_joules, status, kill_confidence)
+            VALUES (?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?)
+        `);
+        targets.forEach(t => stmt.run(...t));
+    }
+
+    // Default Invader / Perimeter Security Alerts
+    const invCount = db.prepare('SELECT COUNT(*) as c FROM invader_alerts').get();
+    if (invCount.c === 0) {
+        db.prepare(`
+            INSERT INTO invader_alerts (invader_type, sector_id, severity, deterrent_action, is_active)
+            VALUES ('Wild Boar (Sus scrofa Sounder)', 'C', 'high', 'Acoustic Siren 110dB + High-Lux Strobe + Boundary Sweep', 1)
+        `).run();
+        db.prepare(`
+            INSERT INTO invader_alerts (invader_type, sector_id, severity, deterrent_action, is_active, resolved_at)
+            VALUES ('Stray Cattle (Bos taurus)', 'E', 'medium', 'Ultrasonic Frequency Deterrent Pulse', 0, CURRENT_TIMESTAMP)
+        `).run();
+    }
+
+    // Default Farm Operational Schedules
+    const schedCount = db.prepare('SELECT COUNT(*) as c FROM farm_schedules').get();
+    if (schedCount.c === 0) {
+        const schedules = [
+            ['harvest', '🌾 Harvest: Wheat HD-2967 (Sector A)', '2026-10-24', 'A', 'Maturity stage estimated at 92%. Grain moisture ideal at 13-14%.'],
+            ['filtration', '💧 Drip Irrigation Sand & Disc Filter Flush', 'Tomorrow 06:30 AM', 'All', 'Automatic backwash cycle after 16.4 m³ filtered volume.'],
+            ['fertilizer', '⏰ Fertilizer Dumping: Organic Composite', 'Thursday 08:00 AM', 'C', 'Apply 350kg/ha Basal Compost + Neem Cake mix before scheduled drip run.'],
+            ['maintenance', '🛠️ Scheduled Robot Preventative Maintenance', '2026-09-16', 'Base', 'Inspect optical laser protective lens, calibrate soil NPK conductivity probes, lube wheel bearings.']
+        ];
+        const stmt = db.prepare(`
+            INSERT INTO farm_schedules (schedule_type, title, due_date, target_sector, details)
+            VALUES (?, ?, ?, ?, ?)
+        `);
+        schedules.forEach(s => stmt.run(...s));
     }
 
     // Default deliveries
@@ -356,12 +528,161 @@ function updateRobotState(data) {
 }
 
 // =============================================
-// FARM SECTORS
+// FARM SECTORS & INTELLIGENCE
 // =============================================
 function getFarmSectors() { return db.prepare('SELECT * FROM farm_sectors ORDER BY sector_id').all(); }
+function getFarmSectorById(sectorId) { return db.prepare('SELECT * FROM farm_sectors WHERE sector_id=?').get(sectorId); }
 
 function updateFarmSector(sectorId, data) {
-    return db.prepare('UPDATE farm_sectors SET status=?, moisture=?, health=?, last_patrolled=CURRENT_TIMESTAMP WHERE sector_id=?').run(data.status, data.moisture, data.health, sectorId);
+    const fields = [];
+    const vals = [];
+    for (const [key, val] of Object.entries(data)) {
+        if (key !== 'id' && key !== 'sector_id') {
+            fields.push(`${key}=?`);
+            vals.push(val);
+        }
+    }
+    fields.push('last_patrolled=CURRENT_TIMESTAMP');
+    vals.push(sectorId);
+    return db.prepare(`UPDATE farm_sectors SET ${fields.join(', ')} WHERE sector_id=?`).run(...vals);
+}
+
+function scanFarmSector(sectorId) {
+    const sector = getFarmSectorById(sectorId);
+    if (!sector) return null;
+    const n = Math.max(60, Math.min(240, Math.round(sector.soil_nitrogen + (Math.random() - 0.45) * 14)));
+    const p = Math.max(10, Math.min(50, Math.round(sector.soil_phosphorus + (Math.random() - 0.5) * 4)));
+    const k = Math.max(80, Math.min(260, Math.round(sector.soil_potassium + (Math.random() - 0.5) * 12)));
+    const ph = parseFloat((Math.max(5.5, Math.min(8.5, sector.soil_ph + (Math.random() - 0.5) * 0.15))).toFixed(1));
+    const moisture = Math.max(15, Math.min(90, Math.round(sector.moisture + (Math.random() - 0.5) * 6)));
+    const om = parseFloat((Math.max(0.6, Math.min(3.5, sector.organic_matter + (Math.random() - 0.5) * 0.1))).toFixed(1));
+
+    let status = 'healthy';
+    let fertStatus = 'optimal';
+    let rec = 'Soil balanced: Routine vermicompost application.';
+    if (n < 100) {
+        status = 'critical';
+        fertStatus = 'critical_deficit';
+        rec = 'Severe Nitrogen Deficit! Apply High-N Organic Booster (Mustard Cake + FYM 450 kg/ha).';
+    } else if (n < 130) {
+        status = 'warning';
+        fertStatus = 'needs_nitrogen';
+        rec = 'Nitrogen sub-optimal. Apply Poultry Manure + Neem Cake (60:40) - 300 kg/ha.';
+    } else if (k < 140) {
+        status = 'warning';
+        fertStatus = 'needs_potassium';
+        rec = 'Potassium low. Supplement with Potash-rich Wood Ash + Biochar.';
+    }
+
+    db.prepare(`
+        UPDATE farm_sectors 
+        SET soil_nitrogen=?, soil_phosphorus=?, soil_potassium=?, soil_ph=?, moisture=?, organic_matter=?, status=?, fertilizer_status=?, recommended_fertilizer=?, last_patrolled=CURRENT_TIMESTAMP
+        WHERE sector_id=?
+    `).run(n, p, k, ph, moisture, om, status, fertStatus, rec, sectorId);
+
+    return getFarmSectorById(sectorId);
+}
+
+// Farm Stats & Mileage
+function getFarmStats() {
+    let stats = db.prepare('SELECT * FROM farm_stats ORDER BY id DESC LIMIT 1').get();
+    if (!stats) {
+        db.prepare('INSERT INTO farm_stats (distance_km, cleared_acres, weeds_killed, pests_killed) VALUES (6.84, 3.45, 142, 67)').run();
+        stats = db.prepare('SELECT * FROM farm_stats ORDER BY id DESC LIMIT 1').get();
+    }
+    return stats;
+}
+
+function updateFarmStats(data) {
+    const fields = [];
+    const vals = [];
+    for (const [k, v] of Object.entries(data)) {
+        if (k !== 'id') { fields.push(`${k}=?`); vals.push(v); }
+    }
+    fields.push('updated_at=CURRENT_TIMESTAMP');
+    return db.prepare(`UPDATE farm_stats SET ${fields.join(', ')} WHERE id=1`).run(...vals);
+}
+
+function recordLaserZap(targetType, species, sectorId, energyJoules = 4.2) {
+    const col = targetType === 'weed' ? 'weeds_killed' : 'pests_killed';
+    db.prepare(`UPDATE farm_stats SET ${col} = ${col} + 1, updated_at=CURRENT_TIMESTAMP WHERE id=1`).run();
+    return logLaserTarget({
+        target_type: targetType,
+        species_name: species,
+        sector_id: sectorId || 'A',
+        coord_x: parseFloat((Math.random() * 25).toFixed(1)),
+        coord_y: parseFloat((Math.random() * 25).toFixed(1)),
+        coord_z: parseFloat((0.2 + Math.random() * 0.8).toFixed(2)),
+        laser_wattage: targetType === 'weed' ? 15.0 : 10.0,
+        pulse_ms: targetType === 'weed' ? 420 : 250,
+        energy_joules: energyJoules,
+        status: 'neutralized',
+        kill_confidence: parseFloat((96.5 + Math.random() * 3.4).toFixed(1))
+    });
+}
+
+// Laser Targets History
+function getLaserTargets(limit = 20) {
+    return db.prepare('SELECT * FROM laser_targets ORDER BY created_at DESC LIMIT ?').all(limit);
+}
+
+function logLaserTarget(data) {
+    const res = db.prepare(`
+        INSERT INTO laser_targets (target_type, species_name, sector_id, coord_x, coord_y, coord_z, laser_wattage, pulse_ms, energy_joules, status, kill_confidence)
+        VALUES (?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?)
+    `).run(
+        data.target_type, data.species_name, data.sector_id || 'A',
+        data.coord_x || 0, data.coord_y || 0, data.coord_z || 0,
+        data.laser_wattage || 12, data.pulse_ms || 350, data.energy_joules || 4.2,
+        data.status || 'neutralized', data.kill_confidence || 98.0
+    );
+    return { success: true, id: res.lastInsertRowid };
+}
+
+// Invader Alerts
+function getInvaderAlerts(limit = 20) {
+    return db.prepare('SELECT * FROM invader_alerts ORDER BY detected_at DESC LIMIT ?').all(limit);
+}
+
+function addInvaderAlert(data) {
+    const res = db.prepare(`
+        INSERT INTO invader_alerts (invader_type, sector_id, severity, deterrent_action, is_active)
+        VALUES (?, ?, ?, ?, 1)
+    `).run(data.invader_type, data.sector_id || 'B', data.severity || 'high', data.deterrent_action || 'Acoustic Siren 110dB + Strobe');
+    return { success: true, id: res.lastInsertRowid };
+}
+
+function triggerInvaderDeterrent(id) {
+    db.prepare('UPDATE invader_alerts SET is_active=0, resolved_at=CURRENT_TIMESTAMP WHERE id=?').run(id);
+    return { success: true };
+}
+
+// Farm Schedules
+function getFarmSchedules() {
+    return db.prepare('SELECT * FROM farm_schedules ORDER BY id ASC').all();
+}
+
+function updateFarmSchedule(id, data) {
+    return db.prepare('UPDATE farm_schedules SET title=?, due_date=?, details=?, status=? WHERE id=?').run(
+        data.title, data.due_date, data.details || '', data.status || 'pending', id
+    );
+}
+
+// P25 Fertilizer Recipes
+function saveFertilizerRecipe(data) {
+    const res = db.prepare(`
+        INSERT INTO fertilizer_recipes (crop_name, growth_stage, acreage, calculated_cn, decomp_stage, moisture_pct, recipe_json, total_kg, estimated_cost, release_timeline_json)
+        VALUES (?, ?, ?, ?, ?, ?, ?, ?, ?, ?)
+    `).run(
+        data.crop_name, data.growth_stage, data.acreage, data.calculated_cn,
+        data.decomp_stage, data.moisture_pct, JSON.stringify(data.recipe_json),
+        data.total_kg, data.estimated_cost, JSON.stringify(data.release_timeline_json)
+    );
+    return { success: true, id: res.lastInsertRowid };
+}
+
+function getFertilizerRecipes(limit = 10) {
+    return db.prepare('SELECT * FROM fertilizer_recipes ORDER BY created_at DESC LIMIT ?').all(limit);
 }
 
 // =============================================
@@ -456,8 +777,14 @@ module.exports = {
     saveSensorData, getLatestSensorData, getSensorHistory,
     addLog, getLogs, getLogsByMode,
     getRobotState, updateRobotState,
-    getFarmSectors, updateFarmSector,
+    getFarmSectors, getFarmSectorById, updateFarmSector, scanFarmSector,
+    getFarmStats, updateFarmStats, recordLaserZap,
+    getLaserTargets, logLaserTarget,
+    getInvaderAlerts, addInvaderAlert, triggerInvaderDeterrent,
+    getFarmSchedules, updateFarmSchedule,
+    saveFertilizerRecipe, getFertilizerRecipes,
     getAllDeliveries, getDeliveryById, getDeliveriesByStatus, createDelivery, updateDeliveryStatus, deleteDelivery,
     getCampusLocations, getCampusTours, createCampusTour, updateTourStatus,
     getWaypoints, addWaypoint
 };
+
