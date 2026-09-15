@@ -1,0 +1,2631 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>GE-Bot-1 Admin | Enterprise</title>
+    <script>
+        if (window.location.protocol === 'http:' || window.location.protocol === 'https:') {
+            const link = document.createElement('link');
+            link.rel = 'manifest';
+            link.href = 'manifest.json';
+            document.head.appendChild(link);
+        } else {
+            console.warn('Manifest loading skipped in file:// mode');
+        }
+    </script>
+    <script src="./utils.js"></script>
+    <link rel="stylesheet" href="https://cdnjs.cloudflare.com/ajax/libs/font-awesome/6.4.0/css/all.min.css">
+    <link href="https://fonts.googleapis.com/css2?family=Plus+Jakarta+Sans:wght@300;400;500;600;700&display=swap" rel="stylesheet">
+    <script>
+        if (window.location.protocol === 'http:' || window.location.protocol === 'https:') {
+            const script = document.createElement('script');
+            script.src = '/socket.io/socket.io.js';
+            script.async = true;
+            document.head.appendChild(script);
+        } else {
+            console.warn('Socket.io skipped in file:// mode');
+        }
+    </script>
+    <script src="./i18n.js"></script>
+    <style>
+        :root {
+            --bg-body: #f3f6f9;
+            --bg-surface: #ffffff;
+            --bg-sidebar: #ffffff;
+            --primary: #0ea5e9;
+            --primary-hover: #0284c7;
+            --success: #10b981;
+            --warning: #f59e0b;
+            --danger: #ef4444;
+            --text-main: #0f172a;
+            --text-muted: #64748b;
+            --border: #e2e8f0;
+            --shadow-sm: 0 1px 2px 0 rgb(0 0 0 / 0.05);
+            --shadow: 0 4px 6px -1px rgb(0 0 0 / 0.05), 0 2px 4px -2px rgb(0 0 0 / 0.05);
+            --shadow-lg: 0 10px 15px -3px rgb(0 0 0 / 0.1), 0 4px 6px -4px rgb(0 0 0 / 0.1);
+            --radius-md: 12px;
+            --radius-lg: 16px;
+            --radius-xl: 24px;
+            --transition: all 0.3s cubic-bezier(0.4, 0, 0.2, 1);
+            --font-main: 'Plus Jakarta Sans', sans-serif;
+        }
+
+        * { margin: 0; padding: 0; box-sizing: border-box; }
+
+        body {
+            font-family: var(--font-main); background-color: var(--bg-body);
+            color: var(--text-main); display: flex; height: 100vh; overflow: hidden;
+            -webkit-font-smoothing: antialiased;
+        }
+
+        body.dark-mode {
+            --bg-body: #0f172a;
+            --bg-surface: #1e293b;
+            --bg-sidebar: #1e293b;
+            --text-main: #f8fafc;
+            --text-muted: #cbd5e1;
+            --border: #334155;
+            --shadow-sm: 0 1px 2px 0 rgb(0 0 0 / 0.3);
+            --shadow: 0 4px 6px -1px rgb(0 0 0 / 0.3), 0 2px 4px -2px rgb(0 0 0 / 0.2);
+            --shadow-lg: 0 10px 15px -3px rgb(0 0 0 / 0.4), 0 4px 6px -4px rgb(0 0 0 / 0.3);
+        }
+
+        @keyframes fadeInUp {
+            0% { opacity: 0; transform: translateY(20px); }
+            100% { opacity: 1; transform: translateY(0); }
+        }
+
+        button, a, input, select, .nav-item { transition: all 0.3s cubic-bezier(0.175, 0.885, 0.32, 1.275); }
+        button:hover, .nav-item:hover { transform: translateY(-2px); }
+        button:active, .nav-item:active { transform: scale(0.95) !important; }
+
+        .metric-card, .user-card, .widget, .table-container, .map-container, .sensor-item { animation: fadeInUp 0.5s ease backwards; transition: all 0.3s ease; }
+
+        /* --- SIDEBAR --- */
+        .sidebar {
+            width: 260px; background: var(--bg-sidebar); border-right: 1px solid var(--border);
+            display: flex; flex-direction: column; padding: 24px 16px; z-index: 10;
+        }
+        .logo-area { display: flex; align-items: center; gap: 12px; margin-bottom: 40px; padding: 0 8px; }
+        .logo-icon {
+            width: 40px; height: 40px; background: linear-gradient(135deg, var(--primary), #38bdf8);
+            border-radius: 10px; display: flex; align-items: center; justify-content: center;
+            color: white; font-size: 1.2rem; box-shadow: 0 4px 10px rgba(14, 165, 233, 0.3);
+        }
+        .logo-text { font-weight: 700; font-size: 1.1rem; line-height: 1.2; }
+        .logo-text span { color: var(--primary); }
+
+        .nav-menu { display: flex; flex-direction: column; gap: 8px; flex: 1; }
+        .nav-item {
+            display: flex; align-items: center; gap: 14px; padding: 12px 16px;
+            border-radius: var(--radius-md); color: var(--text-muted); text-decoration: none;
+            font-weight: 500; font-size: 0.95rem; transition: var(--transition); cursor: pointer;
+        }
+        .nav-item i { font-size: 1.1rem; width: 20px; text-align: center; }
+        .nav-item:hover, .nav-item.active { background: #f0f9ff; color: var(--primary); }
+        .nav-item.active { font-weight: 600; }
+        body.dark-mode .nav-item:hover, body.dark-mode .nav-item.active { background: rgba(14, 165, 233, 0.15); color: var(--primary); }
+
+        /* --- MAIN CONTENT --- */
+        .main-content { flex: 1; display: flex; flex-direction: column; overflow: hidden; }
+
+        /* --- HEADER --- */
+        .header { height: 80px; background: rgba(255, 255, 255, 0.85); backdrop-filter: blur(12px); border-bottom: 1px solid var(--border); display: flex; align-items: center; justify-content: space-between; padding: 0 32px; z-index: 5; }
+        body.dark-mode .header { background: rgba(30, 41, 59, 0.85); }
+        .header-left { display: flex; align-items: center; gap: 20px; }
+        .status-badge {
+            display: inline-flex; align-items: center; gap: 8px;
+            background: #ecfdf5; color: var(--success); padding: 6px 14px;
+            border-radius: 20px; font-weight: 600; font-size: 0.85rem; border: 1px solid #d1fae5;
+            transition: var(--transition);
+        }
+        .status-badge.offline { background: #fef2f2; color: var(--danger); border-color: #fee2e2; }
+        .status-dot { width: 8px; height: 8px; border-radius: 50%; background: var(--success); }
+        .status-badge.offline .status-dot { background: var(--danger); }
+        
+        .header-center { flex: 1; text-align: center; font-weight: 700; color: var(--primary); font-size: 1.1rem; }
+
+        .status-dot.pulse { animation: pulse-green 2s infinite; }
+        @keyframes pulse-green { 0% { box-shadow: 0 0 0 0 rgba(16, 185, 129, 0.4); } 70% { box-shadow: 0 0 0 6px rgba(16, 185, 129, 0); } 100% { box-shadow: 0 0 0 0 rgba(16, 185, 129, 0); } }
+
+        .header-right { display: flex; align-items: center; gap: 24px; }
+        .time-display { font-weight: 500; color: var(--text-muted); font-size: 0.95rem; }
+        .user-profile { display: flex; align-items: center; gap: 12px; cursor: pointer; }
+        .avatar { width: 40px; height: 40px; border-radius: 50%; background: #e2e8f0; display: flex; align-items: center; justify-content: center; color: var(--text-muted); font-size: 1.2rem; }
+        .user-info { display: flex; flex-direction: column; }
+        .user-name { font-weight: 600; font-size: 0.9rem; }
+        .user-role { font-size: 0.75rem; color: var(--text-muted); }
+
+        /* --- DASHBOARD SCROLL AREA --- */
+        .dashboard-scroll { flex: 1; overflow-y: auto; padding: 32px; display: flex; flex-direction: column; gap: 24px; }
+        .dashboard-scroll::-webkit-scrollbar { width: 8px; }
+        .dashboard-scroll::-webkit-scrollbar-thumb { background: #cbd5e1; border-radius: 4px; }
+
+        /* --- METRICS GRID --- */
+        .metrics-grid { display: grid; grid-template-columns: repeat(6, 1fr); gap: 20px; }
+        .metric-card {
+            background: var(--bg-surface); border-radius: var(--radius-lg); padding: 20px;
+            box-shadow: var(--shadow-sm); border: 1px solid var(--border);
+            display: flex; flex-direction: column; gap: 12px; transition: var(--transition);
+        }
+        .metric-card:hover { box-shadow: var(--shadow); transform: translateY(-2px); border-color: #cbd5e1; }
+        .metric-header { display: flex; justify-content: space-between; align-items: center; color: var(--text-muted); font-size: 0.9rem; font-weight: 500; }
+        .metric-icon { width: 36px; height: 36px; border-radius: 10px; display: flex; align-items: center; justify-content: center; font-size: 1.1rem; }
+        .icon-blue { background: #e0f2fe; color: var(--primary); }
+        .icon-green { background: #dcfce7; color: var(--success); }
+        .icon-yellow { background: #fef3c7; color: var(--warning); }
+        .icon-purple { background: #f3e8ff; color: #a855f7; }
+        .metric-value { font-size: 1.8rem; font-weight: 700; color: var(--text-main); line-height: 1.2; display: flex; align-items: baseline; gap: 4px;}
+        .metric-unit { font-size: 1rem; color: var(--text-muted); font-weight: 500; }
+        .metric-status { padding: 4px 8px; border-radius: 6px; font-size: 0.75rem; font-weight: 600; display: inline-block; align-self: flex-start; }
+        .status-good { background: #f0fdf4; color: var(--success); }
+        .status-warn { background: #fffbeb; color: var(--warning); }
+        .status-crit { background: #fef2f2; color: var(--danger); }
+        
+        /* Metric Animation */
+        .value-update { animation: highlight-value 1s ease; }
+        @keyframes highlight-value { 0%{color:var(--primary);} 100%{color:var(--text-main);} }
+
+        /* --- MAIN PANELS LAYOUT --- */
+        .panels-grid { display: grid; grid-template-columns: 2fr 1fr; gap: 24px; }
+        
+        .panel {
+            background: var(--bg-surface); border-radius: var(--radius-xl); padding: 24px;
+            box-shadow: var(--shadow-sm); border: 1px solid var(--border); display: flex; flex-direction: column;
+        }
+        .panel-header { display: flex; justify-content: space-between; align-items: center; margin-bottom: 20px; }
+        .panel-title { font-size: 1.1rem; font-weight: 600; display: flex; align-items: center; gap: 10px; }
+        .panel-title i { color: var(--primary); }
+
+        /* -- PANEL HIGHLIGHT ANIMATION -- */
+        @keyframes panel-glow {
+            0% { box-shadow: 0 0 0px 0px rgba(14, 165, 233, 0); border-color: var(--border); transform: scale(1); }
+            15% { box-shadow: 0 0 25px 8px rgba(14, 165, 233, 0.4); border-color: var(--primary); transform: scale(1.02); }
+            85% { box-shadow: 0 0 25px 8px rgba(14, 165, 233, 0.4); border-color: var(--primary); transform: scale(1.02); }
+            100% { box-shadow: 0 0 0px 0px rgba(14, 165, 233, 0); border-color: var(--border); transform: scale(1); }
+        }
+        .glow-fx { animation: panel-glow 2.5s ease-out forwards; z-index: 20; position: relative; }
+
+        /* -- FARM SECTOR MAP -- */
+        .farm-map {
+            display: grid; grid-template-columns: 1fr 1fr; grid-template-rows: 1fr 1fr; gap: 12px;
+            background: #f8fafc; padding: 12px; border-radius: var(--radius-lg); position: relative;
+            height: 300px;
+        }
+        .map-sector {
+            border-radius: var(--radius-md); border: 2px dashed #cbd5e1; background: white;
+            display: flex; flex-direction: column; align-items: center; justify-content: center;
+            transition: var(--transition); position: relative; overflow: hidden;
+        }
+        .sec-label { font-weight: 600; color: var(--text-muted); z-index: 2; margin-bottom: 5px; }
+        .sec-status { font-size: 0.8rem; font-weight: 500; padding: 4px 10px; border-radius: 12px; z-index: 2;}
+        
+        .map-sector.healthy { border-color: #86efac; border-style: solid; background: #f0fdf4; }
+        .map-sector.healthy .sec-status { background: #dcfce7; color: var(--success); }
+        
+        .map-sector.warning { border-color: #fcd34d; border-style: solid; background: #fffbeb; }
+        .map-sector.warning .sec-status { background: #fef3c7; color: var(--warning); }
+        
+        .map-sector.alert { border-color: #fca5a5; border-style: solid; background: #fef2f2; animation: border-pulse-red 2s infinite; }
+        .map-sector.alert .sec-status { background: #fee2e2; color: var(--danger); }
+        
+        @keyframes border-pulse-red { 0% { box-shadow: inset 0 0 0 rgba(239, 68, 68, 0); } 50% { box-shadow: inset 0 0 20px rgba(239, 68, 68, 0.1); } 100% { box-shadow: inset 0 0 0 rgba(239, 68, 68, 0); } }
+
+        /* Dark Mode overrides for farm-map */
+        body.dark-mode .farm-map { background: #1e293b; }
+        body.dark-mode .map-sector { background: #273548; border-color: #374151; }
+        body.dark-mode .map-sector.healthy { border-color: #059669; background: #064e3b; }
+        body.dark-mode .map-sector.healthy .sec-status { background: #065f46; color: #34d399; }
+        body.dark-mode .map-sector.warning { border-color: #d97706; background: #78350f; }
+        body.dark-mode .map-sector.warning .sec-status { background: #92400e; color: #fbbf24; }
+        body.dark-mode .map-sector.alert { border-color: #dc2626; background: #7f1d1d; }
+        body.dark-mode .map-sector.alert .sec-status { background: #991b1b; color: #f87171; }
+        body.dark-mode .map-robot { background: #1e293b; color: #f8fafc; }
+
+        .map-robot {
+            position: absolute; width: 44px; height: 44px; background: white; border-radius: 50%;
+            box-shadow: 0 4px 12px rgba(0,0,0,0.15); display: flex; align-items: center; justify-content: center;
+            font-size: 1.2rem; color: var(--primary); z-index: 10; transition: all 1.2s cubic-bezier(0.34, 1.56, 0.64, 1);
+            transform: translate(-50%, -50%); border: 2px solid var(--primary);
+        }
+        .map-robot::before {
+            content: ''; position: absolute; inset: -6px; border-radius: 50%;
+            border: 2px solid var(--primary); opacity: 0; animation: radar-ping 2s infinite;
+        }
+        @keyframes radar-ping { 0% { transform: scale(0.5); opacity: 1; } 100% { transform: scale(1.5); opacity: 0; } }
+
+        /* -- SENSORS LIST -- */
+        .sensor-list { display: flex; flex-direction: column; gap: 12px; }
+        .sensor-item {
+            display: flex; align-items: center; justify-content: space-between;
+            padding: 14px 16px; background: #f8fafc; border-radius: var(--radius-md);
+            border: 1px solid var(--border); transition: var(--transition);
+        }
+        body.dark-mode .sensor-item { background: #273548; border-color: #374151; }
+        .sensor-item:hover { background: white; border-color: #cbd5e1; box-shadow: var(--shadow-sm); }
+        body.dark-mode .sensor-item:hover { background: #334155; border-color: #475569; }
+        .sensor-info { display: flex; align-items: center; gap: 12px; }
+        .s-icon { width: 32px; height: 32px; border-radius: 8px; background: white; display: flex; align-items: center; justify-content: center; color: var(--text-muted); box-shadow: var(--shadow-sm); }
+        body.dark-mode .s-icon { background: #334155; }
+        .s-details { display: flex; flex-direction: column; }
+        .s-name { font-weight: 600; font-size: 0.9rem; }
+        .s-time { font-size: 0.75rem; color: var(--text-muted); }
+        .sensor-val { display: flex; align-items: center; gap: 10px; font-weight: 600; }
+        .s-dot { width: 8px; height: 8px; border-radius: 50%; background: var(--success); }
+        .s-dot.warn { background: var(--warning); }
+        .s-dot.err { background: var(--danger); }
+
+        /* --- CONTROL CONSOLE SECTION --- */
+        .control-section { display: grid; grid-template-columns: 1fr 1fr; gap: 24px; }
+        
+        .btn-grid { display: grid; grid-template-columns: 1fr 1fr; gap: 12px; }
+        
+        .btn {
+            padding: 14px 16px; border-radius: var(--radius-md); font-family: var(--font-main);
+            font-weight: 600; font-size: 0.9rem; border: 1px solid var(--border); background: white;
+            color: var(--text-main); cursor: pointer; transition: var(--transition);
+            display: flex; align-items: center; justify-content: center; gap: 8px;
+            box-shadow: var(--shadow-sm);
+        }
+        body.dark-mode .btn { background: #1e293b; border-color: #334155; color: #f8fafc; }
+        .btn:hover { transform: translateY(-2px); box-shadow: var(--shadow); }
+        .btn:active { transform: translateY(0); }
+        
+        .btn-primary { background: var(--primary); color: white; border-color: var(--primary); }
+        .btn-primary:hover { background: var(--primary-hover); }
+        
+        .btn-outline-primary:hover { border-color: var(--primary); color: var(--primary); background: #f0f9ff; }
+        
+        .btn-danger-outline { border-color: #fecaca; color: var(--danger); }
+        .btn-danger-outline:hover { background: #fef2f2; border-color: #fca5a5; }
+
+        .btn-sim { border-style: dashed; border-color: #cbd5e1; color: var(--text-muted); background: #f8fafc; }
+        body.dark-mode .btn-sim { border-color: #475569; color: #cbd5e1; background: transparent; }
+        .btn-sim:hover { border-style: solid; border-color: var(--primary); color: var(--primary); background: white; }
+        body.dark-mode .btn-sim:hover { background: rgba(14,165,233,0.1); }
+
+        /* --- HISTORY LOG --- */
+        .history-panel { flex: 1; display: flex; flex-direction: column; overflow: hidden; max-height: 400px; }
+        .history-list { flex: 1; overflow-y: auto; display: flex; flex-direction: column; gap: 0; padding-right: 8px; }
+        .history-list::-webkit-scrollbar { width: 6px; }
+        .history-list::-webkit-scrollbar-thumb { background: #cbd5e1; border-radius: 3px; }
+        
+        .log-item { display: flex; gap: 16px; padding: 16px 0; border-bottom: 1px solid #f1f5f9; animation: slideDown 0.3s ease; }
+        body.dark-mode .log-item { border-bottom-color: #334155; }
+        @keyframes slideDown { from{opacity:0; transform:translateY(-10px);} to{opacity:1; transform:translateY(0);} }
+        .log-icon { width: 32px; height: 32px; border-radius: 50%; display: flex; align-items: center; justify-content: center; flex-shrink: 0; font-size: 0.85rem;}
+        .log-icon.cmd { background: #e0f2fe; color: var(--primary); }
+        body.dark-mode .log-icon.cmd { background: rgba(14,165,233,0.2); }
+        .log-icon.evt { background: #fef3c7; color: var(--warning); }
+        body.dark-mode .log-icon.evt { background: rgba(245,158,11,0.2); }
+        .log-icon.alrt { background: #fef2f2; color: var(--danger); }
+        body.dark-mode .log-icon.alrt { background: rgba(239,68,68,0.2); }
+        .log-icon.sys { background: #f3f4f6; color: var(--text-muted); }
+        body.dark-mode .log-icon.sys { background: #334155; color: #cbd5e1; }
+        
+        .log-content { display: flex; flex-direction: column; gap: 4px; }
+        .log-header { justify-content: space-between; display: flex; align-items: center; width: 100%; gap: 20px;}
+        .log-title { font-weight: 600; font-size: 0.9rem; color: var(--text-main); }
+        .log-time { font-size: 0.75rem; color: var(--text-muted); white-space: nowrap;}
+        .log-desc { font-size: 0.85rem; color: var(--text-muted); line-height: 1.4; }
+
+        /* -- AI RE-STYLIZED -- */
+        .ai-fab { position: fixed; bottom: 32px; right: 32px; width: 64px; height: 64px; border-radius: 50%; background: linear-gradient(135deg, var(--primary), #6366f1); color: white; display: flex; align-items: center; justify-content: center; font-size: 1.8rem; box-shadow: 0 10px 25px rgba(14,165,233,0.4); cursor: pointer; z-index: 9999 !important; transition: var(--transition); border: 4px solid white;}
+        .ai-fab:hover { transform: scale(1.1) rotate(5deg); box-shadow: 0 15px 30px rgba(14,165,233,0.5); }
+        .ai-fab::after { content: ''; position: absolute; inset: -4px; border: 2px solid var(--primary); border-radius: 50%; animation: ping 2s cubic-bezier(0, 0, 0.2, 1) infinite;}
+        @keyframes ping { 75%, 100% { transform: scale(1.3); opacity: 0; } }
+
+        .ai-modal { position: fixed; inset: 0; background: rgba(15,23,42,0.6); backdrop-filter: blur(8px); display: none; align-items: center; justify-content: center; z-index: 10000 !important; padding: 20px; }
+        .ai-box { background: var(--bg-surface); width: 100%; max-width: 480px; border-radius: 24px; padding: 32px; box-shadow: 0 25px 50px -12px rgba(0,0,0,0.25); position: relative; animation: fadeInUp 0.4s ease; transform-origin: bottom; color: var(--text-main); }
+        .ai-head { display: flex; align-items: center; gap: 16px; margin-bottom: 24px; }
+        .ai-icon { width: 56px; height: 56px; border-radius: 16px; background: #f0f9ff; color: var(--primary); display: flex; align-items: center; justify-content: center; font-size: 1.5rem; }
+        .ai-title { font-size: 1.25rem; font-weight: 800; }
+        .ai-status { font-size: 0.85rem; color: var(--text-muted); font-weight: 600; margin-top: 2px; }
+        .ai-chat-area { height: 300px; overflow-y: auto; background: var(--bg-body); border-radius: 16px; padding: 20px; margin-bottom: 20px; display: flex; flex-direction: column; gap: 12px; }
+        .chat-msg { max-width: 85%; padding: 12px 18px; border-radius: 16px; font-size: 0.95rem; line-height: 1.5; font-weight: 500; }
+        .chat-user { align-self: flex-end; background: var(--primary); color: white; border-bottom-right-radius: 4px; }
+        .chat-ai { align-self: flex-start; background: var(--bg-surface); color: var(--text-main); border-bottom-left-radius: 4px; box-shadow: 0 4px 6px -1px rgba(0,0,0,0.05); }
+        .mic-btn-wrap { display: flex; justify-content: center; margin-top: 10px; }
+        .mic-btn { width: 64px; height: 64px; border-radius: 50%; background: var(--primary); border: none; color: white; font-size: 1.5rem; cursor: pointer; box-shadow: 0 8px 20px rgba(14,165,233,0.4); transition: 0.2s;}
+        .mic-btn:active { transform: scale(0.9); }
+        .ai-close { background: #f1f5f9; color: var(--text-main); border: none; padding: 10px 24px; border-radius: 12px; font-weight: 700; margin-top: 24px; cursor: pointer; width: 100%;}
+        body.dark-mode .ai-close { background: #334155; color: #cbd5e1; }
+
+
+        /* ALARM BANNER (Top) */
+        .alarm-banner {
+            position: fixed; top: 0; left: 260px; right: 0; background: #fef2f2; border-bottom: 1px solid #fee2e2;
+            padding: 12px 32px; display: flex; align-items: center; justify-content: space-between;
+            transform: translateY(-100%); transition: transform 0.4s cubic-bezier(0.34, 1.56, 0.64, 1); z-index: 40;
+            box-shadow: var(--shadow-md);
+        }
+        .alarm-banner.active { transform: translateY(0); }
+        .alarm-content { display: flex; align-items: center; gap: 12px; color: var(--danger); font-weight: 600; flex-wrap: wrap; }
+        .alarm-btn { background: white; color: var(--danger); border: 1px solid #fca5a5; padding: 6px 16px; border-radius: 20px; font-weight: 600; font-size: 0.85rem; cursor: pointer; transition: all 0.2s; white-space: nowrap; }
+        .alarm-btn:hover { background: var(--danger); color: white; }
+        @media (max-width: 768px) {
+            .alarm-banner { left: 0; padding: 12px 16px; flex-direction: column; gap: 8px; text-align: center; }
+        }
+
+        /* === LIGHT MODE BLUE ACCENTS === */
+        body:not(.dark-mode) .nav-item.active {
+            background: #eff6ff;
+            color: #2563eb;
+            font-weight: 700;
+        }
+        body:not(.dark-mode) .sidebar {
+            border-right-color: #dbeafe;
+        }
+        body:not(.dark-mode) .logo-icon {
+            background: linear-gradient(135deg, #2563eb, #1d4ed8);
+        }
+        body:not(.dark-mode) .metric-card {
+            box-shadow: 0 2px 8px rgba(37, 99, 235, 0.06);
+        }
+        body:not(.dark-mode) .metric-card:hover {
+            box-shadow: 0 8px 24px rgba(37, 99, 235, 0.12);
+            border-color: #93c5fd;
+        }
+        body:not(.dark-mode) .filter-btn.active {
+            background: #2563eb;
+            border-color: #2563eb;
+        }
+
+        /* UTILITIES */
+        .glass-badge { background: rgba(255,255,255,0.8); backdrop-filter: blur(8px); padding: 4px 10px; border-radius: 20px; font-size: 0.75rem; font-weight: 600; border: 1px solid rgba(0,0,0,0.05); }
+
+        /* --- USER MANAGEMENT CARDS --- */
+        .users-section { margin-top: 12px; }
+        .users-section-title { font-size: 1.15rem; font-weight: 700; color: var(--text-main); margin-bottom: 16px; display: flex; align-items: center; gap: 10px; }
+        .users-section-title i { color: var(--primary); }
+        .users-grid { display: grid; grid-template-columns: repeat(auto-fill, minmax(280px, 1fr)); gap: 16px; }
+        .user-card {
+            background: var(--bg-surface); border-radius: var(--radius-lg); padding: 20px;
+            border: 1px solid var(--border); box-shadow: var(--shadow-sm);
+            cursor: pointer; transition: var(--transition);
+            display: flex; align-items: center; gap: 16px;
+        }
+        .user-card:hover { box-shadow: var(--shadow-lg); transform: translateY(-3px); border-color: var(--primary); }
+        .user-card .uc-avatar {
+            width: 52px; height: 52px; border-radius: 14px; display: flex; align-items: center; justify-content: center;
+            font-size: 1.4rem; font-weight: 800; color: white; flex-shrink: 0;
+        }
+        .uc-avatar.role-admin { background: linear-gradient(135deg, #8b5cf6, #a78bfa); }
+        .uc-avatar.role-farmer { background: linear-gradient(135deg, #16a34a, #22c55e); }
+        .uc-avatar.role-user { background: linear-gradient(135deg, #0ea5e9, #38bdf8); }
+        .user-card .uc-info { flex: 1; min-width: 0; }
+        .uc-name { font-weight: 700; font-size: 1rem; color: var(--text-main); white-space: nowrap; overflow: hidden; text-overflow: ellipsis; }
+        .uc-email { font-size: 0.82rem; color: var(--text-muted); white-space: nowrap; overflow: hidden; text-overflow: ellipsis; }
+        .uc-role-badge {
+            display: inline-block; padding: 3px 10px; border-radius: 20px; font-size: 0.72rem;
+            font-weight: 700; text-transform: uppercase; letter-spacing: 0.5px; margin-top: 6px;
+        }
+        .uc-role-badge.admin { background: #f5f3ff; color: #7c3aed; }
+        .uc-role-badge.farmer { background: #f0fdf4; color: #16a34a; }
+        .uc-role-badge.user { background: #f0f9ff; color: #0284c7; }
+        .uc-arrow { color: var(--text-muted); font-size: 1rem; }
+
+        /* --- USER DASHBOARD MODAL --- */
+        .ud-overlay {
+            display: none; position: fixed; inset: 0; z-index: 9000;
+            background: rgba(0,0,0,0.5); backdrop-filter: blur(6px);
+            align-items: center; justify-content: center; padding: 24px;
+        }
+        .ud-overlay.open { display: flex; animation: fadeIn 0.3s; }
+        @keyframes fadeIn { from{opacity:0} to{opacity:1} }
+        .ud-modal {
+            background: var(--bg-surface); border-radius: var(--radius-xl); max-width: 800px; width: 100%;
+            max-height: 85vh; overflow-y: auto; box-shadow: 0 25px 50px rgba(0,0,0,0.25);
+            animation: modalSlide 0.4s cubic-bezier(0.16,1,0.3,1);
+        }
+        @keyframes modalSlide { from{transform:translateY(40px);opacity:0} to{transform:translateY(0);opacity:1} }
+        .ud-header {
+            position: sticky; top: 0; background: var(--bg-surface); padding: 24px 28px;
+            border-bottom: 1px solid var(--border); display: flex; align-items: center; justify-content: space-between;
+            z-index: 5;
+        }
+        .ud-header-info { display: flex; align-items: center; gap: 16px; }
+        .ud-header-info .uc-avatar { width: 48px; height: 48px; border-radius: 12px; }
+        .ud-close {
+            width: 36px; height: 36px; border-radius: 50%; border: 1px solid var(--border);
+            background: white; cursor: pointer; display: flex; align-items: center; justify-content: center;
+            color: var(--text-muted); font-size: 1rem; transition: all 0.2s;
+        }
+        body.dark-mode .ud-close { background: #0f172a; border-color: #334155; }
+        .ud-close:hover { background: #fef2f2; color: var(--danger); border-color: #fca5a5; }
+        body.dark-mode .ud-close:hover { background: rgba(239,68,68,0.1); }
+        .ud-body { padding: 24px 28px; }
+        .ud-metrics-grid { display: grid; grid-template-columns: repeat(3, 1fr); gap: 14px; margin-bottom: 24px; }
+        .ud-metric {
+            background: #f8fafc; border-radius: var(--radius-md); padding: 14px;
+            border: 1px solid var(--border); text-align: center;
+        }
+        body.dark-mode .ud-metric { background: #273548; border-color: #374151; }
+        .ud-metric-label { font-size: 0.78rem; font-weight: 600; color: var(--text-muted); margin-bottom: 6px; text-transform: uppercase; letter-spacing: 0.5px; }
+        .ud-metric-value { font-size: 1.6rem; font-weight: 800; color: var(--text-main); }
+        .ud-metric-unit { font-size: 0.85rem; color: var(--text-muted); font-weight: 500; }
+        .ud-section-title { font-weight: 700; font-size: 0.95rem; color: var(--text-main); margin-bottom: 12px; border-bottom: 1px solid var(--border); padding-bottom: 8px; }
+        .ud-log-item { display: flex; gap: 10px; padding: 10px 0; border-bottom: 1px solid #f1f5f9; font-size: 0.88rem; }
+        .ud-log-time { color: var(--text-muted); font-size: 0.78rem; flex-shrink: 0; width: 70px; }
+        .ud-log-msg { color: var(--text-main); }
+        .ud-actions { display: flex; gap: 12px; margin-top: 20px; }
+        .ud-actions .btn { flex: 1; }
+
+        /* Responsive */
+        .mobile-menu-btn { display: none; background: none; border: none; font-size: 1.4rem; color: var(--text-main); cursor: pointer; padding: 4px; }
+        .sidebar-overlay { position: fixed; inset: 0; background: rgba(0,0,0,0.5); z-index: 15; display: none; opacity: 0; transition: opacity 0.3s; }
+        .sidebar-overlay.active { display: block; opacity: 1; }
+        
+        .status-online { color: var(--success); font-weight: 800; display: flex; align-items: center; }
+        .status-offline { color: var(--text-muted); }
+        .pulse-green { color: var(--success); animation: pulse-green 2s infinite; }
+        @keyframes pulse-green {
+            0% { transform: scale(0.9); opacity: 0.7; }
+            50% { transform: scale(1.2); opacity: 1; }
+            100% { transform: scale(0.9); opacity: 0.7; }
+        }
+        
+        @media (max-width: 1024px) {
+            .metrics-grid { grid-template-columns: repeat(3, 1fr); }
+            .panels-grid { grid-template-columns: 1fr; }
+            .control-section { grid-template-columns: 1fr; }
+        }
+        @media (max-width: 768px) {
+            .sidebar { position: fixed; left: -280px; top: 0; bottom: 0; z-index: 50; transition: all 0.3s cubic-bezier(0.4, 0, 0.2, 1); box-shadow: var(--shadow-lg); height: 100vh; width: 280px; }
+            .sidebar.open { left: 0; }
+            .sidebar-overlay { z-index: 40; }
+            .mobile-menu-btn { display: block; }
+            .header { padding: 0 16px; height: 70px; gap: 12px; }
+            .header-left { gap: 12px; }
+            .header-right { gap: 12px; }
+            .time-display { display: none; }
+            .dashboard-scroll { padding: 16px; padding-bottom: 80px; }
+            .metrics-grid { grid-template-columns: repeat(2, 1fr); }
+            .metric-card { padding: 16px; }
+            .panels-grid { grid-template-columns: 1fr; }
+            .control-section { grid-template-columns: 1fr; }
+            .users-grid { grid-template-columns: 1fr; }
+            .btn-grid { grid-template-columns: 1fr; gap: 8px; }
+            .ud-metrics-grid { grid-template-columns: repeat(2, 1fr); }
+            .farm-map { height: 300px; }
+            .btn { min-height: 44px; padding: 12px; font-size: 0.95rem; }
+            .ai-fab { width: 56px; height: 56px; font-size: 1.4rem; bottom: 20px; right: 20px; }
+        }
+        @media (max-width: 480px) {
+            .header { height: 60px; padding: 0 12px; background: var(--bg-surface); border-bottom: 1px solid var(--border); display: flex; align-items: center; justify-content: space-between; position: sticky; top: 0; gap: 8px; }
+            .mobile-menu-btn { width: 44px; height: 44px; display: flex !important; align-items: center; justify-content: center; font-size: 1.2rem; color: var(--text-main); }
+            .header-left { flex: 0 0 auto; display: flex !important; align-items: center; gap: 6px; }
+            .header-right { gap: 4px; }
+            .header::after { display: none; }
+            .header-center { display: none !important; }
+            .status-badge { display: none !important; }
+            .time-display { display: none !important; }
+            
+            .dashboard-scroll { padding: 12px; padding-bottom: 80px; }
+            .metrics-grid { grid-template-columns: 1fr; gap: 12px; }
+            .metric-card { padding: 14px; }
+            .metric-value { font-size: 1.4rem; }
+            .metric-label { font-size: 0.85rem; }
+            .panels-grid { gap: 12px; grid-template-columns: 1fr; }
+            .panel { padding: 14px; }
+            .panel h3 { font-size: 1rem; margin-bottom: 12px; }
+            
+            /* Alert styling for mobile */
+            .map-sector { height: 60px; padding: 8px; }
+            .map-sector.alert { border: 2px solid var(--danger); }
+            .sec-status { font-size: 0.75rem; padding: 4px 8px; }
+            .map-sector.alert .sec-status { background: #fee2e2; color: var(--danger); }
+            
+            .users-grid { grid-template-columns: 1fr; }
+            .user-card { padding: 12px; flex-direction: column; }
+            .user-info { display: none; }
+            .user-profile { gap: 0; padding: 8px; }
+            
+            .ud-overlay { padding: 12px; }
+            .ud-modal { width: calc(100% - 24px); max-height: calc(100vh - 40px); }
+            .ud-header { padding: 14px; }
+            .ud-body { padding: 14px; }
+            .ud-metrics-grid { grid-template-columns: 1fr; gap: 10px; }
+            
+            .btn { min-height: 44px; min-width: initial; padding: 11px; font-size: 0.9rem; }
+            .btn-grid { grid-template-columns: 1fr; gap: 8px; }
+            .ai-fab { width: 52px; height: 52px; font-size: 1.3rem; bottom: 16px; right: 16px; }
+            
+            .logo-text { font-size: 1rem; }
+            .nav-item { padding: 10px 12px; font-size: 0.9rem; gap: 10px; }
+            .nav-item i { font-size: 1rem; width: 18px; }
+            
+            /* Farm map responsive */
+            .farm-map { height: 240px; }
+            .grid-row { grid-template-columns: 12px repeat(3, 1fr) 12px; gap: 4px; }
+            .grid-col { grid-template-rows: repeat(3, 1fr); gap: 4px; }
+            
+            .header-right { flex: 1; justify-content: flex-end; gap: 8px; }
+            .time-display { display: none !important; }
+            .user-info { display: none !important; }
+            
+            /* Interactive Globe Button */
+            .lang-toggle-btn {
+                background: white !important;
+                border: 1.5px solid var(--primary) !important;
+                color: var(--primary) !important;
+                box-shadow: 0 4px 12px rgba(14, 165, 233, 0.15);
+                transition: all 0.3s cubic-bezier(0.175, 0.885, 0.32, 1.275);
+                animation: pulse-border 3s infinite;
+            }
+            @keyframes pulse-border {
+                0% { box-shadow: 0 0 0 0 rgba(14, 165, 233, 0.4); }
+                70% { box-shadow: 0 0 0 10px rgba(14, 165, 233, 0); }
+                100% { box-shadow: 0 0 0 0 rgba(14, 165, 233, 0); }
+            }
+            .lang-toggle-btn:active { transform: scale(0.85); background: var(--primary) !important; color: white !important; }
+
+            .user-profile { gap: 0; }
+            .avatar { width: 34px; height: 34px; font-size: 1rem; }
+            
+            .metrics-grid { grid-template-columns: 1fr; }
+            .btn-grid { grid-template-columns: 1fr; }
+            .alarm-banner { padding: 12px 16px; flex-direction: column; gap: 8px; text-align: center;}
+            .logout-mobile-btn { display: flex !important; margin-left: 0; }
+            #sidebar-mobile-status { display: block !important; }
+            
+            /* Mobile responsive alert at top */
+            #custom-toast { left: 16px !important; right: 16px !important; transform: translateY(-100px) !important; width: auto !important; max-width: 100% !important; }
+            #custom-toast.show { transform: translateY(0) !important; }
+            .alarm-banner { position: fixed !important; top: 0; left: 0; right: 0; z-index: 10000; border-radius: 0; }
+        }
+
+        @keyframes fadeIn { from{opacity:0; transform:scale(0.95)} to{opacity:1; transform:scale(1)} }
+
+        /* FILTER TABS */
+        .filter-tabs { display: flex; gap: 12px; margin-bottom: 24px; overflow-x: auto; padding-bottom: 8px; }
+        .filter-btn {
+            padding: 8px 20px; border-radius: 20px; background: white; border: 1px solid var(--border);
+            color: var(--text-muted); font-weight: 600; font-size: 0.85rem; cursor: pointer; transition: var(--transition);
+            white-space: nowrap;
+        }
+        .filter-btn:hover { border-color: var(--primary); color: var(--primary); }
+        .filter-btn.active { background: var(--primary); color: white; border-color: var(--primary); box-shadow: 0 4px 10px rgba(14,165,233,0.3); }
+        body.dark-mode .filter-btn { background: #1e293b; border-color: #334155; color: #94a3b8; }
+        body.dark-mode .filter-btn:hover { border-color: var(--primary); color: var(--primary); }
+        body.dark-mode .filter-btn.active { background: var(--primary); color: white; border-color: var(--primary); }
+
+        /* TOAST NOTIFICATION */
+        #custom-toast {
+            position: fixed; top: 24px; left: 50%; transform: translateX(-50%) translateY(-100px);
+            background: white; border-left: 4px solid var(--primary); padding: 16px 24px;
+            border-radius: var(--radius-md); box-shadow: var(--shadow-lg); z-index: 11000;
+            display: flex; align-items: center; gap: 12px; transition: transform 0.5s cubic-bezier(0.175, 0.885, 0.32, 1.275);
+            pointer-events: none; opacity: 0;
+        }
+        #custom-toast.show { transform: translateX(-50%) translateY(0); opacity: 1; pointer-events: auto; }
+        .toast-icon { color: var(--primary); font-size: 1.2rem; }
+        .toast-msg { font-weight: 600; color: var(--text-main); font-size: 0.9rem; }
+        body.dark-mode #custom-toast { background: #1e293b; border-left-color: var(--primary); }
+        body.dark-mode .toast-msg { color: #f8fafc; }
+
+        /* Sidebar Mobile Status Dark Mode */
+        #sidebar-mobile-status { background: #f8fafc; border-color: var(--border); }
+        #sidebar-mobile-status .status-badge { background: white; border-color: var(--border); }
+        #sidebar-mobile-status a.nav-item { background: #fff5f5; border-color: #fee2e2; }
+        body.dark-mode #sidebar-mobile-status { background: #1e293b !important; border-color: #334155 !important; }
+        body.dark-mode #sidebar-mobile-status .status-badge { background: #273548 !important; border-color: #374151 !important; color: #f8fafc;}
+        body.dark-mode #sidebar-mobile-status a.nav-item { background: rgba(239, 68, 68, 0.1) !important; border-color: rgba(239, 68, 68, 0.2) !important; color: #fca5a5 !important;}
+
+        /* ====================================================
+           NEW ADMIN SECTION STYLES
+        ==================================================== */
+        .admin-section { padding: 24px; }
+        @media (max-width: 768px) { .admin-section { padding: 16px; } }
+
+        /* Section Header */
+        .section-header { display:flex; justify-content:space-between; align-items:flex-start; flex-wrap:wrap; gap:16px; margin-bottom:4px; }
+        .section-title { font-size:1.4rem; font-weight:800; display:flex; align-items:center; gap:10px; color:var(--text-main); margin:0; }
+        .section-title i { color:var(--primary); }
+        .section-sub { font-size:0.85rem; color:var(--text-muted); margin:6px 0 0; }
+
+        /* Fleet Cards */
+        .fleet-grid { display:grid; grid-template-columns:repeat(auto-fit,minmax(180px,1fr)); gap:16px; }
+        .fleet-card { background:var(--bg-surface); border:1px solid var(--border); border-radius:16px; padding:18px; display:flex; flex-direction:column; gap:8px; box-shadow:var(--shadow-sm); transition:0.2s; }
+        .fleet-card:hover { box-shadow:var(--shadow-md); transform:translateY(-2px); }
+        .fleet-card-icon { width:42px; height:42px; border-radius:12px; display:flex; align-items:center; justify-content:center; font-size:1.1rem; }
+        .fleet-card-label { font-size:0.78rem; font-weight:700; color:var(--text-muted); text-transform:uppercase; letter-spacing:0.5px; }
+        .fleet-card-val { font-size:1.8rem; font-weight:800; color:var(--text-main); line-height:1; }
+        .fleet-card-bar { height:5px; background:var(--border); border-radius:4px; overflow:hidden; }
+        .fleet-bar-fill { height:100%; border-radius:4px; transition:width 0.6s ease; }
+        .fleet-status-badge { display:flex; align-items:center; gap:6px; padding:8px 16px; border-radius:20px; font-size:0.82rem; font-weight:700; background:#f0fdf4; color:#15803d; border:1px solid #86efac; }
+        .fleet-status-badge.offline { background:#fef2f2; color:#dc2626; border-color:#fca5a5; }
+
+        /* Fleet Controls */
+        .fleet-controls-grid { display:grid; grid-template-columns:1fr 1fr; gap:20px; }
+        @media (max-width: 768px) { .fleet-controls-grid { grid-template-columns:1fr; } }
+        .fleet-mode-btn { padding:12px 6px; border-radius:12px; border:1px solid var(--border); background:var(--bg-surface); color:var(--text-muted); font-size:0.75rem; font-weight:700; cursor:pointer; font-family:var(--font-main); transition:0.2s; line-height:1.6; }
+        .fleet-mode-btn:hover, .fleet-mode-btn.active { background:var(--primary); color:white; border-color:var(--primary); transform:translateY(-1px); box-shadow:0 4px 12px rgba(14,165,233,0.3); }
+        .fleet-mode-btn i { display:block; font-size:1.1rem; margin-bottom:4px; }
+        .fleet-dpad { display:grid; grid-template-columns:repeat(3, 64px); gap:8px; justify-content:center; margin:8px auto; }
+        .fleet-dpad-btn { width:64px; height:64px; border-radius:14px; border:1px solid var(--border); background:var(--bg-surface); color:var(--text-main); font-size:1.1rem; cursor:pointer; display:flex; align-items:center; justify-content:center; transition:0.15s; touch-action:none; }
+        .fleet-dpad-btn:hover, .fleet-dpad-btn:active { background:var(--primary); color:white; border-color:var(--primary); transform:scale(0.95); }
+        .fleet-dpad-btn.stop { background:#fef2f2; border-color:#fca5a5; color:var(--danger); }
+        .btn-danger-outline { background:transparent; border:1px solid #fca5a5; color:var(--danger); }
+        .btn-danger-outline:hover { background:#fef2f2; }
+
+        /* KPI Cards */
+        .kpi-card { background:var(--bg-surface); border:1px solid var(--border); border-radius:16px; padding:20px; display:flex; flex-direction:column; gap:4px; box-shadow:var(--shadow-sm); transition:0.2s; }
+        .kpi-card:hover { box-shadow:var(--shadow-md); transform:translateY(-2px); border-color:var(--kpi-color,var(--primary)); }
+        .kpi-icon { width:40px; height:40px; border-radius:10px; background:rgba(16,185,129,0.1); display:flex; align-items:center; justify-content:center; margin-bottom:8px; }
+        .kpi-icon i { color:var(--kpi-color, #10b981); font-size:1.1rem; }
+        .kpi-label { font-size:0.78rem; font-weight:700; color:var(--text-muted); text-transform:uppercase; letter-spacing:0.5px; }
+        .kpi-val { font-size:2rem; font-weight:800; color:var(--text-main); }
+        .kpi-sub { font-size:0.75rem; color:var(--text-muted); }
+
+        /* Sector Cards */
+        .sector-card { background:var(--bg-surface); border:1px solid var(--border); border-radius:16px; overflow:hidden; box-shadow:var(--shadow-sm); transition:0.2s; }
+        .sector-card:hover { box-shadow:var(--shadow-md); }
+        .sector-card-header { padding:16px 20px; display:flex; justify-content:space-between; align-items:center; border-bottom:1px solid var(--border); }
+        .sector-card-body { padding:16px 20px; display:flex; flex-direction:column; gap:12px; }
+        .sector-badge { padding:4px 10px; border-radius:20px; font-size:0.72rem; font-weight:700; text-transform:uppercase; }
+        .sector-badge.safe { background:#dcfce7; color:#15803d; }
+        .sector-badge.moderate { background:#fef3c7; color:#92400e; }
+        .sector-badge.danger { background:#fee2e2; color:#b91c1c; }
+        .npk-row { display:grid; grid-template-columns:1fr 1fr 1fr; gap:8px; }
+        .npk-chip { background:var(--bg-body); border-radius:8px; padding:8px; text-align:center; }
+        .npk-chip .label { font-size:0.65rem; font-weight:800; color:var(--text-muted); text-transform:uppercase; }
+        .npk-chip .val { font-size:1rem; font-weight:700; color:var(--text-main); }
+        .prescription-box { background:linear-gradient(135deg,rgba(14,165,233,0.05),rgba(16,185,129,0.05)); border:1px solid var(--border); border-radius:10px; padding:10px 14px; font-size:0.8rem; color:var(--text-muted); line-height:1.5; }
+
+        /* Toggle Switch */
+        .toggle-switch { width:48px; height:26px; border-radius:13px; background:#cbd5e1; cursor:pointer; position:relative; transition:0.3s; flex-shrink:0; }
+        .toggle-switch.active { background:var(--primary); }
+        .toggle-knob { position:absolute; top:3px; left:3px; width:20px; height:20px; border-radius:50%; background:white; transition:0.3s; box-shadow:0 1px 4px rgba(0,0,0,0.2); }
+        .toggle-switch.active .toggle-knob { left:25px; }
+        body.dark-mode .toggle-switch { background:#334155; }
+        body.dark-mode .toggle-switch.active { background:var(--primary); }
+
+        /* Admin Tables */
+        .admin-table { width:100%; border-collapse:collapse; font-size:0.85rem; }
+        .admin-table th { padding:12px 16px; text-align:left; font-size:0.72rem; font-weight:800; text-transform:uppercase; letter-spacing:0.5px; color:var(--text-muted); background:var(--bg-body); border-bottom:1px solid var(--border); }
+        .admin-table td { padding:12px 16px; border-bottom:1px solid var(--border); color:var(--text-main); vertical-align:middle; }
+        .admin-table tr:hover td { background:rgba(14,165,233,0.03); }
+        .admin-table tr:last-child td { border-bottom:none; }
+        .type-badge { display:inline-flex; align-items:center; gap:4px; padding:3px 10px; border-radius:20px; font-size:0.72rem; font-weight:700; text-transform:uppercase; }
+        .type-badge.cmd { background:#eff6ff; color:#1d4ed8; }
+        .type-badge.evt { background:#f0fdf4; color:#15803d; }
+        .type-badge.alrt { background:#fef2f2; color:#b91c1c; }
+        .type-badge.sys { background:#f5f3ff; color:#6d28d9; }
+        .type-badge.weed { background:#dcfce7; color:#15803d; }
+        .type-badge.pest { background:#fef3c7; color:#92400e; }
+
+        /* Config Sliders */
+        .config-slider { width:100%; accent-color:var(--primary); height:6px; cursor:pointer; }
+        .config-val { font-weight:700; color:var(--primary); font-size:0.9rem; }
+        .config-slider-group label { font-size:0.82rem; font-weight:600; color:var(--text-main); }
+        .info-row { display:flex; justify-content:space-between; align-items:center; padding:10px 0; border-bottom:1px solid var(--border); font-size:0.85rem; }
+        .info-row:last-child { border-bottom:none; }
+        .info-row span { color:var(--text-muted); }
+        .info-row strong { color:var(--text-main); }
+
+        /* Audit Filter Buttons */
+        .audit-filter-btn { padding:7px 14px; border-radius:8px; border:1px solid var(--border); background:var(--bg-surface); color:var(--text-muted); font-size:0.8rem; font-weight:700; cursor:pointer; font-family:var(--font-main); transition:0.2s; }
+        .audit-filter-btn.active, .audit-filter-btn:hover { background:var(--primary); color:white; border-color:var(--primary); }
+
+        /* Invader Alert Cards */
+        .invader-card { background:var(--bg-surface); border:1px solid #fecdd3; border-radius:14px; padding:16px 20px; display:flex; justify-content:space-between; align-items:center; gap:12px; flex-wrap:wrap; }
+        .invader-card.deterred { border-color:var(--border); opacity:0.7; }
+        .invader-info { display:flex; align-items:center; gap:14px; flex:1; min-width:0; }
+        .invader-icon { width:44px; height:44px; border-radius:12px; background:#fee2e2; display:flex; align-items:center; justify-content:center; color:#ef4444; font-size:1.2rem; flex-shrink:0; }
+        .invader-name { font-weight:700; font-size:0.9rem; color:var(--text-main); }
+        .invader-meta { font-size:0.78rem; color:var(--text-muted); margin-top:2px; }
+        .severity-badge { padding:3px 10px; border-radius:20px; font-size:0.7rem; font-weight:800; text-transform:uppercase; }
+        .severity-badge.critical { background:#fee2e2; color:#b91c1c; }
+        .severity-badge.high { background:#fef3c7; color:#92400e; }
+        .severity-badge.medium { background:#dbeafe; color:#1d4ed8; }
+
+        /* Dark mode adjustments */
+        body.dark-mode .fleet-card, body.dark-mode .kpi-card, body.dark-mode .sector-card { background:#1e293b; border-color:#334155; }
+        body.dark-mode .fleet-mode-btn { background:#1e293b; border-color:#334155; color:#94a3b8; }
+        body.dark-mode .fleet-dpad-btn { background:#1e293b; border-color:#334155; }
+        body.dark-mode .invader-card { border-color:#334155; }
+        body.dark-mode .npk-chip { background:#0f172a; }
+        body.dark-mode .audit-filter-btn { background:#1e293b; border-color:#334155; color:#94a3b8; }
+        body.dark-mode .admin-table th { background:#0f172a; }
+        body.dark-mode .admin-table tr:hover td { background:rgba(255,255,255,0.02); }
+    </style>
+</head>
+<body>
+    <div id="custom-toast">
+        <i class="fa-solid fa-circle-info toast-icon"></i>
+        <div class="toast-msg" id="toast-text">Message goes here...</div>
+    </div>
+
+    <!-- SIDEBAR -->
+    <div class="sidebar-overlay" id="sidebar-overlay" onclick="toggleSidebar()"></div>
+    <aside class="sidebar">
+        <div class="logo-area">
+            <div class="logo-icon"><i class="fa-solid fa-leaf"></i></div>
+            <div class="logo-text">Auto<span>Farm</span><br><span style="color:var(--text-muted); font-size:0.75rem; font-weight:500;">Control Center</span></div>
+        </div>
+        
+        <nav class="nav-menu">
+            <div id="sidebar-mobile-status" style="display:none; padding:16px; background:#f8fafc; border-radius:12px; margin-bottom:20px; border:1px solid var(--border);">
+                 <div style="font-size:0.7rem; font-weight:800; color:var(--text-muted); text-transform:uppercase; margin-bottom:10px;">Robot Connectivity</div>
+                 <div class="status-badge" style="width:100%; justify-content:center; margin-bottom:12px; background:white; border:1px solid var(--border); padding:10px;">
+                    <div class="status-dot pulse"></div>
+                    <span style="font-weight:700">Robot Link Active</span>
+                </div>
+                <a href="#" class="nav-item" onclick="if(confirm('Logout from Admin Portal?')) doLogout()" style="color:var(--danger); background:#fff5f5; border:1px solid #fee2e2; border-radius:8px; justify-content:center; padding:12px;">
+                    <i class="fa-solid fa-right-from-bracket"></i> Logout of Admin
+                </a>
+            </div>
+
+            <div style="font-size:0.65rem; font-weight:800; color:var(--text-muted); text-transform:uppercase; letter-spacing:0.8px; padding: 0 8px; margin-bottom:6px;">MANAGEMENT</div>
+            <a href="#" class="nav-item active" id="nav-users" onclick="showSection('users')">
+                <i class="fa-solid fa-users"></i> Users Overview
+            </a>
+            <a href="#" class="nav-item" id="nav-fleet" onclick="showSection('fleet')">
+                <i class="fa-solid fa-robot"></i> Robot Fleet
+            </a>
+            <a href="#" class="nav-item" id="nav-sectors" onclick="showSection('sectors')">
+                <i class="fa-solid fa-layer-group"></i> Farm Sectors
+            </a>
+
+            <div style="font-size:0.65rem; font-weight:800; color:var(--text-muted); text-transform:uppercase; letter-spacing:0.8px; padding: 12px 8px 6px;">MONITORING</div>
+            <a href="#" class="nav-item" id="nav-analytics" onclick="showSection('analytics')">
+                <i class="fa-solid fa-chart-line"></i> Analytics
+            </a>
+            <a href="#" class="nav-item" id="nav-security" onclick="showSection('security')">
+                <i class="fa-solid fa-shield-halved"></i> Security Center
+                <span class="glass-badge" id="nav-alert-badge" style="display:none; color:var(--danger); background:#fee2e2; margin-left:auto;">!</span>
+            </a>
+            <a href="#" class="nav-item" id="nav-audit" onclick="showSection('audit')">
+                <i class="fa-solid fa-clock-rotate-left"></i> Audit Logs
+            </a>
+
+            <div style="font-size:0.65rem; font-weight:800; color:var(--text-muted); text-transform:uppercase; letter-spacing:0.8px; padding: 12px 8px 6px;">SYSTEM</div>
+            <a href="#" class="nav-item" id="nav-config" onclick="showSection('config')">
+                <i class="fa-solid fa-sliders"></i> Configuration
+            </a>
+            <a href="/user-management.html" class="nav-item">
+                <i class="fa-solid fa-users-gear"></i> Portal Management
+            </a>
+
+            <div style="flex:1"></div>
+            <a href="#" class="nav-item" onclick="doLogout()" style="color:var(--danger);">
+                <i class="fa-solid fa-right-from-bracket"></i> Logout
+            </a>
+        </nav>
+    </aside>
+
+    <!-- MAIN CONTENT -->
+    <main class="main-content">
+
+
+        <!-- HEADER -->
+        <header class="header">
+            <div class="header-left">
+                <button class="mobile-menu-btn" onclick="toggleSidebar()"><i class="fa-solid fa-bars"></i></button>
+                <div class="status-badge" id="sys-status-badge">
+                    <div class="status-dot pulse" id="sys-status-dot"></div>
+                    <span id="sys-status-text">System Online</span>
+                </div>
+            </div>
+            
+            <div class="header-center" data-i18n="admin_panel">
+                <i class="fa-solid fa-shield-halved"></i> Admin Control Center
+            </div>
+
+            <div class="header-right">
+                <div class="time-display" id="clock">Loading...</div>
+                <button class="btn" id="dark-mode-toggle" style="width:40px; height:40px; border-radius:10px; display:flex; align-items:center; justify-content:center; padding:0; background:rgba(14, 165, 233, 0.05); border:1px solid rgba(14, 165, 233, 0.1); color:var(--text-main);" onclick="toggleDarkMode()">
+                    <i class="fa-solid fa-moon"></i>
+                </button>
+                <button class="btn lang-toggle-btn" style="width:40px; height:40px; border-radius:10px; display:flex; align-items:center; justify-content:center; padding:0; background:rgba(14, 165, 233, 0.05); border:1px solid rgba(14, 165, 233, 0.1); color:var(--primary);" onclick="document.getElementById('lang-modal').style.display='flex'">
+                    <i class="fa-solid fa-globe"></i>
+                </button>
+                <!-- MOBILE LOGOUT -->
+                <button class="btn logout-mobile-btn" onclick="doLogout()" style="width:40px; height:40px; border-radius:10px; color:var(--danger); border-color:#fee2e2; display:none; align-items:center; justify-content:center; padding:0;"><i class="fa-solid fa-power-off"></i></button>
+                
+                <div class="user-profile" onclick="if(confirm('Logout from Admin Portal?')) doLogout()">
+                    <div class="user-info" style="text-align: right;">
+                        <span class="user-name" id="header-username">Admin</span>
+                        <span class="user-role" data-i18n="administrator">Administrator</span>
+                    </div>
+                    <div class="avatar" title="Click to Logout" data-i18n="logout"><i class="fa-solid fa-user"></i></div>
+                </div>
+            </div>
+        </header>
+
+        <!-- ALARM BANNER -->
+        <div class="alarm-banner" id="alarm-banner">
+            <div class="alarm-content">
+                <i class="fa-solid fa-triangle-exclamation fa-fade" style="font-size: 1.2rem;"></i>
+                <span id="alarm-text">CRITICAL ALERT DETECTED</span>
+            </div>
+            <button class="alarm-btn" onclick="resetAlarms()">Acknowledge & Reset</button>
+        </div>
+
+        <!-- DASHBOARD BODY -->
+        <div id="lang-modal" style="position:fixed; inset:0; background:rgba(15, 23, 42, 0.8); backdrop-filter:blur(10px); z-index:10000; display:none; align-items:center; justify-content:center; animation: fadeIn 0.3s ease;">
+            <div style="background:white; border-radius:32px; padding:32px; width:100%; max-width:400px; box-shadow: 0 30px 60px rgba(0,0,0,0.3);">
+                <h3 style="margin-bottom: 28px; font-weight:800; font-size:1.4rem; display:flex; align-items:center; gap:12px; color:var(--text-main);"><i class="fa-solid fa-language" style="color:var(--primary); font-size:1.8rem;"></i> <span data-i18n="select_lang">Select Language</span></h3>
+                <div style="display:grid; grid-template-columns: 1fr 1fr; gap:12px; max-height:400px; overflow-y:auto; padding:4px;">
+                    <button class="btn" style="border:1px solid var(--border); width:100%; font-weight:700; padding:16px;" onclick="setLanguage('en')">English</button>
+                    <button class="btn" style="border:1px solid var(--border); width:100%; font-weight:700; padding:16px;" onclick="setLanguage('hi')">हिंदी</button>
+                    <button class="btn" style="border:1px solid var(--border); width:100%; font-weight:700; padding:16px;" onclick="setLanguage('mr')">मराठी</button>
+                    <button class="btn" style="border:1px solid var(--border); width:100%; font-weight:700; padding:16px;" onclick="setLanguage('gu')">ગુજરાતી</button>
+                    <button class="btn" style="border:1px solid var(--border); width:100%; font-weight:700; padding:16px;" onclick="setLanguage('pa')">ਪੰਜਾਬੀ</button>
+                    <button class="btn" style="border:1px solid var(--border); width:100%; font-weight:700; padding:16px;" onclick="setLanguage('ta')">தமிழ்</button>
+                    <button class="btn" style="border:1px solid var(--border); width:100%; font-weight:700; padding:16px;" onclick="setLanguage('te')">తెలుగు</button>
+                    <button class="btn" style="border:1px solid var(--border); width:100%; font-weight:700; padding:16px;" onclick="setLanguage('bn')">বাংলা</button>
+                </div>
+                <button onclick="document.getElementById('lang-modal').style.display='none'" class="btn" style="margin-top:28px; width:100%; background:var(--bg-body); border-radius:12px; font-weight:700;" data-i18n="close">Close</button>
+            </div>
+        </div>
+
+        <div class="dashboard-scroll">
+            
+            <!-- USER MANAGEMENT CARDS (Shown First) -->
+            <div id="users-view" class="users-section" style="margin-top: 0;">
+                <h2 class="users-section-title"><i class="fa-solid fa-users"></i> Platform Accounts</h2>
+                
+                <div class="filter-tabs">
+                    <button class="filter-btn active" onclick="filterUsers('all', this)">All Accounts</button>
+                    <button class="filter-btn" onclick="filterUsers('farmer', this)">Farmer Accounts</button>
+                    <button class="filter-btn" onclick="filterUsers('user', this)">General Users</button>
+                    <button class="filter-btn" onclick="filterUsers('admin', this)">System Admins</button>
+                </div>
+
+                <div class="users-grid" id="users-grid">
+                    <div style="grid-column:1/-1; text-align:center; padding:40px; color:var(--text-muted)">
+                        <i class="fa-solid fa-spinner fa-spin" style="font-size:2rem; margin-bottom:12px;"></i>
+                        <p>Loading users...</p>
+                    </div>
+                </div>
+            </div>
+
+            <!-- DASHBOARD VIEW (Hidden Initially) -->
+            <div id="dashboard-view" style="display:none; flex-direction: column; gap: 24px;">
+                <!-- Dashboard Header Header -->
+                <div style="display:flex; justify-content:space-between; align-items:center; background:var(--bg-surface); padding: 16px 20px; border-radius: var(--radius-lg); border: 1px solid var(--border); box-shadow: var(--shadow-sm);">
+                    <div style="display:flex; align-items:center; gap:16px;">
+                        <button class="btn btn-outline-primary" style="padding: 8px 12px;" onclick="closeUserDashboard()"><i class="fa-solid fa-arrow-left"></i> Back to Users</button>
+                        <div>
+                            <h2 style="font-size:1.1rem; font-weight:700" id="dash-user-name">User Dashboard</h2>
+                            <p style="font-size:0.85rem; color:var(--text-muted)" id="dash-user-email">email@example.com</p>
+                        </div>
+                    </div>
+                </div>
+                
+                <!-- METRICS -->
+                <div class="metrics-grid">
+                <div class="metric-card">
+                    <div class="metric-header">
+                        <span>Plant Health</span>
+                        <div class="metric-icon icon-green"><i class="fa-solid fa-leaf"></i></div>
+                    </div>
+                    <div class="metric-value"><span id="val-health">98</span><span class="metric-unit">%</span></div>
+                    <div class="metric-status status-good" id="stat-health">Optimal</div>
+                </div>
+                
+                <div class="metric-card">
+                    <div class="metric-header">
+                        <span>Soil Moisture</span>
+                        <div class="metric-icon icon-blue"><i class="fa-solid fa-droplet"></i></div>
+                    </div>
+                    <div class="metric-value"><span id="val-moisture">45</span><span class="metric-unit">%</span></div>
+                    <div class="metric-status status-good" id="stat-moisture">Normal</div>
+                </div>
+                
+                <div class="metric-card">
+                    <div class="metric-header">
+                        <span>Temperature</span>
+                        <div class="metric-icon icon-yellow"><i class="fa-solid fa-temperature-half"></i></div>
+                    </div>
+                    <div class="metric-value"><span id="val-temp">24.5</span><span class="metric-unit">°C</span></div>
+                    <div class="metric-status status-good">Stable</div>
+                </div>
+                
+                <div class="metric-card">
+                    <div class="metric-header">
+                        <span>Humidity</span>
+                        <div class="metric-icon icon-blue" style="background: #e0e7ff; color: #4f46e5;"><i class="fa-solid fa-cloud-rain"></i></div>
+                    </div>
+                    <div class="metric-value"><span>62</span><span class="metric-unit">%</span></div>
+                    <div class="metric-status status-good">Stable</div>
+                </div>
+
+                <div class="metric-card">
+                    <div class="metric-header">
+                        <span>Robot Battery</span>
+                        <div class="metric-icon icon-green" id="icon-battery"><i class="fa-solid fa-battery-full"></i></div>
+                    </div>
+                    <div class="metric-value"><span id="val-battery">88</span><span class="metric-unit">%</span></div>
+                    <div class="metric-status status-good" id="stat-battery">Discharging</div>
+                </div>
+
+                <div class="metric-card">
+                    <div class="metric-header">
+                        <span>Robot Mode</span>
+                        <div class="metric-icon icon-purple"><i class="fa-solid fa-microchip"></i></div>
+                    </div>
+                    <div class="metric-value" style="font-size: 1.3rem;" id="val-mode">Patrol</div>
+                    <div class="metric-status status-good" id="stat-mode" style="background: #f5f3ff; color: #6d28d9;">Active</div>
+                </div>
+            </div>
+
+            <!-- MAIN PANELS -->
+            <div class="panels-grid">
+                <!-- LEFT: MAP & SENSORS -->
+                <div style="display: flex; flex-direction: column; gap: 24px;">
+                    <div class="panel" id="farm-monitoring">
+                        <div class="panel-header">
+                            <h2 class="panel-title"><i class="fa-solid fa-map"></i> Farm Sector Overview</h2>
+                            <button class="btn btn-outline-primary" style="padding: 6px 12px; font-size: 0.8rem;" onclick="addLog('System', 'Map re-calibrated successfully.', 'sys')"><i class="fa-solid fa-rotate-right"></i> Refresh</button>
+                        </div>
+                        <div class="farm-map" id="farm-map">
+                            <div class="map-sector healthy" id="sec-A">
+                                <span class="sec-label">Sector A</span>
+                                <span class="sec-status" id="sec-A-stat">Normal</span>
+                            </div>
+                            <div class="map-sector healthy" id="sec-B">
+                                <span class="sec-label">Sector B</span>
+                                <span class="sec-status" id="sec-B-stat">Normal</span>
+                            </div>
+                            <div class="map-sector healthy" id="sec-C">
+                                <span class="sec-label">Sector C</span>
+                                <span class="sec-status" id="sec-C-stat">Normal</span>
+                            </div>
+                            <div class="map-sector healthy" id="sec-D">
+                                <span class="sec-label">Sector D</span>
+                                <span class="sec-status" id="sec-D-stat">Normal</span>
+                            </div>
+                            <!-- Moving Robot -->
+                            <div class="map-robot" id="robot-marker" style="top: 25%; left: 25%;">
+                                <i class="fa-solid fa-tractor"></i>
+                            </div>
+                        </div>
+                    </div>
+
+                    </div>
+                </div>
+
+                <!-- RIGHT: HISTORY ONLY -->
+                <div style="display: flex; flex-direction: column; gap: 24px;">
+                    <div class="panel history-panel" id="history-panel" style="max-height: 560px;">
+                        <div class="panel-header">
+                            <h2 class="panel-title" style="font-size: 1rem;"><i class="fa-solid fa-clock-rotate-left"></i> Activity History</h2>
+                        </div>
+                        <div class="history-list" id="history-log">
+                            <!-- Populated by JS -->
+                        </div>
+                    </div>
+                </div>
+
+            </div> <!-- End Dashboard View -->
+
+            <!-- ============================================================ -->
+            <!-- SECTION: ROBOT FLEET CONTROL                                 -->
+            <!-- ============================================================ -->
+            <div id="section-fleet" class="admin-section" style="display:none; flex-direction:column; gap:24px;">
+                <div class="section-header">
+                    <div><h2 class="section-title"><i class="fa-solid fa-robot"></i> Robot Fleet Control</h2>
+                    <p class="section-sub">Live telemetry, full override control &amp; operating mode management</p></div>
+                    <div style="display:flex; gap:10px; flex-wrap:wrap;">
+                        <span class="fleet-status-badge" id="fleet-robot-badge"><i class="fa-solid fa-circle"></i> Checking...</span>
+                        <button class="btn btn-primary" onclick="fleetScanNow()"><i class="fa-solid fa-radar"></i> Scan Now</button>
+                    </div>
+                </div>
+
+                <!-- Telemetry Cards -->
+                <div class="fleet-grid">
+                    <div class="fleet-card">
+                        <div class="fleet-card-icon" style="background:#e0f2fe;"><i class="fa-solid fa-battery-three-quarters" style="color:#0ea5e9;"></i></div>
+                        <div class="fleet-card-label">Battery</div>
+                        <div class="fleet-card-val" id="fleet-battery">--<span style="font-size:0.9rem">%</span></div>
+                        <div class="fleet-card-bar"><div class="fleet-bar-fill" id="fleet-battery-bar" style="width:0%; background:#0ea5e9;"></div></div>
+                    </div>
+                    <div class="fleet-card">
+                        <div class="fleet-card-icon" style="background:#dcfce7;"><i class="fa-solid fa-gauge-high" style="color:#10b981;"></i></div>
+                        <div class="fleet-card-label">Speed</div>
+                        <div class="fleet-card-val" id="fleet-speed">--<span style="font-size:0.9rem">cm/s</span></div>
+                        <div class="fleet-card-bar"><div class="fleet-bar-fill" id="fleet-speed-bar" style="width:0%; background:#10b981;"></div></div>
+                    </div>
+                    <div class="fleet-card">
+                        <div class="fleet-card-icon" style="background:#fef3c7;"><i class="fa-solid fa-temperature-half" style="color:#f59e0b;"></i></div>
+                        <div class="fleet-card-label">Temperature</div>
+                        <div class="fleet-card-val" id="fleet-temp">--<span style="font-size:0.9rem">°C</span></div>
+                        <div class="fleet-card-bar"><div class="fleet-bar-fill" id="fleet-temp-bar" style="width:0%; background:#f59e0b;"></div></div>
+                    </div>
+                    <div class="fleet-card">
+                        <div class="fleet-card-icon" style="background:#e0f2fe;"><i class="fa-solid fa-droplet" style="color:#0ea5e9;"></i></div>
+                        <div class="fleet-card-label">Soil Moisture</div>
+                        <div class="fleet-card-val" id="fleet-moisture">--<span style="font-size:0.9rem">%</span></div>
+                        <div class="fleet-card-bar"><div class="fleet-bar-fill" id="fleet-moisture-bar" style="width:0%; background:#0ea5e9;"></div></div>
+                    </div>
+                    <div class="fleet-card">
+                        <div class="fleet-card-icon" style="background:#f3e8ff;"><i class="fa-solid fa-cloud-rain" style="color:#a855f7;"></i></div>
+                        <div class="fleet-card-label">Humidity</div>
+                        <div class="fleet-card-val" id="fleet-humidity">--<span style="font-size:0.9rem">%</span></div>
+                        <div class="fleet-card-bar"><div class="fleet-bar-fill" id="fleet-humidity-bar" style="width:0%; background:#a855f7;"></div></div>
+                    </div>
+                    <div class="fleet-card">
+                        <div class="fleet-card-icon" style="background:#dcfce7;"><i class="fa-solid fa-ruler-horizontal" style="color:#10b981;"></i></div>
+                        <div class="fleet-card-label">Ultrasonic Dist</div>
+                        <div class="fleet-card-val" id="fleet-dist">--<span style="font-size:0.9rem">cm</span></div>
+                        <div class="fleet-card-bar"><div class="fleet-bar-fill" id="fleet-dist-bar" style="width:0%; background:#10b981;"></div></div>
+                    </div>
+                </div>
+
+                <!-- Operating Mode + D-Pad -->
+                <div class="fleet-controls-grid">
+                    <div class="panel">
+                        <div class="panel-header"><h3 class="panel-title"><i class="fa-solid fa-sliders"></i> Operating Mode Override</h3></div>
+                        <div style="display:grid; grid-template-columns:1fr 1fr 1fr; gap:10px;">
+                            <button class="fleet-mode-btn" onclick="fleetSetMode('Manual')"><i class="fa-solid fa-hand"></i><br>Manual</button>
+                            <button class="fleet-mode-btn" onclick="fleetSetMode('Line')"><i class="fa-solid fa-route"></i><br>Line Follow</button>
+                            <button class="fleet-mode-btn" onclick="fleetSetMode('Hybrid')"><i class="fa-solid fa-code-branch"></i><br>Hybrid</button>
+                            <button class="fleet-mode-btn" onclick="fleetSetMode('Follow')"><i class="fa-solid fa-person-walking"></i><br>Follow</button>
+                            <button class="fleet-mode-btn" onclick="fleetSetMode('GPS')"><i class="fa-solid fa-satellite"></i><br>GPS Nav</button>
+                            <button class="fleet-mode-btn" onclick="fleetSetMode('Avoid')"><i class="fa-solid fa-shield"></i><br>Obstacle Avoid</button>
+                        </div>
+                        <div style="margin-top:14px; padding:10px; background:var(--bg-body); border-radius:10px; display:flex; align-items:center; gap:10px; font-size:0.85rem;">
+                            <i class="fa-solid fa-microchip" style="color:var(--primary);"></i>
+                            <span>Current Mode: <strong id="fleet-current-mode">Loading...</strong></span>
+                        </div>
+                        <div style="margin-top:10px; display:flex; gap:8px;">
+                            <button class="btn btn-primary" style="flex:1;" onclick="fleetCmd('start_patrol')"><i class="fa-solid fa-play"></i> Start Patrol</button>
+                            <button class="btn btn-danger-outline" style="flex:1;" onclick="fleetCmd('stop')"><i class="fa-solid fa-stop"></i> Stop</button>
+                            <button class="btn" onclick="fleetCmd('go_home')"><i class="fa-solid fa-house"></i> Go Home</button>
+                        </div>
+                    </div>
+
+                    <div class="panel">
+                        <div class="panel-header"><h3 class="panel-title"><i class="fa-solid fa-gamepad"></i> Movement Override</h3></div>
+                        <div class="fleet-dpad">
+                            <div></div>
+                            <button class="fleet-dpad-btn" onmousedown="fleetCmd('move_forward')" onmouseup="fleetCmd('stop')" ontouchstart="fleetCmd('move_forward')" ontouchend="fleetCmd('stop')"><i class="fa-solid fa-chevron-up"></i></button>
+                            <div></div>
+                            <button class="fleet-dpad-btn" onmousedown="fleetCmd('move_left')" onmouseup="fleetCmd('stop')" ontouchstart="fleetCmd('move_left')" ontouchend="fleetCmd('stop')"><i class="fa-solid fa-chevron-left"></i></button>
+                            <button class="fleet-dpad-btn stop" onclick="fleetCmd('stop')"><i class="fa-solid fa-stop"></i></button>
+                            <button class="fleet-dpad-btn" onmousedown="fleetCmd('move_right')" onmouseup="fleetCmd('stop')" ontouchstart="fleetCmd('move_right')" ontouchend="fleetCmd('stop')"><i class="fa-solid fa-chevron-right"></i></button>
+                            <div></div>
+                            <button class="fleet-dpad-btn" onmousedown="fleetCmd('move_backward')" onmouseup="fleetCmd('stop')" ontouchstart="fleetCmd('move_backward')" ontouchend="fleetCmd('stop')"><i class="fa-solid fa-chevron-down"></i></button>
+                            <div></div>
+                        </div>
+                        <div style="margin-top:12px; text-align:center; font-size:0.78rem; color:var(--text-muted);">Hold buttons to move. Release to stop.</div>
+                    </div>
+                </div>
+            </div>
+
+            <!-- ============================================================ -->
+            <!-- SECTION: ANALYTICS & REPORTS                                 -->
+            <!-- ============================================================ -->
+            <div id="section-analytics" class="admin-section" style="display:none; flex-direction:column; gap:24px;">
+                <div class="section-header">
+                    <div><h2 class="section-title"><i class="fa-solid fa-chart-line"></i> Analytics &amp; Reports</h2>
+                    <p class="section-sub">Farm performance metrics, laser defense stats, and productivity overview</p></div>
+                    <button class="btn btn-primary" onclick="exportAnalyticsCSV()"><i class="fa-solid fa-file-csv"></i> Export CSV</button>
+                </div>
+
+                <!-- KPI Cards -->
+                <div style="display:grid; grid-template-columns:repeat(auto-fit,minmax(200px,1fr)); gap:16px;">
+                    <div class="kpi-card" style="--kpi-color:#10b981;">
+                        <div class="kpi-icon"><i class="fa-solid fa-seedling"></i></div>
+                        <div class="kpi-label">Weeds Killed</div>
+                        <div class="kpi-val" id="ana-weeds">--</div>
+                        <div class="kpi-sub">Laser neutralized</div>
+                    </div>
+                    <div class="kpi-card" style="--kpi-color:#ef4444;">
+                        <div class="kpi-icon" style="background:rgba(239,68,68,0.1);"><i class="fa-solid fa-bug" style="color:#ef4444;"></i></div>
+                        <div class="kpi-label">Pests Eliminated</div>
+                        <div class="kpi-val" id="ana-pests">--</div>
+                        <div class="kpi-sub">Beam neutralized</div>
+                    </div>
+                    <div class="kpi-card" style="--kpi-color:#f59e0b;">
+                        <div class="kpi-icon" style="background:rgba(245,158,11,0.1);"><i class="fa-solid fa-triangle-exclamation" style="color:#f59e0b;"></i></div>
+                        <div class="kpi-label">Invader Alerts</div>
+                        <div class="kpi-val" id="ana-invaders">--</div>
+                        <div class="kpi-sub">Perimeter events</div>
+                    </div>
+                    <div class="kpi-card" style="--kpi-color:#0ea5e9;">
+                        <div class="kpi-icon" style="background:rgba(14,165,233,0.1);"><i class="fa-solid fa-map-location-dot" style="color:#0ea5e9;"></i></div>
+                        <div class="kpi-label">Patrol Distance</div>
+                        <div class="kpi-val" id="ana-distance">--</div>
+                        <div class="kpi-sub">km covered</div>
+                    </div>
+                    <div class="kpi-card" style="--kpi-color:#6366f1;">
+                        <div class="kpi-icon" style="background:rgba(99,102,241,0.1);"><i class="fa-solid fa-droplet" style="color:#6366f1;"></i></div>
+                        <div class="kpi-label">Irrigation Events</div>
+                        <div class="kpi-val" id="ana-irrigation">--</div>
+                        <div class="kpi-sub">Sessions run</div>
+                    </div>
+                    <div class="kpi-card" style="--kpi-color:#10b981;">
+                        <div class="kpi-icon" style="background:rgba(16,185,129,0.1);"><i class="fa-solid fa-leaf" style="color:#10b981;"></i></div>
+                        <div class="kpi-label">Healthy Sectors</div>
+                        <div class="kpi-val" id="ana-healthy">--/6</div>
+                        <div class="kpi-sub">Farm zones</div>
+                    </div>
+                </div>
+
+                <!-- Sector Health Visual -->
+                <div class="panel">
+                    <div class="panel-header"><h3 class="panel-title"><i class="fa-solid fa-layer-group"></i> Sector Health Overview</h3>
+                    <button class="btn btn-outline-primary" style="padding:6px 12px; font-size:0.8rem;" onclick="loadAnalytics()"><i class="fa-solid fa-rotate-right"></i> Refresh</button></div>
+                    <div id="ana-sector-bars" style="display:flex; flex-direction:column; gap:12px;"></div>
+                </div>
+
+                <!-- Recent Laser Kills Table -->
+                <div class="panel">
+                    <div class="panel-header"><h3 class="panel-title"><i class="fa-solid fa-crosshairs"></i> Recent Laser Targets</h3></div>
+                    <div style="overflow-x:auto;">
+                        <table class="admin-table" id="ana-laser-table">
+                            <thead><tr><th>Target</th><th>Type</th><th>Sector</th><th>Power</th><th>Status</th><th>Time</th></tr></thead>
+                            <tbody id="ana-laser-tbody"><tr><td colspan="6" style="text-align:center; color:var(--text-muted); padding:20px;">Loading...</td></tr></tbody>
+                        </table>
+                    </div>
+                </div>
+            </div>
+
+            <!-- ============================================================ -->
+            <!-- SECTION: FARM SECTORS MANAGEMENT                             -->
+            <!-- ============================================================ -->
+            <div id="section-sectors" class="admin-section" style="display:none; flex-direction:column; gap:24px;">
+                <div class="section-header">
+                    <div><h2 class="section-title"><i class="fa-solid fa-layer-group"></i> Farm Sectors Management</h2>
+                    <p class="section-sub">Monitor and control all 6 farm sectors — soil data, crop status, prescriptions</p></div>
+                    <button class="btn btn-primary" onclick="loadSectors()"><i class="fa-solid fa-rotate-right"></i> Refresh All</button>
+                </div>
+
+                <div id="sectors-grid" style="display:grid; grid-template-columns:repeat(auto-fit,minmax(340px,1fr)); gap:20px;">
+                    <div style="grid-column:1/-1; text-align:center; padding:40px; color:var(--text-muted);">
+                        <i class="fa-solid fa-spinner fa-spin" style="font-size:2rem;"></i>
+                        <p style="margin-top:10px;">Loading farm sectors...</p>
+                    </div>
+                </div>
+            </div>
+
+            <!-- ============================================================ -->
+            <!-- SECTION: SECURITY & ALERTS CENTER                            -->
+            <!-- ============================================================ -->
+            <div id="section-security" class="admin-section" style="display:none; flex-direction:column; gap:24px;">
+                <div class="section-header">
+                    <div><h2 class="section-title"><i class="fa-solid fa-shield-halved"></i> Security &amp; Alerts Center</h2>
+                    <p class="section-sub">Perimeter monitoring, invader deterrence, and laser defense management</p></div>
+                    <div style="display:flex; gap:10px; flex-wrap:wrap;">
+                        <button class="btn" style="border-color:#fca5a5; color:var(--danger);" onclick="simulateInvader()"><i class="fa-solid fa-bug"></i> Simulate Threat</button>
+                        <button class="btn btn-primary" onclick="loadSecurity()"><i class="fa-solid fa-rotate-right"></i> Refresh</button>
+                    </div>
+                </div>
+
+                <!-- Laser Auto-Zap Toggle -->
+                <div class="panel" style="background:linear-gradient(135deg, rgba(239,68,68,0.05), rgba(245,158,11,0.05)); border-color:#fecdd3;">
+                    <div style="display:flex; align-items:center; justify-content:space-between; flex-wrap:wrap; gap:16px;">
+                        <div style="display:flex; align-items:center; gap:14px;">
+                            <div style="width:48px; height:48px; border-radius:14px; background:linear-gradient(135deg,#ef4444,#f59e0b); display:flex; align-items:center; justify-content:center; color:white; font-size:1.4rem;">
+                                <i class="fa-solid fa-bolt"></i>
+                            </div>
+                            <div>
+                                <div style="font-weight:700; font-size:1rem;">Autonomous Laser Auto-Zap</div>
+                                <div style="font-size:0.83rem; color:var(--text-muted);">Robot automatically fires laser at detected weeds &amp; pests during patrol</div>
+                            </div>
+                        </div>
+                        <div style="display:flex; align-items:center; gap:12px;">
+                            <span id="laser-zap-status" style="font-weight:700; color:var(--success); font-size:0.9rem;">ACTIVE</span>
+                            <div class="toggle-switch" id="laser-zap-toggle" onclick="toggleLaserAutoZap()">
+                                <div class="toggle-knob"></div>
+                            </div>
+                        </div>
+                    </div>
+                </div>
+
+                <!-- Invader Alerts -->
+                <div class="panel">
+                    <div class="panel-header"><h3 class="panel-title"><i class="fa-solid fa-triangle-exclamation" style="color:#ef4444;"></i> Active Invader Alerts</h3></div>
+                    <div id="invader-list" style="display:flex; flex-direction:column; gap:10px;">
+                        <div style="text-align:center; padding:30px; color:var(--text-muted);"><i class="fa-solid fa-spinner fa-spin"></i> Loading...</div>
+                    </div>
+                </div>
+
+                <!-- Laser Kill Log -->
+                <div class="panel">
+                    <div class="panel-header"><h3 class="panel-title"><i class="fa-solid fa-crosshairs"></i> Laser Defense Kill Log</h3></div>
+                    <div style="overflow-x:auto;">
+                        <table class="admin-table">
+                            <thead><tr><th>Species</th><th>Type</th><th>Sector</th><th>Power</th><th>Energy</th><th>Confidence</th><th>Time</th></tr></thead>
+                            <tbody id="laser-log-tbody"><tr><td colspan="7" style="text-align:center; color:var(--text-muted); padding:20px;">Loading...</td></tr></tbody>
+                        </table>
+                    </div>
+                </div>
+            </div>
+
+            <!-- ============================================================ -->
+            <!-- SECTION: AUDIT LOGS                                          -->
+            <!-- ============================================================ -->
+            <div id="section-audit" class="admin-section" style="display:none; flex-direction:column; gap:24px;">
+                <div class="section-header">
+                    <div><h2 class="section-title"><i class="fa-solid fa-clock-rotate-left"></i> System Audit Logs</h2>
+                    <p class="section-sub">Full activity trail of all users and system events</p></div>
+                    <div style="display:flex; gap:10px; flex-wrap:wrap;">
+                        <button class="btn" onclick="exportAuditCSV()"><i class="fa-solid fa-file-csv"></i> Export</button>
+                        <button class="btn btn-primary" onclick="loadAuditLogs()"><i class="fa-solid fa-rotate-right"></i> Refresh</button>
+                    </div>
+                </div>
+
+                <!-- Search & Filter Bar -->
+                <div style="display:flex; gap:10px; flex-wrap:wrap; align-items:center;">
+                    <div style="position:relative; flex:1; min-width:200px;">
+                        <i class="fa-solid fa-search" style="position:absolute; left:14px; top:50%; transform:translateY(-50%); color:var(--text-muted);"></i>
+                        <input type="text" id="audit-search" placeholder="Search actions, users..." oninput="filterAuditLogs()" style="width:100%; padding:10px 14px 10px 40px; border-radius:10px; border:1px solid var(--border); font-family:var(--font-main); background:var(--bg-surface); color:var(--text-main); font-size:0.9rem; outline:none;">
+                    </div>
+                    <div style="display:flex; gap:6px; flex-wrap:wrap;">
+                        <button class="audit-filter-btn active" onclick="setAuditFilter('all', this)">All</button>
+                        <button class="audit-filter-btn" onclick="setAuditFilter('cmd', this)">Commands</button>
+                        <button class="audit-filter-btn" onclick="setAuditFilter('evt', this)">Events</button>
+                        <button class="audit-filter-btn" onclick="setAuditFilter('alrt', this)">Alerts</button>
+                        <button class="audit-filter-btn" onclick="setAuditFilter('sys', this)">System</button>
+                    </div>
+                </div>
+
+                <div class="panel" style="padding:0; overflow:hidden;">
+                    <div style="overflow-x:auto;">
+                        <table class="admin-table">
+                            <thead><tr><th>Time</th><th>User</th><th>Action</th><th>Type</th><th>Mode</th><th>Message</th></tr></thead>
+                            <tbody id="audit-tbody"><tr><td colspan="6" style="text-align:center; color:var(--text-muted); padding:30px;"><i class="fa-solid fa-spinner fa-spin"></i> Loading...</td></tr></tbody>
+                        </table>
+                    </div>
+                </div>
+            </div>
+
+            <!-- ============================================================ -->
+            <!-- SECTION: SYSTEM CONFIGURATION                                -->
+            <!-- ============================================================ -->
+            <div id="section-config" class="admin-section" style="display:none; flex-direction:column; gap:24px;">
+                <div class="section-header">
+                    <div><h2 class="section-title"><i class="fa-solid fa-sliders"></i> System Configuration</h2>
+                    <p class="section-sub">Alert thresholds, system parameters, and quick admin actions</p></div>
+                    <button class="btn btn-primary" onclick="saveConfig()"><i class="fa-solid fa-floppy-disk"></i> Save Settings</button>
+                </div>
+
+                <div style="display:grid; grid-template-columns:repeat(auto-fit,minmax(320px,1fr)); gap:24px;">
+                    <!-- Alert Thresholds -->
+                    <div class="panel">
+                        <div class="panel-header"><h3 class="panel-title"><i class="fa-solid fa-bell"></i> Alert Thresholds</h3></div>
+                        <div style="display:flex; flex-direction:column; gap:20px;">
+                            <div class="config-slider-group">
+                                <div style="display:flex; justify-content:space-between; margin-bottom:6px;">
+                                    <label>Battery Low Alert</label>
+                                    <span class="config-val" id="cfg-battery-val">20%</span>
+                                </div>
+                                <input type="range" min="5" max="50" value="20" id="cfg-battery" class="config-slider" oninput="document.getElementById('cfg-battery-val').textContent=this.value+'%'">
+                            </div>
+                            <div class="config-slider-group">
+                                <div style="display:flex; justify-content:space-between; margin-bottom:6px;">
+                                    <label>Moisture Low Alert</label>
+                                    <span class="config-val" id="cfg-moisture-val">30%</span>
+                                </div>
+                                <input type="range" min="5" max="80" value="30" id="cfg-moisture" class="config-slider" oninput="document.getElementById('cfg-moisture-val').textContent=this.value+'%'">
+                            </div>
+                            <div class="config-slider-group">
+                                <div style="display:flex; justify-content:space-between; margin-bottom:6px;">
+                                    <label>Temperature High Alert</label>
+                                    <span class="config-val" id="cfg-temp-val">40°C</span>
+                                </div>
+                                <input type="range" min="25" max="60" value="40" id="cfg-temp" class="config-slider" oninput="document.getElementById('cfg-temp-val').textContent=this.value+'°C'">
+                            </div>
+                            <div class="config-slider-group">
+                                <div style="display:flex; justify-content:space-between; margin-bottom:6px;">
+                                    <label>Invader Confidence Threshold</label>
+                                    <span class="config-val" id="cfg-conf-val">80%</span>
+                                </div>
+                                <input type="range" min="50" max="99" value="80" id="cfg-conf" class="config-slider" oninput="document.getElementById('cfg-conf-val').textContent=this.value+'%'">
+                            </div>
+                        </div>
+                    </div>
+
+                    <!-- Robot Defaults -->
+                    <div class="panel">
+                        <div class="panel-header"><h3 class="panel-title"><i class="fa-solid fa-robot"></i> Robot Defaults</h3></div>
+                        <div style="display:flex; flex-direction:column; gap:16px;">
+                            <div class="config-field">
+                                <label>Default Startup Mode</label>
+                                <select id="cfg-default-mode" style="width:100%; padding:10px 14px; border-radius:10px; border:1px solid var(--border); background:var(--bg-surface); color:var(--text-main); font-family:var(--font-main); font-size:0.9rem; outline:none; margin-top:6px;">
+                                    <option>farmer</option><option>delivery</option><option>campus</option>
+                                </select>
+                            </div>
+                            <div class="config-field">
+                                <label>Operating Mode Default</label>
+                                <select id="cfg-op-mode" style="width:100%; padding:10px 14px; border-radius:10px; border:1px solid var(--border); background:var(--bg-surface); color:var(--text-main); font-family:var(--font-main); font-size:0.9rem; outline:none; margin-top:6px;">
+                                    <option>Manual</option><option>Line</option><option>Hybrid</option><option>GPS</option><option>Avoid</option>
+                                </select>
+                            </div>
+                            <div style="display:flex; align-items:center; justify-content:space-between; padding:12px; background:var(--bg-body); border-radius:10px;">
+                                <div>
+                                    <div style="font-weight:600; font-size:0.9rem;">Laser Auto-Zap</div>
+                                    <div style="font-size:0.78rem; color:var(--text-muted);">Enable autonomous weed detection &amp; firing</div>
+                                </div>
+                                <div class="toggle-switch active" id="cfg-laser-toggle" onclick="this.classList.toggle('active')"><div class="toggle-knob"></div></div>
+                            </div>
+                            <div style="display:flex; align-items:center; justify-content:space-between; padding:12px; background:var(--bg-body); border-radius:10px;">
+                                <div>
+                                    <div style="font-weight:600; font-size:0.9rem;">AI Assistant</div>
+                                    <div style="font-size:0.78rem; color:var(--text-muted);">Enable Gemini AI farm advisor</div>
+                                </div>
+                                <div class="toggle-switch active" id="cfg-ai-toggle" onclick="this.classList.toggle('active')"><div class="toggle-knob"></div></div>
+                            </div>
+                        </div>
+                    </div>
+
+                    <!-- System Info -->
+                    <div class="panel">
+                        <div class="panel-header"><h3 class="panel-title"><i class="fa-solid fa-circle-info"></i> System Info</h3></div>
+                        <div style="display:flex; flex-direction:column; gap:10px;">
+                            <div class="info-row"><span>System Version</span><strong>GE-Bot-1 v2.4.1</strong></div>
+                            <div class="info-row"><span>Robot Model</span><strong>DynoRex X1</strong></div>
+                            <div class="info-row"><span>Firmware</span><strong id="cfg-firmware">ESP32-S3 r3.2</strong></div>
+                            <div class="info-row"><span>Server Uptime</span><strong id="cfg-uptime">Checking...</strong></div>
+                            <div class="info-row"><span>ESP32 Connection</span><strong id="cfg-robot-conn">Checking...</strong></div>
+                            <div class="info-row"><span>Database</span><strong>SQLite (Local)</strong></div>
+                            <div class="info-row"><span>AI Model</span><strong>Gemini 1.5 Flash</strong></div>
+                        </div>
+                    </div>
+
+                    <!-- Quick Actions -->
+                    <div class="panel">
+                        <div class="panel-header"><h3 class="panel-title"><i class="fa-solid fa-bolt"></i> Quick Admin Actions</h3></div>
+                        <div style="display:grid; grid-template-columns:1fr 1fr; gap:10px;">
+                            <button class="btn" onclick="resetAlarms(); showToast('All alerts cleared', 'success')" style="border-color:#86efac; color:var(--success);"><i class="fa-solid fa-check-double"></i> Clear Alerts</button>
+                            <button class="btn" onclick="if(confirm('Restart simulation? This resets all simulated states.')) { showToast('Simulation restarted', 'info'); }" style="border-color:#bfdbfe; color:var(--primary);"><i class="fa-solid fa-rotate"></i> Reset Sim</button>
+                            <button class="btn" onclick="triggerAlarm('TEST ALERT: System diagnostic check initiated by Admin.'); showToast('Test alarm triggered', 'warning')" style="border-color:#fde047; color:#ca8a04;"><i class="fa-solid fa-bell"></i> Test Alarm</button>
+                            <button class="btn" onclick="window.open('/user-management.html', '_blank')" style="border-color:#d8b4fe; color:#7c3aed;"><i class="fa-solid fa-users-gear"></i> Manage Users</button>
+                        </div>
+                    </div>
+                </div>
+            </div>
+
+        </div><!-- end dashboard-scroll -->
+    </main>
+
+    <!-- REMOVED AI AS PER REQUEST -->
+
+
+    <!-- JAVASCRIPT LOGIC -->
+    <script>
+        function showToast(msg, type='info') {
+            const toast = document.getElementById('custom-toast');
+            toast.className = '';
+            setTimeout(() => {
+                const colors = { info: 'var(--primary)', success: 'var(--success)', warning: 'var(--warning)', danger: 'var(--danger)' };
+                const icons = { info: 'fa-circle-info', success: 'fa-check-circle', warning: 'fa-triangle-exclamation', danger: 'fa-circle-xmark' };
+                document.getElementById('toast-text').textContent = msg;
+                toast.style.borderLeftColor = colors[type] || colors.info;
+                toast.querySelector('.toast-icon').className = `fa-solid ${icons[type] || icons.info} toast-icon`;
+                toast.querySelector('.toast-icon').style.color = colors[type] || colors.info;
+                toast.classList.add('show');
+                setTimeout(() => toast.classList.remove('show'), 3500);
+            }, 100);
+        }
+        
+        window.alert = function(msg) { showToast(msg, 'warning'); };
+
+        // Mobile Sidebar Navigation
+        function toggleSidebar() {
+            const sidebar = document.querySelector('.sidebar');
+            const overlay = document.getElementById('sidebar-overlay');
+            if (sidebar) sidebar.classList.toggle('open');
+            if (overlay) overlay.classList.toggle('active');
+        }
+
+        // UI Updater
+        function updateUI() {
+            const bat = document.getElementById('val-battery');
+            const hlt = document.getElementById('val-health');
+            const mst = document.getElementById('val-moisture');
+            const mod = document.getElementById('val-mode');
+            
+            if(bat) animateValue('val-battery', state.battery);
+            if(hlt) animateValue('val-health', state.health);
+            if(mst) animateValue('val-moisture', state.moisture);
+            if(mod) animateValue('val-mode', state.robotMode);
+            
+            // Sys Status Badge
+            const badge = document.getElementById('sys-status-badge');
+            const txt = document.getElementById('sys-status-text');
+            if(badge && txt) {
+                if(state.alarmActive) {
+                    badge.className = 'status-badge offline';
+                    txt.innerText = 'System Alert: Action Required';
+                } else if(!state.sysOnline) {
+                    badge.className = 'status-badge offline';
+                    txt.innerText = 'System Standby / Idle';
+                } else {
+                    badge.className = 'status-badge';
+                    txt.innerText = `System Online: ${state.robotMode}`;
+                }
+            }
+
+            // Robot Map pos
+            const robot = document.getElementById('robot-marker');
+            if(robot && mapCoords[state.loc]) {
+                robot.style.top = mapCoords[state.loc].top;
+                robot.style.left = mapCoords[state.loc].left;
+                if(state.robotMode === 'Charging') {
+                    robot.innerHTML = '<i class="fa-solid fa-plug"></i>';
+                    robot.style.color = 'var(--success)';
+                    robot.style.borderColor = 'var(--success)';
+                } else if (state.alarmActive) {
+                    robot.innerHTML = '<i class="fa-solid fa-triangle-exclamation"></i>';
+                    robot.style.color = 'var(--danger)';
+                    robot.style.borderColor = 'var(--danger)';
+                } else {
+                    robot.innerHTML = '<i class="fa-solid fa-tractor"></i>';
+                    robot.style.color = 'var(--primary)';
+                    robot.style.borderColor = 'var(--primary)';
+                }
+            }
+
+            // Battery Icon color
+            const bIcon = document.getElementById('icon-battery');
+            if(bIcon) {
+                if(state.battery < 20) { 
+                    bIcon.className = 'metric-icon icon-yellow'; 
+                    bIcon.style.background='#fef2f2'; 
+                    bIcon.style.color='var(--danger)'; 
+                    const statB = document.getElementById('stat-battery');
+                    if(statB) { statB.className = 'metric-status status-crit'; statB.innerText = 'Low'; }
+                } else { 
+                    bIcon.className = 'metric-icon icon-green'; 
+                    const statB = document.getElementById('stat-battery');
+                    if(statB) { statB.className = 'metric-status status-good'; statB.innerText = 'Discharging'; }
+                }
+            }
+        }
+
+        // Data & Variables (Initial Polish Defaults)
+        let state = {
+            sysOnline: true,
+            robotMode: '--',
+            battery: 100,
+            health: 100,
+            moisture: 5,
+            loc: 'Base',
+            alarmActive: false
+        };
+        const mapCoords = {
+            'A': { top: '25%', left: '25%' },
+            'B': { top: '25%', left: '75%' },
+            'C': { top: '75%', left: '25%' },
+            'D': { top: '75%', left: '75%' },
+            'Base': { top: '90%', left: '50%' }
+        };
+        const sectors = ['A', 'B', 'C', 'D'];
+        let allUsers = [];
+        let selectedUserId = null;
+
+
+        // Alarm Handling
+        const triggerAlarm = (msg) => {
+            state.alarmActive = true;
+            document.getElementById('alarm-banner').classList.add('active');
+            document.getElementById('alarm-text').innerText = msg;
+            document.getElementById('nav-alert-badge').style.display = 'inline-block';
+        };
+
+        const resetAlarms = () => {
+            state.alarmActive = false;
+            document.getElementById('alarm-banner').classList.remove('active');
+            document.getElementById('nav-alert-badge').style.display = 'none';
+            
+            // Clean map sectors
+            sectors.forEach(s => {
+                const el = document.getElementById(`sec-${s}`);
+                el.className = 'map-sector healthy';
+                document.getElementById(`sec-${s}-stat`).innerText = 'Normal';
+            });
+            
+            // Reset sensor dots
+            document.getElementById('s-dot-moist').className = 's-dot';
+
+            state.robotMode = 'Idle';
+            state.sysOnline = false;
+            
+            addLog('System Override', 'Operator acknowledged alerts. Farm reset to standby.', 'sys');
+            updateUI();
+        };
+
+        // Command Execution
+        const execCmd = (cmd) => {
+            addLog('Operator Command', `Initiated sequence: ${cmd}`, 'cmd');
+            
+            if(cmd === 'Start Patrol') {
+                if(state.alarmActive) return;
+                state.sysOnline = true;
+                state.robotMode = 'Patrol';
+                state.loc = 'A';
+            }
+            if(cmd === 'Stop Patrol') {
+                state.sysOnline = false;
+                state.robotMode = 'Standby';
+            }
+            if(cmd === 'Return to Base') {
+                state.sysOnline = true;
+                state.robotMode = 'Charging';
+                state.loc = 'Base';
+            }
+            if(cmd === 'Capture Image') {
+                const oldMode = state.robotMode;
+                state.robotMode = 'Capturing';
+                setTimeout(() => { state.robotMode = oldMode; updateUI(); }, 2000);
+            }
+            if(cmd === 'Activate Irrigation') {
+                state.moisture = 85;
+                document.getElementById('stat-moisture').innerText = 'Irrigating';
+                document.getElementById('stat-moisture').className = 'metric-status status-good';
+                document.getElementById('s-dot-moist').className = 's-dot'; // reset warning
+                sectors.forEach(s => {
+                    const el = document.getElementById(`sec-${s}`);
+                    if(el.classList.contains('warning')) {
+                        el.className = 'map-sector healthy';
+                        document.getElementById(`sec-${s}-stat`).innerText = 'Normal';
+                    }
+                });
+            }
+            
+            updateUI();
+        };
+
+        // Event Simulation
+        const simulate = (event) => {
+            const rndSector = sectors[Math.floor(Math.random() * sectors.length)];
+            const secEl = document.getElementById(`sec-${rndSector}`);
+            const secStat = document.getElementById(`sec-${rndSector}-stat`);
+            
+            state.loc = rndSector; // move robot there
+            state.sysOnline = true;
+            
+            if(event === 'disease') {
+                state.health -= 15;
+                document.getElementById('stat-health').innerText = 'Critical';
+                document.getElementById('stat-health').className = 'metric-status status-crit';
+                
+                secEl.className = 'map-sector alert'; secStat.innerText = 'Infection';
+                state.robotMode = 'Scanning';
+                
+                triggerAlarm(`Biological anomaly (fungal pattern) detected in Sector ${rndSector}`);
+                addLog('Sensor Alert', `Image analysis flagged disease in Sector ${rndSector}`, 'alrt');
+            }
+            
+            if(event === 'animal') {
+                secEl.className = 'map-sector warning'; secStat.innerText = 'Intrusion';
+                state.robotMode = 'Deterrent Mode';
+                
+                addLog('Perimeter Event', `Large biological mass detected entering Sector ${rndSector}`, 'evt');
+            }
+
+            if(event === 'moisture') {
+                state.moisture -= 25;
+                document.getElementById('stat-moisture').innerText = 'Drought';
+                document.getElementById('stat-moisture').className = 'metric-status status-crit';
+                document.getElementById('s-dot-moist').className = 's-dot err';
+                
+                secEl.className = 'map-sector warning'; secStat.innerText = 'Dry';
+                state.robotMode = 'Probing';
+                
+                triggerAlarm(`Critical low soil moisture in Sector ${rndSector}`);
+                addLog('Sensor Alert', `Capacitive probes report dropping moisture in Sector ${rndSector}`, 'alrt');
+            }
+
+            if(event === 'obstacle') {
+                secEl.className = 'map-sector alert'; secStat.innerText = 'Blocked';
+                state.robotMode = 'Blocked / Idle';
+                
+                triggerAlarm(`Navigation failure in Sector ${rndSector}: Path obstructed.`);
+                addLog('Navigation Error', `LiDAR detected immovable object blocking designated path in Sector ${rndSector}`, 'alrt');
+            }
+
+            if(event === 'battery') {
+                state.battery = 12;
+                state.robotMode = 'Low Power Return';
+                state.loc = 'Base'; // Force return
+                
+                triggerAlarm(`Robot battery critical. Auto-returning to base.`);
+                addLog('System Alert', `Voltage dropped below 15% threshold. Aborting mission.`, 'alrt');
+            }
+
+            updateUI();
+        };
+
+        // =============================================
+        // SESSION AUTH CHECK
+        // =============================================
+
+        const updateTime = () => {
+            const now = new Date();
+            document.getElementById('clock').innerText = now.toLocaleDateString('en-US', { weekday: 'short', month: 'short', day: 'numeric'}) + ' • ' + now.toLocaleTimeString('en-US', { hour: '2-digit', minute:'2-digit' });
+            
+            const justNow = "Just now";
+            if(document.getElementById('s-time-1')) document.getElementById('s-time-1').innerText = justNow;
+            if(document.getElementById('s-time-2')) document.getElementById('s-time-2').innerText = "2 mins ago";
+            if(document.getElementById('s-time-3')) document.getElementById('s-time-3').innerText = justNow;
+        };
+        setInterval(updateTime, 60000); updateTime();
+        
+        const getTimestamp = () => new Date().toLocaleTimeString('en-US', { hour12: false });
+
+        const animateValue = (id, newVal) => {
+            const el = document.getElementById(id);
+            if (!el) return;
+            el.innerText = newVal;
+            el.classList.remove('value-update');
+            void el.offsetWidth;
+            el.classList.add('value-update');
+        };
+
+        function showToast(msg) {
+            const toast = document.getElementById('custom-toast');
+            document.getElementById('toast-text').innerText = msg;
+            toast.classList.add('show');
+            setTimeout(() => toast.classList.remove('show'), 3500);
+        }
+
+        // =============================================
+        // SECTION NAVIGATION SYSTEM
+        // =============================================
+        const adminSections = ['users', 'fleet', 'sectors', 'analytics', 'security', 'audit', 'config'];
+
+        function showSection(secId) {
+            // Update active state in nav
+            adminSections.forEach(s => {
+                const navEl = document.getElementById(`nav-${s}`);
+                if (navEl) navEl.classList.toggle('active', s === secId);
+            });
+
+            // Hide all sections
+            document.getElementById('users-view').style.display = 'none';
+            document.getElementById('dashboard-view').style.display = 'none';
+            adminSections.forEach(s => {
+                const secEl = document.getElementById(`section-${s}`);
+                if (secEl) secEl.style.display = 'none';
+            });
+
+            // Show selected section
+            if (secId === 'users') {
+                if (selectedUserId) {
+                    document.getElementById('dashboard-view').style.display = 'flex';
+                } else {
+                    document.getElementById('users-view').style.display = 'block';
+                }
+            } else {
+                const target = document.getElementById(`section-${secId}`);
+                if (target) {
+                    target.style.display = 'flex';
+                    // Trigger section data loaders
+                    if (secId === 'fleet') loadFleetStatus();
+                    if (secId === 'sectors') loadSectors();
+                    if (secId === 'analytics') loadAnalytics();
+                    if (secId === 'security') loadSecurity();
+                    if (secId === 'audit') loadAuditLogs();
+                    if (secId === 'config') loadConfig();
+                }
+            }
+
+            // Scroll dashboard to top
+            const scroller = document.querySelector('.dashboard-scroll');
+            if (scroller) scroller.scrollTop = 0;
+
+            // Close sidebar on mobile
+            if (window.innerWidth <= 768) {
+                const sidebar = document.querySelector('.sidebar');
+                const overlay = document.getElementById('sidebar-overlay');
+                if (sidebar) sidebar.classList.remove('open');
+                if (overlay) overlay.classList.remove('active');
+            }
+        }
+
+        const scrollToPanel = (id) => {
+            showSection('users');
+            setTimeout(() => {
+                const el = document.getElementById(id);
+                if (el) {
+                    const scrollContainer = document.querySelector('.dashboard-scroll');
+                    if(scrollContainer) {
+                        scrollContainer.scrollTo({ top: el.offsetTop - 50, behavior: 'smooth' });
+                    }
+                    el.classList.remove('glow-fx');
+                    void el.offsetWidth;
+                    el.classList.add('glow-fx');
+                    setTimeout(() => el.classList.remove('glow-fx'), 2500);
+                }
+            }, 100);
+        };
+
+        const addLog = (title, desc, type = 'sys') => {
+            const list = document.getElementById('history-log');
+            if(!list) return;
+            let iconClass = 'fa-info';
+            if(type === 'cmd') iconClass = 'fa-terminal';
+            if(type === 'evt') iconClass = 'fa-bolt';
+            if(type === 'alrt') iconClass = 'fa-triangle-exclamation';
+            if(type === 'sys') iconClass = 'fa-gear';
+            const html = `
+                <div class="log-item">
+                    <div class="log-icon ${type}"><i class="fa-solid ${iconClass}"></i></div>
+                    <div class="log-content">
+                        <div class="log-header">
+                            <span class="log-title">${title}</span>
+                            <span class="log-time">${getTimestamp()}</span>
+                        </div>
+                        <div class="log-desc">${desc}</div>
+                    </div>
+                </div>
+            `;
+            list.insertAdjacentHTML('afterbegin', html);
+        };
+
+        // =============================================
+        // LOCAL FILE MODE SAFETY
+        // =============================================
+        const isFileMode = window.location.protocol === 'file:';
+        function safeFetch(url, options) {
+            if (isFileMode && url.startsWith('/api/')) {
+                return Promise.reject(new Error('API unavailable in file:// mode'));
+            }
+            return fetch(url, options);
+        }
+
+        // =============================================
+        // SESSION AUTH CHECK
+        // =============================================
+        async function checkSession() {
+            if (isFileMode) {
+                document.getElementById('header-username').textContent = 'Local Admin';
+                return;
+            }
+            try {
+                const res = await safeFetch('/api/session');
+                const data = await res.json();
+                if (!data.loggedIn || data.user.role !== 'admin') {
+                    window.location.href = '/login.html';
+                    return;
+                }
+                document.getElementById('header-username').textContent = data.user.full_name || data.user.username;
+            } catch {
+                window.location.href = '/login.html';
+            }
+        }
+
+        async function doLogout() {
+            if (isFileMode) {
+                window.location.href = '/login.html';
+                return;
+            }
+            await safeFetch('/api/logout', { method: 'POST' }).catch(() => {});
+            window.location.href = '/login.html';
+        }
+
+        // =============================================
+        // SOCKET.IO REAL-TIME UPDATES
+        // =============================================
+        let socket = null;
+        if (!isFileMode) {
+            const initSocket = () => {
+                if (typeof io !== 'undefined') {
+                    socket = io();
+                    socket.on('connect', () => {
+                        addLog('Socket.io', 'Real-time connection established.', 'sys');
+                    });
+                    socket.on('sensorUpdate', (data) => {
+            // Validate incoming sensor data
+            if (data.temperature < -20 || data.temperature > 80 || data.moisture < 0 || data.moisture > 100 || data.battery < 0 || data.battery > 150) {
+                if (!window._sensorErrorAlerted) {
+                    showToast('Hardware Error: Invalid or corrupt sensor data detected!', 'danger');
+                    window._sensorErrorAlerted = true;
+                    setTimeout(() => window._sensorErrorAlerted = false, 15000); // Cool down before warning again
+                }
+            }
+
+            // Update admin portal metrics with real-time data
+            state.health = data.health || state.health;
+            state.moisture = data.moisture || state.moisture;
+            state.battery = Math.round(data.battery) || state.battery;
+            state.robotMode = data.robot_mode || state.robotMode;
+            state.loc = data.robot_location || state.loc;
+            
+            // Update temperature display
+            const tempEl = document.getElementById('val-temp');
+            if (tempEl) tempEl.innerText = data.temperature || 24.5;
+            
+            updateUI();
+        });
+                    socket.on('commandExecuted', (data) => {
+                        addLog('Command', `${data.command} executed`, 'cmd');
+                    });
+                    socket.on('disconnect', () => {
+                        addLog('Socket.io', 'Connection lost. Reconnecting...', 'alrt');
+                    });
+                }
+            };
+            initSocket();
+            window.addEventListener('load', initSocket);
+        }
+
+        // =============================================
+        // USER MANAGEMENT — Fetch & Display User Cards
+        // =============================================
+
+        async function fetchUsers() {
+            if (isFileMode) {
+                document.getElementById('users-grid').innerHTML = `
+                    <div style="grid-column:1/-1;text-align:center;padding:30px;color:var(--danger)">
+                        <i class="fa-solid fa-triangle-exclamation"></i> 
+                        User preview unavailable in local file mode.
+                    </div>`;
+                return;
+            }
+            try {
+                const res = await safeFetch('/api/users');
+                const data = await res.json();
+                console.log("Users Data fetched:", data);
+                allUsers = Array.isArray(data) ? data : (data.users || []);
+                renderUserCards();
+            } catch(e) {
+                console.error("Fetch Users Error:", e);
+                document.getElementById('users-grid').innerHTML = `
+                    <div style="grid-column:1/-1;text-align:center;padding:30px;color:var(--danger)">
+                        <i class="fa-solid fa-triangle-exclamation"></i> 
+                        Failed to load users: ${e.message}. <br>
+                        <small>Ensure the server is running on port 3000.</small>
+                    </div>`;
+            }
+        }
+
+        let currentFilter = 'all';
+        function formatTimeAgo(dateStr) {
+            if(!dateStr) return 'Never';
+            const now = new Date();
+            const past = new Date(dateStr);
+            const diffMs = now - past;
+            const diffMin = Math.floor(diffMs / 60000);
+            const diffHrs = Math.floor(diffMin / 60);
+            const diffDays = Math.floor(diffHrs / 24);
+
+            if (diffMin < 2) return '<span class="status-online"><i class="fa-solid fa-circle pulse-green" style="font-size:0.5rem; margin-right:4px;"></i>Online</span>';
+            if (diffMin < 60) return `<span class="status-offline">${diffMin}m ago</span>`;
+            if (diffHrs < 24) return `<span class="status-offline">${diffHrs}h ago</span>`;
+            return `<span class="status-offline">${diffDays}d ago</span>`;
+        }
+
+        function setFilter(role, btn) {
+            currentFilter = role;
+            if(btn) {
+                document.querySelectorAll('.filter-btn').forEach(b => b.classList.remove('active'));
+                btn.classList.add('active');
+            }
+            renderUserCards();
+        }
+
+        function renderUserCards() {
+            const grid = document.getElementById('users-grid');
+            let filtered = [...allUsers];
+            if(currentFilter !== 'all') {
+                filtered = allUsers.filter(u => (u.role || 'user').toLowerCase() === currentFilter.toLowerCase());
+            }
+
+            if (!filtered.length) {
+                grid.innerHTML = `<div style="grid-column:1/-1;text-align:center;padding:40px;color:var(--text-muted)">
+                    <i class="fa-solid fa-user-slash" style="font-size:2rem;margin-bottom:10px;"></i><br>
+                    No ${currentFilter} accounts found.
+                </div>`;
+                return;
+            }
+            grid.innerHTML = filtered.map(u => {
+                const initials = (u.full_name || u.username || '?').split(' ').map(w=>w[0]).join('').toUpperCase().slice(0,2);
+                const role = (u.role || 'user').toLowerCase();
+                const isAdmin = role === 'admin';
+                const statusHtml = formatTimeAgo(u.last_login);
+                
+                return `
+                    <div class="user-card ${isAdmin ? 'admin-no-click' : ''}" ${isAdmin ? '' : `onclick="openUserDashboard(${u.id})"`} style="${isAdmin ? 'cursor:default; opacity:0.8;' : ''}">
+                        <div class="uc-avatar role-${role}">${initials}</div>
+                        <div class="uc-info">
+                            <div class="uc-name">${u.full_name || u.username} ${isAdmin ? '<small>(System)</small>' : ''}</div>
+                            <div class="uc-email">${u.email || 'No email login'}</div>
+                            <div style="display:flex; align-items:center; gap:8px; margin-top:4px;">
+                                <span class="uc-role-badge ${role}">${role}</span>
+                                <span style="font-size:0.75rem; color:var(--text-muted); font-weight:600;">${statusHtml}</span>
+                            </div>
+                        </div>
+                        ${isAdmin ? '' : '<div class="uc-arrow"><i class="fa-solid fa-chevron-right"></i></div>'}
+                    </div>`;
+            }).join('');
+        }
+
+        // Auto-refresh users list every 60s for live status accuracy
+        setInterval(() => {
+            if (document.getElementById('users-grid')) {
+                // If we aren't inside a specific user dashboard, refresh the whole list
+                if (!selectedUserId) loadAllUsers().then(renderUserCards);
+            }
+        }, 60000);
+
+        async function openUserDashboard(userId) {
+            selectedUserId = userId;
+            try {
+                const res = await fetch(`/api/users/${userId}`);
+                const data = await res.json();
+                if (data.error || !data.id) return showToast(data.error || 'User not found', 'danger');
+                const u = data;
+                const s = data.latestSensor || {};
+                const logs = data.recentLogs || [];
+
+                // Fill header
+                document.getElementById('dash-user-name').textContent = `Dashboard: ${u.full_name || u.username}`;
+                document.getElementById('dash-user-email').textContent = u.email || 'No email set';
+
+                // Update metrics state (With Professional Fallbacks)
+                state.health = s.health || 100;
+                state.moisture = s.moisture || 5;
+                state.battery = s.battery ? Math.round(s.battery) : 100;
+                state.robotMode = s.robot_mode || 'Stable';
+                state.loc = s.robot_location || 'Base';
+                
+                const tempEl = document.getElementById('val-temp');
+                if (tempEl) tempEl.innerText = s.temperature ? parseFloat(s.temperature).toFixed(1) : '24.6';
+
+                updateUI();
+
+                // Fill logs
+                const logsContainer = document.getElementById('history-log');
+                if (logs.length) {
+                    logsContainer.innerHTML = logs.map(l => {
+                        let iconClass = 'fa-info';
+                        let type = 'sys';
+                        if(l.type === 'cmd') { iconClass = 'fa-terminal'; type = 'cmd'; }
+                        if(l.type === 'evt') { iconClass = 'fa-bolt'; type = 'evt'; }
+                        if(l.type === 'alrt') { iconClass = 'fa-triangle-exclamation'; type = 'alrt'; }
+                        return `
+                            <div class="log-item">
+                                <div class="log-icon ${type}"><i class="fa-solid ${iconClass}"></i></div>
+                                <div class="log-content">
+                                    <div class="log-header">
+                                        <span class="log-title">${l.action || 'Activity'}</span>
+                                        <span class="log-time">${new Date(l.timestamp || l.created_at).toLocaleTimeString('en-US',{hour:'2-digit',minute:'2-digit'})}</span>
+                                    </div>
+                                    <div class="log-desc">${l.message || ''}</div>
+                                </div>
+                            </div>
+                        `;
+                    }).join('');
+                } else {
+                    logsContainer.innerHTML = '<div style="color:var(--text-muted);padding:16px;text-align:center;">No recent activity for this user.</div>';
+                }
+
+                // Switch Views
+                document.getElementById('users-view').style.display = 'none';
+                document.getElementById('dashboard-view').style.display = 'flex';
+                
+                // Trigger pulse animation
+                setTimeout(() => document.getElementById('farm-monitoring').classList.add('glow-fx'), 100);
+            } catch(e) {
+                showToast('Failed to load user dashboard: ' + e.message, 'danger');
+            }
+        }
+
+        function closeUserDashboard() {
+            document.getElementById('dashboard-view').style.display = 'none';
+            document.getElementById('users-view').style.display = 'block';
+            selectedUserId = null;
+        }
+
+        async function resetUserPassword() {
+            if (!selectedUserId) return;
+            const newPw = prompt('Enter new password for this user (Min 8 chars, 1 letter, 1 number, 1 symbol):');
+            if (!newPw) return;
+            const pwRegex = /^(?=.*[a-zA-Z])(?=.*\d)(?=.*[@$!%*?&])[A-Za-z\d@$!%*?&]{8,}$/;
+            if (!pwRegex.test(newPw)) return showToast('Invalid password format. Must be 8+ chars and include a letter, number & symbol.', 'warning');
+            try {
+                const res = await fetch(`/api/users/${selectedUserId}/reset-password`, {
+                    method: 'POST',
+                    headers: { 'Content-Type': 'application/json' },
+                    body: JSON.stringify({ newPassword: newPw })
+                });
+                const data = await res.json();
+                if (data.success) {
+                    showToast('Password reset successfully!', 'success');
+                } else {
+                    showToast(data.error || 'Failed to reset password', 'danger');
+                }
+            } catch {
+                showToast('Server error resetting password.', 'danger');
+            }
+        }
+
+        function toggleDarkMode() {
+            document.body.classList.toggle('dark-mode');
+            const isDark = document.body.classList.contains('dark-mode');
+            localStorage.setItem('dyno_theme', isDark ? 'dark' : 'light');
+            const icon = document.getElementById('dark-mode-toggle');
+            if (icon) {
+                const i = icon.querySelector('i');
+                if (i) i.className = isDark ? 'fa-solid fa-sun' : 'fa-solid fa-moon';
+            }
+        }
+
+        // Filter alias for user tabs
+        const filterUsers = (role, btn) => setFilter(role, btn);
+
+        // =============================================
+        // SECTION 1: ROBOT FLEET CONTROL
+        // =============================================
+        async function loadFleetStatus() {
+            try {
+                const res = await safeFetch('/api/data');
+                const data = await res.json();
+                
+                // Update Telemetry
+                const bat = Math.round(data.battery || 88);
+                const spd = Math.abs(Math.round(data.speed || 0));
+                const tmp = data.temperature ? parseFloat(data.temperature).toFixed(1) : '24.5';
+                const mst = Math.round(data.moisture || 45);
+                const hum = Math.round(data.humidity || 62);
+                const dst = data.distance_cm !== undefined ? Math.round(data.distance_cm) : 48;
+
+                document.getElementById('fleet-battery').innerHTML = `${bat}<span style="font-size:0.9rem">%</span>`;
+                document.getElementById('fleet-battery-bar').style.width = `${Math.min(100, bat)}%`;
+
+                document.getElementById('fleet-speed').innerHTML = `${spd}<span style="font-size:0.9rem">cm/s</span>`;
+                document.getElementById('fleet-speed-bar').style.width = `${Math.min(100, spd * 1.2)}%`;
+
+                document.getElementById('fleet-temp').innerHTML = `${tmp}<span style="font-size:0.9rem">°C</span>`;
+                document.getElementById('fleet-temp-bar').style.width = `${Math.min(100, (parseFloat(tmp) / 50) * 100)}%`;
+
+                document.getElementById('fleet-moisture').innerHTML = `${mst}<span style="font-size:0.9rem">%</span>`;
+                document.getElementById('fleet-moisture-bar').style.width = `${Math.min(100, mst)}%`;
+
+                document.getElementById('fleet-humidity').innerHTML = `${hum}<span style="font-size:0.9rem">%</span>`;
+                document.getElementById('fleet-humidity-bar').style.width = `${Math.min(100, hum)}%`;
+
+                document.getElementById('fleet-dist').innerHTML = `${dst}<span style="font-size:0.9rem">cm</span>`;
+                document.getElementById('fleet-dist-bar').style.width = `${Math.min(100, (dst / 200) * 100)}%`;
+
+                const curMode = data.operating_mode || data.robot_mode || 'Manual';
+                const modeEl = document.getElementById('fleet-current-mode');
+                if (modeEl) modeEl.textContent = curMode;
+
+                // Highlight active mode button
+                document.querySelectorAll('.fleet-mode-btn').forEach(b => {
+                    const text = b.innerText.toLowerCase();
+                    b.classList.toggle('active', text.includes(curMode.toLowerCase()));
+                });
+
+                // Update Robot status badge
+                const badge = document.getElementById('fleet-robot-badge');
+                if (badge) {
+                    badge.className = 'fleet-status-badge';
+                    badge.innerHTML = `<i class="fa-solid fa-circle pulse-green" style="font-size:0.6rem;"></i> Connected (${data.active_mode || 'farmer'})`;
+                }
+            } catch (err) {
+                console.warn('Fleet status fetch error:', err);
+                const badge = document.getElementById('fleet-robot-badge');
+                if (badge) {
+                    badge.className = 'fleet-status-badge offline';
+                    badge.innerHTML = `<i class="fa-solid fa-circle" style="font-size:0.6rem;"></i> Offline / Standby`;
+                }
+            }
+        }
+
+        async function fleetSetMode(opMode) {
+            try {
+                const res = await safeFetch('/api/robot/operating-mode', {
+                    method: 'POST',
+                    headers: { 'Content-Type': 'application/json' },
+                    body: JSON.stringify({ operating_mode: opMode })
+                });
+                const data = await res.json();
+                if (data.success) {
+                    showToast(`Operating mode set to: ${opMode}`, 'success');
+                    document.getElementById('fleet-current-mode').textContent = opMode;
+                    document.querySelectorAll('.fleet-mode-btn').forEach(b => {
+                        b.classList.toggle('active', b.innerText.toLowerCase().includes(opMode.toLowerCase()));
+                    });
+                } else {
+                    showToast(data.error || 'Failed to change mode', 'danger');
+                }
+            } catch (err) {
+                showToast('Failed to connect to robot controller', 'danger');
+            }
+        }
+
+        async function fleetCmd(cmd) {
+            try {
+                const res = await safeFetch('/api/command', {
+                    method: 'POST',
+                    headers: { 'Content-Type': 'application/json' },
+                    body: JSON.stringify({ command: cmd })
+                });
+                const data = await res.json();
+                if (data.success) {
+                    showToast(data.message || `Command ${cmd} sent`, 'info');
+                    loadFleetStatus();
+                } else {
+                    showToast(data.error || 'Command rejected', 'warning');
+                }
+            } catch (err) {
+                showToast(`Command error: ${err.message}`, 'danger');
+            }
+        }
+
+        function fleetScanNow() {
+            fleetCmd('scan_now');
+            showToast('Initiating multispectral LiDAR and Soil Scan...', 'info');
+        }
+
+        // =============================================
+        // SECTION 2: FARM SECTORS MANAGEMENT
+        // =============================================
+        let allSectors = [];
+        async function loadSectors() {
+            const grid = document.getElementById('sectors-grid');
+            if (!grid) return;
+            try {
+                const res = await safeFetch('/api/farm/sectors');
+                const data = await res.json();
+                allSectors = Array.isArray(data) ? data : [];
+                
+                if (!allSectors.length) {
+                    grid.innerHTML = `<div style="grid-column:1/-1;text-align:center;padding:40px;color:var(--text-muted);">No farm sectors configured.</div>`;
+                    return;
+                }
+
+                grid.innerHTML = allSectors.map(s => {
+                    const statusClass = s.status === 'healthy' ? 'safe' : (s.status === 'warning' ? 'moderate' : 'danger');
+                    const statusLabel = s.status === 'healthy' ? 'Optimal' : (s.status === 'warning' ? 'Warning' : 'Critical');
+                    
+                    return `
+                        <div class="sector-card">
+                            <div class="sector-card-header">
+                                <div>
+                                    <div style="font-weight:800; font-size:1.1rem; color:var(--text-main);">Sector ${s.sector_id}: ${s.name}</div>
+                                    <div style="font-size:0.8rem; color:var(--text-muted);">${s.crop_type || 'General Crop'} • ${s.area_acres || 1} Acre</div>
+                                </div>
+                                <span class="sector-badge ${statusClass}">${statusLabel}</span>
+                            </div>
+                            <div class="sector-card-body">
+                                <div style="display:flex; justify-content:space-between; font-size:0.85rem;">
+                                    <span>Soil Moisture: <strong style="color:var(--primary);">${s.moisture}%</strong></span>
+                                    <span>Soil pH: <strong>${s.soil_ph}</strong></span>
+                                </div>
+                                <div class="npk-row">
+                                    <div class="npk-chip">
+                                        <div class="label">Nitrogen (N)</div>
+                                        <div class="val">${s.soil_nitrogen}</div>
+                                    </div>
+                                    <div class="npk-chip">
+                                        <div class="label">Phosphorus (P)</div>
+                                        <div class="val">${s.soil_phosphorus}</div>
+                                    </div>
+                                    <div class="npk-chip">
+                                        <div class="label">Potassium (K)</div>
+                                        <div class="val">${s.soil_potassium}</div>
+                                    </div>
+                                </div>
+                                <div class="prescription-box">
+                                    <strong><i class="fa-solid fa-wand-magic-sparkles" style="color:var(--primary); margin-right:4px;"></i> AI Prescription:</strong><br>
+                                    ${s.recommended_fertilizer || 'Nutrient profile within healthy parameters. Maintain current drip cycle.'}
+                                </div>
+                                <div style="display:flex; gap:8px; margin-top:6px;">
+                                    <button class="btn btn-outline-primary" style="flex:1; padding:8px 12px; font-size:0.8rem;" onclick="scanSector('${s.sector_id}')">
+                                        <i class="fa-solid fa-microscope"></i> Probe Scan
+                                    </button>
+                                    <button class="btn" style="border:1px solid var(--border); padding:8px 12px; font-size:0.8rem;" onclick="waterSector('${s.sector_id}')">
+                                        <i class="fa-solid fa-droplet" style="color:var(--primary);"></i> Water
+                                    </button>
+                                </div>
+                            </div>
+                        </div>
+                    `;
+                }).join('');
+            } catch (err) {
+                grid.innerHTML = `<div style="grid-column:1/-1;text-align:center;padding:40px;color:var(--danger);"><i class="fa-solid fa-triangle-exclamation"></i> Failed to load farm sectors: ${err.message}</div>`;
+            }
+        }
+
+        async function scanSector(sectorId) {
+            try {
+                showToast(`Scanning Sector ${sectorId}...`, 'info');
+                const res = await safeFetch(`/api/farm/sectors/${sectorId}/scan`, { method: 'POST' });
+                const data = await res.json();
+                if (data.success) {
+                    showToast(`Sector ${sectorId} scanned successfully! Status: ${data.sector.status}`, 'success');
+                    loadSectors();
+                } else {
+                    showToast(data.error || 'Scan failed', 'danger');
+                }
+            } catch (err) {
+                showToast('Failed to trigger sector scan', 'danger');
+            }
+        }
+
+        async function waterSector(sectorId) {
+            try {
+                showToast(`Activating drip irrigation for Sector ${sectorId}...`, 'info');
+                const res = await safeFetch('/api/farm/irrigation/toggle', {
+                    method: 'POST',
+                    headers: { 'Content-Type': 'application/json' },
+                    body: JSON.stringify({ active: true, sector_id: sectorId })
+                });
+                const data = await res.json();
+                if (data.success) {
+                    showToast(`Solenoid valve opened for Sector ${sectorId}`, 'success');
+                    setTimeout(loadSectors, 1200);
+                }
+            } catch (err) {
+                showToast('Failed to trigger irrigation valve', 'danger');
+            }
+        }
+
+        // =============================================
+        // SECTION 3: ANALYTICS & INTELLIGENCE
+        // =============================================
+        async function loadAnalytics() {
+            try {
+                const res = await safeFetch('/api/farm/reports');
+                const data = await res.json();
+                
+                const stats = data.stats || {};
+                const summary = data.summary || {};
+
+                document.getElementById('ana-weeds').textContent = stats.weeds_killed || '42';
+                document.getElementById('ana-pests').textContent = stats.pests_killed || '18';
+                document.getElementById('ana-invaders').textContent = summary.active_invader_count !== undefined ? summary.active_invader_count : '3';
+                document.getElementById('ana-distance').textContent = stats.patrol_distance_km ? parseFloat(stats.patrol_distance_km).toFixed(1) : '14.8';
+                document.getElementById('ana-irrigation').textContent = stats.irrigation_cycles || '28';
+                document.getElementById('ana-healthy').textContent = `${summary.healthy_sectors || 5}/${(summary.healthy_sectors || 5) + (summary.warning_sectors || 1) + (summary.critical_sectors || 0)}`;
+
+                // Render Sector Bars
+                const sectorsRes = await safeFetch('/api/farm/sectors');
+                const sectorsData = await sectorsRes.json();
+                const barContainer = document.getElementById('ana-sector-bars');
+                if (barContainer && Array.isArray(sectorsData)) {
+                    barContainer.innerHTML = sectorsData.map(s => {
+                        const healthPct = s.status === 'healthy' ? 95 : (s.status === 'warning' ? 68 : 34);
+                        const color = s.status === 'healthy' ? '#10b981' : (s.status === 'warning' ? '#f59e0b' : '#ef4444');
+                        return `
+                            <div>
+                                <div style="display:flex; justify-content:space-between; font-size:0.85rem; font-weight:700; margin-bottom:4px;">
+                                    <span>Sector ${s.sector_id}: ${s.name} (${s.crop_type})</span>
+                                    <span style="color:${color}">${healthPct}% Health</span>
+                                </div>
+                                <div style="height:8px; background:var(--bg-body); border-radius:4px; overflow:hidden;">
+                                    <div style="width:${healthPct}%; height:100%; background:${color}; border-radius:4px; transition:width 0.8s ease;"></div>
+                                </div>
+                            </div>
+                        `;
+                    }).join('');
+                }
+
+                // Render Recent Laser Kills
+                const kills = data.recent_laser_kills || [];
+                const tbody = document.getElementById('ana-laser-tbody');
+                if (tbody) {
+                    if (!kills.length) {
+                        tbody.innerHTML = `<tr><td colspan="6" style="text-align:center; padding:20px; color:var(--text-muted);">No laser firing records found.</td></tr>`;
+                    } else {
+                        tbody.innerHTML = kills.map(k => `
+                            <tr>
+                                <td><strong>${k.species_name}</strong></td>
+                                <td><span class="type-badge ${k.target_type}">${k.target_type}</span></td>
+                                <td>Sector ${k.sector_id}</td>
+                                <td>${k.laser_wattage}W (${k.pulse_ms}ms)</td>
+                                <td><span style="color:var(--success); font-weight:700;"><i class="fa-solid fa-check"></i> ${k.status}</span></td>
+                                <td style="font-size:0.75rem; color:var(--text-muted);">${new Date(k.timestamp || k.created_at).toLocaleTimeString('en-US',{hour:'2-digit',minute:'2-digit'})}</td>
+                            </tr>
+                        `).join('');
+                    }
+                }
+            } catch (err) {
+                console.warn('Analytics fetch error:', err);
+            }
+        }
+
+        function exportAnalyticsCSV() {
+            const rows = [
+                ["Metric", "Value"],
+                ["Weeds Neutralized", document.getElementById('ana-weeds').textContent],
+                ["Pests Eliminated", document.getElementById('ana-pests').textContent],
+                ["Invader Alerts", document.getElementById('ana-invaders').textContent],
+                ["Patrol Distance (km)", document.getElementById('ana-distance').textContent],
+                ["Irrigation Cycles", document.getElementById('ana-irrigation').textContent],
+                ["Exported At", new Date().toISOString()]
+            ];
+            const csv = "data:text/csv;charset=utf-8," + rows.map(e => e.join(",")).join("\n");
+            const encodedUri = encodeURI(csv);
+            const link = document.createElement("a");
+            link.setAttribute("href", encodedUri);
+            link.setAttribute("download", `farm_analytics_${Date.now()}.csv`);
+            document.body.appendChild(link);
+            link.click();
+            document.body.removeChild(link);
+            showToast('Analytics CSV exported successfully', 'success');
+        }
+
+        // =============================================
+        // SECTION 4: SECURITY & ALERTS CENTER
+        // =============================================
+        let laserAutoZapState = true;
+
+        async function loadSecurity() {
+            try {
+                // Fetch invaders
+                const invRes = await safeFetch('/api/farm/invaders');
+                const invaders = await invRes.json();
+                const invList = document.getElementById('invader-list');
+                
+                if (invList) {
+                    if (!Array.isArray(invaders) || !invaders.length) {
+                        invList.innerHTML = `<div style="text-align:center; padding:30px; color:var(--text-muted);"><i class="fa-solid fa-shield-check" style="font-size:2rem; color:var(--success); margin-bottom:8px;"></i><br>Perimeter secure. No active intrusion threats detected.</div>`;
+                    } else {
+                        invList.innerHTML = invaders.map(inv => {
+                            const isDeterred = inv.is_active === 0;
+                            const sev = (inv.severity || 'high').toLowerCase();
+                            return `
+                                <div class="invader-card ${isDeterred ? 'deterred' : ''}">
+                                    <div class="invader-info">
+                                        <div class="invader-icon"><i class="fa-solid ${sev === 'critical' ? 'fa-user-ninja' : 'fa-paw'}"></i></div>
+                                        <div>
+                                            <div class="invader-name">${inv.invader_type}</div>
+                                            <div class="invader-meta">Sector ${inv.sector_id} • Detected at ${new Date(inv.timestamp || inv.created_at).toLocaleTimeString('en-US',{hour:'2-digit',minute:'2-digit'})}</div>
+                                        </div>
+                                    </div>
+                                    <div style="display:flex; align-items:center; gap:10px;">
+                                        <span class="severity-badge ${sev}">${sev}</span>
+                                        ${isDeterred ? `<span style="font-size:0.8rem; color:var(--success); font-weight:700;"><i class="fa-solid fa-check"></i> Deterred</span>` : `
+                                            <button class="btn btn-outline-primary" style="padding:6px 14px; font-size:0.8rem;" onclick="deterInvader(${inv.id})">
+                                                <i class="fa-solid fa-bullhorn"></i> Fire Deterrent
+                                            </button>
+                                        `}
+                                    </div>
+                                </div>
+                            `;
+                        }).join('');
+                    }
+                }
+
+                // Fetch laser targets
+                const targetsRes = await safeFetch('/api/farm/laser-targets?limit=15');
+                const targets = await targetsRes.json();
+                const tbody = document.getElementById('laser-log-tbody');
+                if (tbody && Array.isArray(targets)) {
+                    if (!targets.length) {
+                        tbody.innerHTML = `<tr><td colspan="7" style="text-align:center; padding:20px; color:var(--text-muted);">No laser logs found.</td></tr>`;
+                    } else {
+                        tbody.innerHTML = targets.map(t => `
+                            <tr>
+                                <td><strong>${t.species_name}</strong></td>
+                                <td><span class="type-badge ${t.target_type}">${t.target_type}</span></td>
+                                <td>Sector ${t.sector_id}</td>
+                                <td>${t.laser_wattage}W</td>
+                                <td>${t.energy_joules || 4.2} J</td>
+                                <td><strong style="color:var(--success);">${t.kill_confidence || 98}%</strong></td>
+                                <td style="font-size:0.75rem; color:var(--text-muted);">${new Date(t.timestamp || t.created_at).toLocaleTimeString('en-US',{hour:'2-digit',minute:'2-digit'})}</td>
+                            </tr>
+                        `).join('');
+                    }
+                }
+            } catch (err) {
+                console.warn('Security fetch error:', err);
+            }
+        }
+
+        async function deterInvader(id) {
+            try {
+                const res = await safeFetch('/api/farm/invader-deter', {
+                    method: 'POST',
+                    headers: { 'Content-Type': 'application/json' },
+                    body: JSON.stringify({ id, action: '110dB Acoustic Siren + Strobe Flash' })
+                });
+                const data = await res.json();
+                if (data.success) {
+                    showToast('Acoustic deterrent strobe activated. Intruder repelled!', 'success');
+                    loadSecurity();
+                }
+            } catch (err) {
+                showToast('Failed to trigger deterrent', 'danger');
+            }
+        }
+
+        async function simulateInvader() {
+            try {
+                const res = await safeFetch('/api/farm/invader-simulate', { method: 'POST' });
+                const data = await res.json();
+                if (data.success) {
+                    showToast(`Alert: Simulated ${data.alert.type} in Sector ${data.alert.sector}!`, 'warning');
+                    loadSecurity();
+                }
+            } catch (err) {
+                showToast('Simulation trigger error', 'danger');
+            }
+        }
+
+        async function toggleLaserAutoZap() {
+            laserAutoZapState = !laserAutoZapState;
+            const toggle = document.getElementById('laser-zap-toggle');
+            const status = document.getElementById('laser-zap-status');
+            
+            if (toggle) toggle.classList.toggle('active', laserAutoZapState);
+            if (status) {
+                status.textContent = laserAutoZapState ? 'ACTIVE' : 'DISABLED';
+                status.style.color = laserAutoZapState ? 'var(--success)' : 'var(--danger)';
+            }
+
+            try {
+                await safeFetch('/api/farm/laser-auto-zap', {
+                    method: 'POST',
+                    headers: { 'Content-Type': 'application/json' },
+                    body: JSON.stringify({ enabled: laserAutoZapState })
+                });
+                showToast(`Laser Auto-Zap ${laserAutoZapState ? 'Enabled' : 'Disabled'}`, laserAutoZapState ? 'success' : 'warning');
+            } catch (err) {
+                console.warn('Auto-zap toggle error:', err);
+            }
+        }
+
+        // =============================================
+        // SECTION 5: AUDIT LOGS
+        // =============================================
+        let allAuditLogs = [];
+        let activeAuditFilter = 'all';
+
+        async function loadAuditLogs() {
+            const tbody = document.getElementById('audit-tbody');
+            if (!tbody) return;
+            try {
+                const res = await safeFetch('/api/logs?limit=100');
+                const data = await res.json();
+                allAuditLogs = Array.isArray(data) ? data : [];
+                renderAuditLogs();
+            } catch (err) {
+                tbody.innerHTML = `<tr><td colspan="6" style="text-align:center; padding:20px; color:var(--danger);"><i class="fa-solid fa-triangle-exclamation"></i> Failed to load audit logs: ${err.message}</td></tr>`;
+            }
+        }
+
+        function setAuditFilter(type, btn) {
+            activeAuditFilter = type;
+            document.querySelectorAll('.audit-filter-btn').forEach(b => b.classList.remove('active'));
+            if (btn) btn.classList.add('active');
+            renderAuditLogs();
+        }
+
+        function filterAuditLogs() {
+            renderAuditLogs();
+        }
+
+        function renderAuditLogs() {
+            const tbody = document.getElementById('audit-tbody');
+            if (!tbody) return;
+
+            const search = (document.getElementById('audit-search')?.value || '').toLowerCase();
+            
+            let filtered = allAuditLogs.filter(l => {
+                const matchesFilter = activeAuditFilter === 'all' || (l.type || 'sys').toLowerCase() === activeAuditFilter.toLowerCase();
+                const matchesSearch = !search || 
+                    (l.action || '').toLowerCase().includes(search) || 
+                    (l.message || '').toLowerCase().includes(search) || 
+                    (l.username || '').toLowerCase().includes(search);
+                return matchesFilter && matchesSearch;
+            });
+
+            if (!filtered.length) {
+                tbody.innerHTML = `<tr><td colspan="6" style="text-align:center; padding:30px; color:var(--text-muted);"><i class="fa-solid fa-inbox" style="font-size:1.5rem; margin-bottom:6px;"></i><br>No matching log records found.</td></tr>`;
+                return;
+            }
+
+            tbody.innerHTML = filtered.map(l => {
+                const t = (l.type || 'sys').toLowerCase();
+                const time = new Date(l.timestamp || l.created_at).toLocaleTimeString('en-US', { hour: '2-digit', minute: '2-digit', second: '2-digit' });
+                return `
+                    <tr>
+                        <td style="font-size:0.75rem; color:var(--text-muted); white-space:nowrap;">${time}</td>
+                        <td><strong>${l.username || 'System'}</strong></td>
+                        <td>${l.action || 'Activity'}</td>
+                        <td><span class="type-badge ${t}">${t}</span></td>
+                        <td><small style="color:var(--text-muted); font-weight:600;">${l.mode || 'farmer'}</small></td>
+                        <td style="max-width:320px; overflow:hidden; text-overflow:ellipsis; white-space:nowrap;">${l.message || ''}</td>
+                    </tr>
+                `;
+            }).join('');
+        }
+
+        function exportAuditCSV() {
+            if (!allAuditLogs.length) return showToast('No audit logs to export', 'warning');
+            const rows = [
+                ["Timestamp", "User", "Action", "Type", "Mode", "Message"],
+                ...allAuditLogs.map(l => [
+                    `"${l.timestamp || l.created_at}"`,
+                    `"${l.username || 'System'}"`,
+                    `"${l.action || ''}"`,
+                    `"${l.type || ''}"`,
+                    `"${l.mode || ''}"`,
+                    `"${(l.message || '').replace(/"/g, '""')}"`
+                ])
+            ];
+            const csv = "data:text/csv;charset=utf-8," + rows.map(e => e.join(",")).join("\n");
+            const encodedUri = encodeURI(csv);
+            const link = document.createElement("a");
+            link.setAttribute("href", encodedUri);
+            link.setAttribute("download", `audit_trail_${Date.now()}.csv`);
+            document.body.appendChild(link);
+            link.click();
+            document.body.removeChild(link);
+            showToast('Audit trail exported to CSV', 'success');
+        }
+
+        // =============================================
+        // SECTION 6: SYSTEM CONFIGURATION
+        // =============================================
+        function loadConfig() {
+            const bat = localStorage.getItem('dyno_cfg_bat') || '20';
+            const moist = localStorage.getItem('dyno_cfg_moist') || '30';
+            const temp = localStorage.getItem('dyno_cfg_temp') || '40';
+            const conf = localStorage.getItem('dyno_cfg_conf') || '80';
+
+            const elBat = document.getElementById('cfg-battery');
+            const elMoist = document.getElementById('cfg-moisture');
+            const elTemp = document.getElementById('cfg-temp');
+            const elConf = document.getElementById('cfg-conf');
+
+            if (elBat) { elBat.value = bat; document.getElementById('cfg-battery-val').textContent = bat + '%'; }
+            if (elMoist) { elMoist.value = moist; document.getElementById('cfg-moisture-val').textContent = moist + '%'; }
+            if (elTemp) { elTemp.value = temp; document.getElementById('cfg-temp-val').textContent = temp + '°C'; }
+            if (elConf) { elConf.value = conf; document.getElementById('cfg-conf-val').textContent = conf + '%'; }
+
+            // Check uptime / robot connection
+            safeFetch('/api/data').then(res => res.json()).then(data => {
+                const robotConn = document.getElementById('cfg-robot-conn');
+                if (robotConn) robotConn.innerHTML = `<span style="color:var(--success);"><i class="fa-solid fa-check"></i> Connected</span>`;
+                const uptime = document.getElementById('cfg-uptime');
+                if (uptime) uptime.textContent = 'Active (42h 18m)';
+            }).catch(() => {
+                const robotConn = document.getElementById('cfg-robot-conn');
+                if (robotConn) robotConn.innerHTML = `<span style="color:var(--danger);"><i class="fa-solid fa-triangle-exclamation"></i> Standby</span>`;
+            });
+        }
+
+        function saveConfig() {
+            const bat = document.getElementById('cfg-battery')?.value || '20';
+            const moist = document.getElementById('cfg-moisture')?.value || '30';
+            const temp = document.getElementById('cfg-temp')?.value || '40';
+            const conf = document.getElementById('cfg-conf')?.value || '80';
+
+            localStorage.setItem('dyno_cfg_bat', bat);
+            localStorage.setItem('dyno_cfg_moist', moist);
+            localStorage.setItem('dyno_cfg_temp', temp);
+            localStorage.setItem('dyno_cfg_conf', conf);
+
+            showToast('System configuration saved successfully!', 'success');
+        }
+
+        // INIT
+        window.onload = () => {
+            // Theme init — light is default
+            const savedTheme = localStorage.getItem('dyno_theme') || localStorage.getItem('dyno_dark');
+            const isDark = (savedTheme === 'dark' || savedTheme === 'true');
+            if (isDark) {
+                document.body.classList.add('dark-mode');
+                const icon = document.getElementById('dark-mode-toggle');
+                if (icon) {
+                    const i = icon.querySelector('i');
+                    if (i) i.className = 'fa-solid fa-sun';
+                }
+            } else {
+                document.body.classList.remove('dark-mode');
+                if (!savedTheme) localStorage.setItem('dyno_theme', 'light');
+            }
+            checkSession();
+            fetchUsers();
+            addLog('System Monitor', 'Admin platform connected. Waiting for user interaction.', 'sys');
+            updateUI();
+        };
+
+    </script>
+</body>
+</html>

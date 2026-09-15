@@ -2,15 +2,10 @@
   "version": 2,
   "cleanUrls": true,
   "rewrites": [
-    { "source": "/", "destination": "/frontend/login.html" },
-    { "source": "/login", "destination": "/frontend/login.html" },
-    { "source": "/login.html", "destination": "/frontend/login.html" },
-    { "source": "/dashboard", "destination": "/frontend/dashboard.html" },
-    { "source": "/dashboard.html", "destination": "/frontend/dashboard.html" },
-    { "source": "/admin", "destination": "/frontend/admin-portal.html" },
-    { "source": "/admin-portal.html", "destination": "/frontend/admin-portal.html" },
-    { "source": "/user-management", "destination": "/frontend/user-management.html" },
-    { "source": "/user-management.html", "destination": "/frontend/user-management.html" },
-    { "source": "/:path*", "destination": "/frontend/:path*" }
+    { "source": "/", "destination": "/login.html" },
+    { "source": "/login", "destination": "/login.html" },
+    { "source": "/dashboard", "destination": "/dashboard.html" },
+    { "source": "/admin", "destination": "/admin-portal.html" },
+    { "source": "/user-management", "destination": "/user-management.html" }
   ]
 }
