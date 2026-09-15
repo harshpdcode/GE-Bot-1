@@ -1,16 +1,32 @@
 {
-  "name": "GE-Bot-1 Autonomous System",
+  "name": "GE-Bot-1 | Go Earth Organic",
   "short_name": "GE-Bot-1",
-  "description": "Smart Farm & Autonomous Delivery UI",
-  "start_url": "/dashboard.html",
+  "description": "Go Earth Organic Autonomous Smart Farming & Robotics Ecosystem",
+  "id": "/",
+  "start_url": "/",
+  "scope": "/",
   "display": "standalone",
-  "background_color": "#f8fafc",
-  "theme_color": "#3b82f6",
+  "orientation": "any",
+  "background_color": "#f0f6ff",
+  "theme_color": "#2563eb",
   "icons": [
     {
+      "src": "/assets/logo.png",
+      "sizes": "192x192",
+      "type": "image/png",
+      "purpose": "any maskable"
+    },
+    {
+      "src": "/assets/logo.png",
+      "sizes": "512x512",
+      "type": "image/png",
+      "purpose": "any maskable"
+    },
+    {
       "src": "/assets/icon.svg",
-      "sizes": "192x192 512x512",
-      "type": "image/svg+xml"
+      "sizes": "any",
+      "type": "image/svg+xml",
+      "purpose": "any"
     }
   ]
 }
