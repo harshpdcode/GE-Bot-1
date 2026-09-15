@@ -213,15 +213,16 @@ robotBridge.connect();
 // =============================================
 // MIDDLEWARE
 // =============================================
+app.set('trust proxy', 1);
 app.use(cors());
 app.use(express.json());
 app.use(express.urlencoded({ extended: true }));
 
 app.use(session({
-    secret: 'dynorex-x1-secret-2024-avishkar',
+    secret: process.env.SESSION_SECRET || 'dynorex-x1-secret-2024-avishkar',
     resave: false,
     saveUninitialized: false,
-    cookie: { secure: false, maxAge: 24 * 60 * 60 * 1000 }
+    cookie: { secure: 'auto', maxAge: 24 * 60 * 60 * 1000 }
 }));
 
 app.use(express.static(path.join(__dirname, '..', 'frontend')));

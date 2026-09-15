@@ -2,6 +2,8 @@
   "version": 2,
   "cleanUrls": true,
   "rewrites": [
+    { "source": "/api/:path*", "destination": "https://ge-bot-1.onrender.com/api/:path*" },
+    { "source": "/socket.io/:path*", "destination": "https://ge-bot-1.onrender.com/socket.io/:path*" },
     { "source": "/", "destination": "/login.html" },
     { "source": "/login", "destination": "/login.html" },
     { "source": "/dashboard", "destination": "/dashboard.html" },
@@ -9,3 +11,4 @@
     { "source": "/user-management", "destination": "/user-management.html" }
   ]
 }
+
