@@ -9,6 +9,10 @@ yarn-error.log*
 .env.local
 
 # SQLite Database Files (Do not commit real user data)
+*.db
+*.sqlite
+*.db-wal
+*.db-shm
 database/*.db
 database/*.sqlite
 database/*-wal
