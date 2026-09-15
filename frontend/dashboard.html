@@ -61,6 +61,60 @@
             --shadow: 0 4px 6px -1px rgba(0, 0, 0, 0.2), 0 2px 4px -1px rgba(0, 0, 0, 0.1);
         }
 
+        /* === LIGHT MODE BLUE ACCENTS (default theme) === */
+        body:not(.dark-mode) #sidebar {
+            border-right: 2px solid #dbeafe;
+        }
+        body:not(.dark-mode) .brand-icon {
+            background: linear-gradient(135deg, #2563eb, #1d4ed8);
+            box-shadow: 0 4px 12px rgba(37, 99, 246, 0.25);
+        }
+        body:not(.dark-mode) .nav-btn.active {
+            background: linear-gradient(135deg, #2563eb, #1d4ed8) !important;
+            color: white !important;
+            box-shadow: 0 4px 14px rgba(37, 99, 235, 0.3) !important;
+        }
+        body:not(.dark-mode) header {
+            background: rgba(255, 255, 255, 0.95) !important;
+            border-bottom: 1px solid #dbeafe !important;
+        }
+        body:not(.dark-mode) .icon-btn {
+            background: #f0f9ff;
+            border-color: #bfdbfe;
+            color: #2563eb;
+        }
+        body:not(.dark-mode) .icon-btn:hover {
+            background: #2563eb;
+            color: white;
+            border-color: #2563eb;
+        }
+        body:not(.dark-mode) .action-btn {
+            border-color: #bfdbfe;
+            color: #2563eb;
+            background: #f0f9ff;
+        }
+        body:not(.dark-mode) .action-btn:hover {
+            background: #dbeafe;
+            border-color: #93c5fd;
+        }
+        body:not(.dark-mode) .info-card {
+            border-color: #e0f2fe;
+            box-shadow: 0 2px 8px rgba(37, 99, 235, 0.06);
+        }
+        body:not(.dark-mode) .info-card:hover {
+            box-shadow: 0 8px 24px rgba(37, 99, 235, 0.12);
+            border-color: #93c5fd;
+        }
+        body:not(.dark-mode) nav::-webkit-scrollbar-thumb {
+            background: #bfdbfe;
+        }
+        body:not(.dark-mode) .agro-stat-card:hover {
+            box-shadow: 0 8px 24px rgba(37, 99, 235, 0.1);
+        }
+        body:not(.dark-mode) .ctrl-card {
+            border-color: #e0f2fe;
+        }
+
         body.dark-mode header {
             background: rgba(30, 41, 59, 0.8) !important;
         }
@@ -1348,7 +1402,35 @@
             opacity: 1;
         }
 
+        /* ── TABLET BREAKPOINT (769px - 1024px) ── */
+        @media (min-width: 769px) and (max-width: 1024px) {
+            #sidebar { width: 220px; }
+            .cards-2x2-grid { grid-template-columns: 1fr 1fr !important; }
+            .controls-grid { grid-template-columns: repeat(6, 1fr) !important; }
+            .ctrl-span-6 { grid-column: span 3 !important; }
+            .ctrl-span-4 { grid-column: span 3 !important; }
+            .ctrl-span-8 { grid-column: span 6 !important; }
+            .ctrl-span-3 { grid-column: span 3 !important; }
+            .dashboard-scroll { padding: 20px; }
+        }
+
         @media (max-width: 768px) {
+            .invader-banner {
+                flex-direction: column;
+                align-items: flex-start;
+                padding: 16px;
+                gap: 12px;
+            }
+            .invader-banner > div:last-child {
+                width: 100%;
+                flex-wrap: wrap;
+            }
+            .invader-banner button {
+                flex: 1;
+                min-width: 0;
+                font-size: 0.85rem;
+                padding: 10px 12px;
+            }
             #sidebar {
                 position: fixed;
                 left: -320px;
@@ -4067,36 +4149,44 @@
         let currentThemeMode = localStorage.getItem('dynorex_mode') || 'farmer';
         let currentLanguage = 'en';
 
-        // DARK MODE CONTROLLER
+        // DARK MODE CONTROLLER — Light Default
         function toggleDarkMode() {
             document.body.classList.toggle('dark-mode');
             const isDark = document.body.classList.contains('dark-mode');
-            localStorage.setItem('dyno_dark', isDark);
+            localStorage.setItem('dyno_theme', isDark ? 'dark' : 'light');
 
             // Sync all icons/toggles
             const headerToggle = document.getElementById('dark-mode-toggle');
-            const headerIcon = headerToggle.querySelector('i');
-            headerIcon.className = isDark ? 'fa-solid fa-sun' : 'fa-solid fa-moon';
-
-            // Add visual feedback flash effect
-            headerToggle.classList.add('active');
-            setTimeout(() => headerToggle.classList.remove('active'), 600);
+            if (headerToggle) {
+                const headerIcon = headerToggle.querySelector('i');
+                if (headerIcon) headerIcon.className = isDark ? 'fa-solid fa-sun' : 'fa-solid fa-moon';
+                // Add visual feedback flash effect
+                headerToggle.classList.add('active');
+                setTimeout(() => headerToggle.classList.remove('active'), 600);
+            }
 
             const sideSwitch = document.getElementById('sidebar-dark-switch');
             if (sideSwitch) {
                 isDark ? sideSwitch.classList.add('active') : sideSwitch.classList.remove('active');
             }
         }
-        if (localStorage.getItem('dyno_dark') === 'true') {
-            document.body.classList.add('dark-mode');
-            const sideSwitch = document.getElementById('sidebar-dark-switch');
-            if (sideSwitch) sideSwitch.classList.add('active');
-            const hdrIcon = document.getElementById('dark-mode-toggle');
-            if (hdrIcon && hdrIcon.querySelector('i')) hdrIcon.querySelector('i').className = 'fa-solid fa-sun';
-        } else {
-            const hdrIcon = document.getElementById('dark-mode-toggle');
-            if (hdrIcon && hdrIcon.querySelector('i')) hdrIcon.querySelector('i').className = 'fa-solid fa-moon';
-        }
+        // Init theme — light is default
+        (function() {
+            const saved = localStorage.getItem('dyno_theme') || localStorage.getItem('dyno_dark');
+            const isDark = (saved === 'true' || saved === 'dark');
+            if (isDark) {
+                document.body.classList.add('dark-mode');
+                const sideSwitch = document.getElementById('sidebar-dark-switch');
+                if (sideSwitch) sideSwitch.classList.add('active');
+                const hdrIcon = document.getElementById('dark-mode-toggle');
+                if (hdrIcon && hdrIcon.querySelector('i')) hdrIcon.querySelector('i').className = 'fa-solid fa-sun';
+            } else {
+                document.body.classList.remove('dark-mode');
+                if (!saved) localStorage.setItem('dyno_theme', 'light');
+                const hdrIcon = document.getElementById('dark-mode-toggle');
+                if (hdrIcon && hdrIcon.querySelector('i')) hdrIcon.querySelector('i').className = 'fa-solid fa-moon';
+            }
+        })();
 
         // Initialize toggle switches with proper state
         document.addEventListener('DOMContentLoaded', function () {
