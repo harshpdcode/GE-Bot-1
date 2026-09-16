@@ -66,6 +66,33 @@
             --shadow: 0 4px 6px -1px rgba(0, 0, 0, 0.2), 0 2px 4px -1px rgba(0, 0, 0, 0.1);
         }
 
+        /* === SIMULATED DATA BADGE === */
+        .sim-badge {
+            display: inline-flex;
+            align-items: center;
+            gap: 4px;
+            background: rgba(245, 158, 11, 0.15);
+            border: 1px solid #f59e0b;
+            color: #d97706;
+            font-size: 0.65rem;
+            font-weight: 800;
+            padding: 2px 7px;
+            border-radius: 20px;
+            letter-spacing: 0.04em;
+            vertical-align: middle;
+            margin-left: 6px;
+            animation: simPulse 2.5s ease-in-out infinite;
+        }
+        @keyframes simPulse {
+            0%, 100% { opacity: 1; }
+            50% { opacity: 0.6; }
+        }
+        body.dark-mode .sim-badge {
+            background: rgba(245, 158, 11, 0.22);
+            border-color: #d97706;
+            color: #fbbf24;
+        }
+
         /* === LIGHT MODE BLUE ACCENTS (default theme) === */
         body:not(.dark-mode) #sidebar {
             border-right: 2px solid #dbeafe;
@@ -3050,6 +3077,31 @@
                                 <p>Loading real-time field soil zoning telemetry...</p>
                             </div>
                         </div>
+
+                        <div class="panel-section" id="panel-crops" style="display:none; animation: fadeIn 0.3s;">
+                            <!-- We use the one further down -->
+                            <div id="crop-recs-old-container">
+                            </div>
+                        </div>
+
+                        <!-- CROP ROTATION RECOMMENDATION PANEL (AI-powered via /api/farm/crop-recommendation) -->
+                        <div style="margin-top:28px;">
+                            <div style="display:flex; justify-content:space-between; align-items:center; margin-bottom:16px; flex-wrap:wrap; gap:12px;">
+                                <div>
+                                    <h3 style="font-size:1.05rem; font-weight:800; color:var(--text-main); margin:0 0 4px;"><i class="fa-solid fa-rotate" style="color:#8b5cf6; margin-right:8px;"></i>AI Crop Rotation Recommendations</h3>
+                                    <p style="font-size:0.82rem; color:var(--text-sub); margin:0;">Based on real soil N/P/K/pH from your 6 sectors — updated on every scan.</p>
+                                </div>
+                                <button class="action-btn" onclick="loadCropRecommendations()" style="background:var(--card-bg); border:1px solid var(--border); color:var(--text-main); flex-shrink:0;">
+                                    <i class="fa-solid fa-rotate-right"></i> Refresh
+                                </button>
+                            </div>
+                            <div id="crop-recommendations-container">
+                                <div style="padding:30px; text-align:center; color:var(--text-sub);">
+                                    <i class="fa-solid fa-circle-notch fa-spin" style="font-size:1.8rem; margin-bottom:12px; color:var(--primary);"></i>
+                                    <p>Analyzing soil data for crop rotation recommendations...</p>
+                                </div>
+                            </div>
+                        </div>
         </div>
 
         <!-- 2. LASER WEED & PEST DEFENSE PANEL (ONLY HISTORY & TOTAL COUNTS) -->
@@ -3149,7 +3201,7 @@
                                 <th style="padding:12px 10px;">Ablation Status</th>
                             </tr>
                         </thead>
-                        <tbody id="tbody-laser-history">
+                        <tbody id="laser-history-tbody">
                             <!-- Injected by JavaScript -->
                         </tbody>
                     </table>
@@ -3470,22 +3522,10 @@
                     <div class="ctrl-card" style="margin-bottom:20px; padding:16px 20px; display:flex; flex-wrap:wrap; justify-content:space-between; align-items:center; gap:14px; background:var(--card-bg); border:1.5px solid var(--border);">
                         <div style="display:flex; align-items:center; gap:10px; flex-wrap:wrap;">
                             <span style="font-weight:700; font-size:0.9rem; color:var(--text-main); display:flex; align-items:center; gap:6px;">
-                                <i class="fa-solid fa-location-dot" style="color:#ef4444;"></i> Select Farm Location:
+                                <i class="fa-solid fa-location-dot" style="color:#ef4444;"></i> Search Farm Location:
                             </span>
-                            <select id="weather-city-select" onchange="onWeatherCitySelectChange(this.value)" style="padding:8px 14px; border-radius:10px; border:1px solid var(--border); background:var(--card-bg); color:var(--text-main); font-weight:600; font-size:0.88rem; outline:none; cursor:pointer;">
-                                <option value="28.6139,77.2090,New Delhi Farm Ridge" selected>New Delhi (Farm Ridge Central)</option>
-                                <option value="18.5204,73.8567,Pune Agri Hub">Pune (Agri Hub)</option>
-                                <option value="30.9010,75.8573,Ludhiana Farm Zone">Ludhiana (Punjab Wheat Belt)</option>
-                                <option value="29.6857,76.9905,Karnal Agro Centre">Karnal (Haryana Basmati Region)</option>
-                                <option value="26.9124,75.7873,Jaipur Semi-Arid Fields">Jaipur (Rajasthan Fields)</option>
-                                <option value="22.7196,75.8577,Indore Black Soil Tract">Indore (Madhya Pradesh Tract)</option>
-                                <option value="12.9716,77.5946,Bengaluru Horticulture Zone">Bengaluru (Horticulture Zone)</option>
-                                <option value="17.3850,78.4867,Hyderabad Deccan Farm">Hyderabad (Deccan Farm)</option>
-                                <option value="26.8467,80.9462,Lucknow Gangetic Plains">Lucknow (Gangetic Plains)</option>
-                                <option value="36.7468,-119.7726,Fresno Central Valley">Fresno (California Central Valley)</option>
-                            </select>
                         </div>
-                        <div style="display:flex; align-items:center; gap:8px; flex:1; max-width:360px; min-width:240px;">
+                        <div style="display:flex; align-items:center; gap:8px; flex:1; max-width:500px; min-width:240px;">
                             <input type="text" id="weather-search-input" placeholder="Search city name (e.g. Nashik, Surat)..." onkeydown="if(event.key==='Enter') searchCustomCityWeather()" style="flex:1; padding:8px 14px; border-radius:10px; border:1px solid var(--border); background:var(--card-bg); color:var(--text-main); font-size:0.88rem; outline:none;">
                             <button type="button" onclick="searchCustomCityWeather()" class="action-btn" style="background:#0ea5e9; color:white; border:none; padding:8px 16px; border-radius:10px; font-weight:700; font-size:0.88rem; white-space:nowrap; cursor:pointer;">
                                 <i class="fa-solid fa-magnifying-glass"></i> Find
@@ -4406,6 +4446,7 @@
             if (panelId === 'camera_live' && !laptopStream) startLaptopCamera();
             if (panelId === 'soil_zoning') {
                 loadSoilZoning();
+                loadCropRecommendations(); // Wire crop recommendation on soil panel open
                 if (window.farmLeafletMap) {
                     setTimeout(() => window.farmLeafletMap.invalidateSize(), 150);
                 }
@@ -4752,6 +4793,82 @@
         // ══════════════════════════════════════════════════════════════════════
         //  LASER DEFENSE (HISTORY & TOTAL COUNTS ONLY)
         // ══════════════════════════════════════════════════════════════════════
+        // ══════════════════════════════════════════════════════════════════════
+        //  CROP ROTATION RECOMMENDATION (calls real backend engine)
+        // ══════════════════════════════════════════════════════════════════════
+        async function loadCropRecommendations() {
+            const container = document.getElementById('crop-recommendations-container');
+            if (!container) return;
+
+            container.innerHTML = `
+                <div style="padding:30px; text-align:center; color:var(--text-sub);">
+                    <i class="fa-solid fa-circle-notch fa-spin" style="font-size:1.8rem; margin-bottom:12px; color:var(--primary);"></i>
+                    <p>Analyzing soil data for crop rotation recommendations...</p>
+                </div>`;
+
+            try {
+                const res = await safeFetch('/api/farm/crop-recommendation');
+                if (!res.ok) throw new Error('API ' + res.status);
+                const data = await res.json();
+
+                const assessment = data.current_soil_assessment || {};
+                const recs = data.recommended_rotation || [];
+
+                const defLabel = assessment.primary_deficiency || 'Balanced';
+                const defColor = defLabel.includes('Depleted') ? '#ef4444' : defLabel.includes('Potassium') ? '#f59e0b' : '#22c55e';
+
+                let html = `
+                    <div style="background:var(--bg-main); border:1px solid var(--border); border-radius:12px; padding:16px 20px; margin-bottom:20px; display:flex; gap:24px; flex-wrap:wrap; align-items:center;">
+                        <div style="display:flex; gap:20px; flex-wrap:wrap; flex:1;">
+                            <div style="text-align:center;"><div style="font-size:0.7rem; font-weight:700; color:var(--text-sub); text-transform:uppercase;">Avg Nitrogen</div><div style="font-size:1.3rem; font-weight:800; color:var(--text-main);">${assessment.avg_nitrogen || '—'}<small style="font-size:0.65rem;"> kg/ha</small></div></div>
+                            <div style="text-align:center;"><div style="font-size:0.7rem; font-weight:700; color:var(--text-sub); text-transform:uppercase;">Avg Phosphorus</div><div style="font-size:1.3rem; font-weight:800; color:var(--text-main);">${assessment.avg_phosphorus || '—'}<small style="font-size:0.65rem;"> kg/ha</small></div></div>
+                            <div style="text-align:center;"><div style="font-size:0.7rem; font-weight:700; color:var(--text-sub); text-transform:uppercase;">Avg Potassium</div><div style="font-size:1.3rem; font-weight:800; color:var(--text-main);">${assessment.avg_potassium || '—'}<small style="font-size:0.65rem;"> kg/ha</small></div></div>
+                            <div style="text-align:center;"><div style="font-size:0.7rem; font-weight:700; color:var(--text-sub); text-transform:uppercase;">Avg pH</div><div style="font-size:1.3rem; font-weight:800; color:var(--text-main);">${assessment.avg_ph || '—'}</div></div>
+                        </div>
+                        <div style="background:rgba(${defColor === '#22c55e' ? '34,197,94' : defColor === '#ef4444' ? '239,68,68' : '245,158,11'},0.1); border:1px solid ${defColor}; border-radius:10px; padding:8px 14px; font-size:0.85rem; font-weight:700; color:${defColor}; flex-shrink:0;">
+                            ${defLabel === 'Balanced' ? '✅' : '⚠️'} ${defLabel}
+                        </div>
+                    </div>
+                    <div style="display:grid; grid-template-columns:repeat(auto-fit, minmax(280px, 1fr)); gap:16px;">`;
+
+                recs.forEach(r => {
+                    const score = r.suitability_score || 80;
+                    const barColor = score >= 90 ? '#22c55e' : score >= 80 ? '#10b981' : '#f59e0b';
+                    html += `
+                        <div class="ctrl-card" style="margin:0; border-left:4px solid ${barColor};">
+                            <div style="display:flex; justify-content:space-between; align-items:flex-start; margin-bottom:10px; gap:8px;">
+                                <div style="font-weight:800; font-size:0.95rem; color:var(--text-main); flex:1;">${r.crop}</div>
+                                <div style="font-size:1.1rem; font-weight:900; color:${barColor}; flex-shrink:0;">${score}%</div>
+                            </div>
+                            <div style="background:var(--bg-main); border-radius:20px; height:6px; margin-bottom:12px; overflow:hidden;">
+                                <div style="height:100%; width:${score}%; background:${barColor}; border-radius:20px; transition:width 0.8s ease;"></div>
+                            </div>
+                            <div style="font-size:0.75rem; font-weight:700; color:var(--text-sub); text-transform:uppercase; margin-bottom:4px;">${r.category || ''}</div>
+                            <div style="font-size:0.82rem; color:var(--text-main); margin-bottom:8px; line-height:1.4;">${r.soil_benefit || ''}</div>
+                            <div style="display:flex; flex-wrap:wrap; gap:8px; font-size:0.78rem; margin-bottom:8px;">
+                                <span style="background:#e0f2fe; color:#0284c7; padding:2px 8px; border-radius:6px; font-weight:700;">💧 ${r.water_requirement || 'Medium'}</span>
+                                <span style="background:#dcfce7; color:#16a34a; padding:2px 8px; border-radius:6px; font-weight:700;">📦 ${r.estimated_yield || '—'}</span>
+                            </div>
+                            <div style="background:rgba(16,185,129,0.08); border-left:3px solid #10b981; padding:8px 10px; border-radius:6px; font-size:0.78rem; color:var(--text-main);">
+                                <strong style="color:#10b981;">Rotation Reason:</strong> ${r.rotation_reason || '—'}
+                            </div>
+                            <div style="margin-top:8px; font-weight:800; color:#16a34a; font-size:0.88rem;">💰 ${r.expected_profit || '—'}</div>
+                        </div>`;
+                });
+
+                html += '</div>';
+                container.innerHTML = html;
+            } catch (e) {
+                console.error('Crop recommendation error:', e);
+                container.innerHTML = `
+                    <div style="text-align:center; padding:30px; color:#f59e0b;">
+                        <i class="fa-solid fa-triangle-exclamation" style="font-size:2rem; margin-bottom:12px;"></i>
+                        <p>Could not load crop recommendations.</p>
+                        <button onclick="loadCropRecommendations()" style="background:var(--primary);color:white;border:none;padding:8px 18px;border-radius:8px;cursor:pointer;font-weight:700;">Retry</button>
+                    </div>`;
+            }
+        }
+
         let currentLaserTargets = [
             { id: 1, type: 'weed', name: 'Parthenium hysterophorus (Congress Grass)', sector: 'A', timestamp: '10 mins ago', laser_power: '100W Fiber Pulsed', status: 'Eliminated', duration: '140ms' },
             { id: 2, type: 'pest', name: 'Helicoverpa armigera (Cotton Bollworm)', sector: 'C', timestamp: '24 mins ago', laser_power: '60W High-Speed', status: 'Neutralized', duration: '85ms' },
@@ -4864,10 +4981,26 @@
             const legacyInput = document.getElementById('calc-landfield-acres');
             if (geInput) geInput.value = acres.toFixed(1);
             if (legacyInput) legacyInput.value = acres;
+            
+            // Toggle active state visually
+            document.querySelectorAll('button[onclick^="setLandfieldPreset"]').forEach(btn => {
+                if (btn.innerText.includes(acres.toString())) {
+                    btn.classList.add('active');
+                    btn.style.background = '#16a34a';
+                    btn.style.color = 'white';
+                    btn.style.border = 'none';
+                } else {
+                    btn.classList.remove('active');
+                    btn.style.background = 'var(--card-bg)';
+                    btn.style.color = 'var(--text-main)';
+                    btn.style.border = '1.5px solid var(--border)';
+                }
+            });
+            
             calculateGoEarthLandfield();
         }
 
-        function calculateGoEarthLandfield() {
+                async function calculateGoEarthLandfield() {
             const geInput = document.getElementById('ge-land-acres');
             const legacyInput = document.getElementById('calc-landfield-acres');
             const acres = parseFloat(geInput ? geInput.value : (legacyInput ? legacyInput.value : 5)) || 1;
@@ -4883,97 +5016,67 @@
 
             const wasteEl = document.getElementById('ge-waste-type');
             const wasteType = wasteEl ? wasteEl.value : 'animal';
-
-            // Multipliers based on soil & growth stage
-            let soilMult = 1.0;
-            if (soil === 'deficient') soilMult = 1.25;
-            else if (soil === 'healthy') soilMult = 0.85;
-
-            let stageMult = 1.0;
-            if (stage === 'basal') stageMult = 1.2;
-            else if (stage === 'flowering') stageMult = 0.9;
-
-            const totalMult = soilMult * stageMult;
-
-            let products = [];
-            if (wasteType === 'animal') {
-                const p1Bags = Math.max(1, Math.round(acres * 16 * totalMult));
-                const p2Bags = Math.max(1, Math.round(acres * 8 * totalMult));
-                const p3Bags = Math.max(1, Math.round(acres * 3 * totalMult));
-                const p4Bags = Math.max(1, Math.round(acres * 4 * totalMult));
-                const p5Liters = Math.max(2, Math.round(acres * 5 * totalMult));
-
-                products = [
-                    { name: 'Go Earth Bio-Compost Gold', sub: 'Enriched Bovine Compost with Azotobacter & Trichoderma • C:N 24:1', icon: 'fa-seedling', iconBg: '#dcfce7', iconColor: '#16a34a', bags: p1Bags, kg: p1Bags * 50, cost: p1Bags * 160 },
-                    { name: 'Go Earth Vermicompost Plus', sub: 'Pure Earthworm Castings • High Humus & Bioactive Microbes', icon: 'fa-worm', iconBg: '#fef3c7', iconColor: '#d97706', bags: p2Bags, kg: p2Bags * 50, cost: p2Bags * 220 },
-                    { name: 'Go Earth Neem Khali / Cake', sub: 'Organic Pest Deterrent & Natural Nitrogen Stabilizer', icon: 'fa-shield-virus', iconBg: '#fee2e2', iconColor: '#ef4444', bags: p3Bags, kg: p3Bags * 50, cost: p3Bags * 320 },
-                    { name: 'Go Earth PROM Organic Phosphate', sub: 'Rock Phosphate Enriched Organic Manure for Root Strength', icon: 'fa-layer-group', iconBg: '#f3e8ff', iconColor: '#8b5cf6', bags: p4Bags, kg: p4Bags * 50, cost: p4Bags * 260 },
-                    { name: 'Go Earth Jeevamrut Liquid Extract', sub: 'Fermented Desi Cow Dung/Urine Bio-Inoculant for Drip Feed', icon: 'fa-bottle-droplet', iconBg: '#e0f2fe', iconColor: '#0284c7', liters: p5Liters, cost: p5Liters * 120 }
-                ];
-            } else {
-                const p1Bags = Math.max(1, Math.round(acres * 18 * totalMult));
-                const p2Bags = Math.max(1, Math.round(acres * 6 * totalMult));
-                const p3Bags = Math.max(1, Math.round(acres * 4 * totalMult));
-                const p4Bags = Math.max(1, Math.round(acres * 3 * totalMult));
-                const p5Liters = Math.max(2, Math.round(acres * 6 * totalMult));
-
-                products = [
-                    { name: 'Go Earth Crop-Residue Bio-Mulch', sub: 'Enriched Paddy Straw & Mustard Stalk Compost • High Carbon Tilth', icon: 'fa-wheat-awn', iconBg: '#dcfce7', iconColor: '#16a34a', bags: p1Bags, kg: p1Bags * 50, cost: p1Bags * 140 },
-                    { name: 'Go Earth Biochar Carbon Blend', sub: 'Pyrolyzed Agro-Biomass for Moisture Retention & Soil Aeration', icon: 'fa-fire-flame-curved', iconBg: '#fef3c7', iconColor: '#d97706', bags: p2Bags, kg: p2Bags * 50, cost: p2Bags * 240 },
-                    { name: 'Go Earth Karanja & Castor Seed Cake', sub: 'Botanical Pest Deterrent & Natural Nematode Repellent', icon: 'fa-shield-halved', iconBg: '#fee2e2', iconColor: '#ef4444', bags: p3Bags, kg: p3Bags * 50, cost: p3Bags * 280 },
-                    { name: 'Go Earth Agro-Waste Humic Acid', sub: 'Plant-Derived Concentrated Humic & Fulvic Bio-Stimulant', icon: 'fa-cubes-stacked', iconBg: '#f3e8ff', iconColor: '#8b5cf6', bags: p4Bags, kg: p4Bags * 50, cost: p4Bags * 310 },
-                    { name: 'Go Earth Fermented Plant Juice (FPJ)', sub: 'Liquid Green Leaf & Fruit Ferment for Rapid Foliar Nutrition', icon: 'fa-bottle-droplet', iconBg: '#e0f2fe', iconColor: '#0284c7', liters: p5Liters, cost: p5Liters * 130 }
-                ];
-            }
+            
+            const materials = wasteType === 'animal' ? ['fym', 'bone_meal'] : ['vermicompost', 'neem_cake'];
 
             let totalBags = 0;
             let totalKg = 0;
             let totalCost = 0;
             let totalLiters = 0;
 
-            const productListEl = document.getElementById('ge-products-list');
-            if (productListEl) {
-                productListEl.innerHTML = products.map(p => {
-                    totalCost += p.cost;
-                    if (p.bags) {
-                        totalBags += p.bags;
-                        totalKg += p.kg;
+            try {
+                const res = await safeFetch('/api/farm/organic-calculator', {
+                    method: 'POST',
+                    headers: { 'Content-Type': 'application/json' },
+                    body: JSON.stringify({
+                        crop_name: crop,
+                        growth_stage: stage === 'basal' ? 'Vegetative' : (stage === 'flowering' ? 'Flowering' : 'Fruiting'),
+                        acreage: acres,
+                        selected_materials: materials,
+                        decomp_stage: 'semi_decomposed',
+                        moisture_pct: 35
+                    })
+                });
+                
+                if (!res.ok) throw new Error('API Error');
+                const data = await res.json();
+                
+                const productListEl = document.getElementById('ge-products-list');
+                if (productListEl) {
+                    productListEl.innerHTML = data.blend_materials.map((rec, idx) => {
+                        const iconBg = idx === 0 ? '#dcfce7' : (idx === 1 ? '#fef3c7' : '#fee2e2');
+                        const iconColor = idx === 0 ? '#16a34a' : (idx === 1 ? '#d97706' : '#ef4444');
+                        const iconClass = idx === 0 ? 'fa-sack-xmark' : (idx === 1 ? 'fa-leaf' : 'fa-seedling');
+                        const bags = Math.max(1, Math.round(rec.kg / 50));
+                        totalBags += bags;
+                        totalKg += rec.kg;
+                        totalCost += rec.cost_inr;
+                        
                         return `
                         <div style="background:var(--bg-main); border:1.5px solid var(--border); border-radius:12px; padding:12px 16px; display:flex; justify-content:space-between; align-items:center; gap:12px;">
                             <div style="display:flex; align-items:center; gap:12px;">
-                                <div style="width:40px; height:40px; border-radius:10px; background:${p.iconBg}; color:${p.iconColor}; display:flex; align-items:center; justify-content:center; font-size:1.2rem; flex-shrink:0;">
-                                    <i class="fa-solid ${p.icon}"></i>
+                                <div style="width:40px; height:40px; border-radius:10px; background:${iconBg}; color:${iconColor}; display:flex; align-items:center; justify-content:center; font-size:1.2rem; flex-shrink:0;">
+                                    <i class="fa-solid ${iconClass}"></i>
                                 </div>
                                 <div>
-                                    <div style="font-weight:800; font-size:0.95rem; color:var(--text-main);">${p.name}</div>
-                                    <div style="font-size:0.75rem; color:var(--text-sub);">${p.sub}</div>
+                                    <div style="font-weight:800; font-size:0.95rem; color:var(--text-main);">${rec.name.toUpperCase()}</div>
+                                    <div style="font-size:0.75rem; color:var(--text-sub);">NPK: ${rec.npk_ratio} | C:N: ${rec.c_n_ratio}:1</div>
                                 </div>
                             </div>
                             <div style="text-align:right; flex-shrink:0;">
-                                <div style="font-size:1.15rem; font-weight:800; color:${p.iconColor};">${p.bags} Bags</div>
-                                <div style="font-size:0.75rem; color:var(--text-sub);">${p.kg.toLocaleString('en-IN')} kg total</div>
+                                <div style="font-size:1.15rem; font-weight:800; color:${iconColor};">${bags} Bags</div>
+                                <div style="font-size:0.75rem; color:var(--text-sub);">${rec.kg.toLocaleString('en-IN')} kg total</div>
                             </div>
                         </div>`;
-                    } else {
-                        totalLiters += p.liters;
-                        return `
-                        <div style="background:var(--bg-main); border:1.5px solid var(--border); border-radius:12px; padding:12px 16px; display:flex; justify-content:space-between; align-items:center; gap:12px;">
-                            <div style="display:flex; align-items:center; gap:12px;">
-                                <div style="width:40px; height:40px; border-radius:10px; background:${p.iconBg}; color:${p.iconColor}; display:flex; align-items:center; justify-content:center; font-size:1.2rem; flex-shrink:0;">
-                                    <i class="fa-solid ${p.icon}"></i>
-                                </div>
-                                <div>
-                                    <div style="font-weight:800; font-size:0.95rem; color:var(--text-main);">${p.name}</div>
-                                    <div style="font-size:0.75rem; color:var(--text-sub);">${p.sub}</div>
-                                </div>
-                            </div>
-                            <div style="text-align:right; flex-shrink:0;">
-                                <div style="font-size:1.15rem; font-weight:800; color:${p.iconColor};">${p.liters} Liters</div>
-                                <div style="font-size:0.75rem; color:var(--text-sub);">Drip System Feed</div>
-                            </div>
-                        </div>`;
-                    }
-                }).join('');
+                    }).join('');
+                }
+                
+                // Show analytics modal if available
+                const C_N_Ratio = data.calculated_cn_ratio.toFixed(1);
+                showToast(`Backend calc: ${data.cn_diagnosis.title}. C:N Ratio: ${C_N_Ratio}:1`, 'success');
+
+            } catch (e) {
+                console.error("Backend calc failed", e);
             }
 
             // Update badge, totals, and cost
@@ -5094,6 +5197,27 @@
                 if (!res.ok) throw new Error('Weather API error');
                 const data = await res.json();
                 renderLiveWeatherData(data, locationName || currentFarmLocation.name, lat, lon);
+
+                // Push real weather data to backend cache so irrigation rain-delay uses real data
+                if (!isFileMode) {
+                    const cur = data.current || {};
+                    const rainProb = data.daily && data.daily.precipitation_probability_max
+                        ? (data.daily.precipitation_probability_max[0] || 0) : 0;
+                    safeFetch('/api/farm/weather-cache', {
+                        method: 'POST',
+                        headers: { 'Content-Type': 'application/json' },
+                        body: JSON.stringify({
+                            current: {
+                                temperature_c: cur.temperature_2m,
+                                humidity_pct: cur.relative_humidity_2m,
+                                wind_speed_kmh: cur.wind_speed_10m,
+                                rainfall_prob_12h: rainProb,
+                                condition: 'Live — Open-Meteo'
+                            },
+                            rainProb12h: rainProb
+                        })
+                    }).catch(() => {});
+                }
             } catch (err) {
                 console.warn('Open-Meteo fetch failed, using fallback:', err);
             }
@@ -5167,19 +5291,6 @@
             }
         }
 
-        function onWeatherCitySelectChange(val) {
-            if (!val) return;
-            const parts = val.split(',');
-            if (parts.length >= 3) {
-                const lat = parseFloat(parts[0]);
-                const lon = parseFloat(parts[1]);
-                const name = parts[2];
-                currentFarmLocation = { name, lat, lon };
-                fetchLiveWeather(lat, lon, name);
-                showToast(`Weather location set to ${name}`, 'info');
-            }
-        }
-
         async function searchCustomCityWeather() {
             const input = document.getElementById('weather-search-input');
             if (!input || !input.value.trim()) return;
@@ -5208,10 +5319,15 @@
                 const res = await safeFetch('/api/farm/irrigation/status');
                 if (res.ok) {
                     const data = await res.json();
-                    isIrrigationOn = !!data.valveOpen;
+                    // Accept both field names: valve_active (backend) or valveOpen (legacy)
+                    isIrrigationOn = !!(data.valve_active ?? data.valveOpen);
                     updateIrrigationUI();
+                } else {
+                    console.warn('Irrigation status load failed:', res.status);
                 }
-            } catch (e) {}
+            } catch (e) {
+                console.warn('Irrigation status error:', e);
+            }
             fetchLiveWeather(currentFarmLocation.lat, currentFarmLocation.lon, currentFarmLocation.name);
         }
 
@@ -5252,19 +5368,34 @@
         //  INVADER SECURITY & ALERTS
         // ══════════════════════════════════════════════════════════════════════
         async function loadInvaderAlerts() {
+            const tbody = document.getElementById('invader-logs-tbody') || document.getElementById('tbody-invader-alerts');
+            if (tbody) tbody.innerHTML = '<tr><td colspan="7" style="text-align:center; padding:20px; color:var(--text-sub);"><i class="fa-solid fa-circle-notch fa-spin" style="margin-right:8px;"></i>Loading security logs...</td></tr>';
+
             try {
                 const res = await safeFetch('/api/farm/invader-alerts');
                 if (res.ok) {
-                    const data = await res.json();
-                    renderInvaderTable(data);
-                    return;
+                    const raw = await res.json();
+                    if (raw && raw.length > 0) {
+                        // Normalize DB field names → renderer field names
+                        const normalized = raw.map(a => ({
+                            id: a.id,
+                            type: a.invader_type || a.type || 'Unknown',
+                            sector: a.sector_id || a.sector || 'X',
+                            confidence: a.kill_confidence ? a.kill_confidence + '%' : (a.confidence || '—'),
+                            time: a.detected_at ? new Date(a.detected_at).toLocaleString() : (a.time || 'Unknown'),
+                            countermeasure: a.deterrent_action || a.countermeasure || 'Acoustic Deterrent',
+                            status: a.is_active === 0 ? 'Deterred' : (a.is_active === 1 ? 'Active' : (a.status || 'Deterred'))
+                        }));
+                        renderInvaderTable(normalized);
+                        return;
+                    }
                 }
-            } catch (e) {}
-            renderInvaderTable([
-                { id: 1, type: 'Wild Boar (Sus scrofa)', sector: 'C', confidence: '94.2%', time: 'Just now', countermeasure: '110dB Siren & Strobe', status: 'Deterred' },
-                { id: 2, type: 'Stray Cattle (Bos taurus)', sector: 'D', confidence: '91.8%', time: '42 mins ago', countermeasure: '4000-Lumen Strobe', status: 'Deterred' },
-                { id: 3, type: 'Porcupine / Burrowing Rodent', sector: 'B', confidence: '88.5%', time: '2 hrs ago', countermeasure: '24 kHz Ultrasonic Pulse', status: 'Deterred' }
-            ]);
+                // Show inline error if API fails
+                if (tbody) tbody.innerHTML = '<tr><td colspan="7" style="text-align:center; padding:20px; color:#f59e0b;"><i class="fa-solid fa-triangle-exclamation" style="margin-right:6px;"></i>Could not load security logs. <button onclick="loadInvaderAlerts()" style="background:none;border:1px solid #f59e0b;color:#f59e0b;padding:2px 8px;border-radius:6px;cursor:pointer;font-size:0.8rem;">Retry</button></td></tr>';
+            } catch (e) {
+                console.error('Invader alerts fetch error:', e);
+                if (tbody) tbody.innerHTML = '<tr><td colspan="7" style="text-align:center; padding:20px; color:#ef4444;"><i class="fa-solid fa-wifi" style="margin-right:6px;"></i>Network error loading security logs. <button onclick="loadInvaderAlerts()" style="background:none;border:1px solid #ef4444;color:#ef4444;padding:2px 8px;border-radius:6px;cursor:pointer;font-size:0.8rem;">Retry</button></td></tr>';
+            }
         }
 
         function renderInvaderTable(alerts) {
@@ -6038,7 +6169,39 @@
             renderLaserHistory();
             loadInvaderAlerts();
             loadWeatherIrrigation();
+            loadCropRecommendations();
+            loadFarmSchedules();
+            initSimulatedBadges();    // Mark simulated data widgets
         });
+
+        // ══════════════════════════════════════════════════════════════════════
+        //  SIMULATED DATA BADGE HELPER
+        //  Marks widgets that are backed by random jitter / mock data.
+        //  Call initSimulatedBadges() on load; badges auto-remove when
+        //  robotBridge reports isConnected (via robotConnectionStatus socket event).
+        // ══════════════════════════════════════════════════════════════════════
+        function markSimulated(elementId, labelText = '⚙ SIMULATED') {
+            const el = document.getElementById(elementId);
+            if (!el) return;
+            if (el.querySelector('.sim-badge')) return; // already marked
+            const badge = document.createElement('span');
+            badge.className = 'sim-badge';
+            badge.setAttribute('data-sim', 'true');
+            badge.textContent = labelText;
+            el.appendChild(badge);
+        }
+        function clearSimulated(elementId) {
+            const el = document.getElementById(elementId);
+            if (!el) return;
+            el.querySelectorAll('.sim-badge').forEach(b => b.remove());
+        }
+
+        function initSimulatedBadges() {
+            // These widgets are jitter/mock-backed unless real ESP32 telemetry arrives
+            markSimulated('diag-card-laser', '⚙ COORDINATES SIMULATED');
+            // Sensor cards: battery, mode etc. are simulated when ESP32 not connected
+            // Badges removed on robotConnectionStatus event (see Socket.io listener below)
+        }
     </script>
 </body>
 
