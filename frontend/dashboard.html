@@ -3095,7 +3095,7 @@
                                     <i class="fa-solid fa-rotate-right"></i> Refresh
                                 </button>
                             </div>
-                            <div id="crop-recommendations-container">
+                            <div id="crop-recs-old-container">
                                 <div style="padding:30px; text-align:center; color:var(--text-sub);">
                                     <i class="fa-solid fa-circle-notch fa-spin" style="font-size:1.8rem; margin-bottom:12px; color:var(--primary);"></i>
                                     <p>Analyzing soil data for crop rotation recommendations...</p>
@@ -3522,8 +3522,20 @@
                     <div class="ctrl-card" style="margin-bottom:20px; padding:16px 20px; display:flex; flex-wrap:wrap; justify-content:space-between; align-items:center; gap:14px; background:var(--card-bg); border:1.5px solid var(--border);">
                         <div style="display:flex; align-items:center; gap:10px; flex-wrap:wrap;">
                             <span style="font-weight:700; font-size:0.9rem; color:var(--text-main); display:flex; align-items:center; gap:6px;">
-                                <i class="fa-solid fa-location-dot" style="color:#ef4444;"></i> Search Farm Location:
+                                <i class="fa-solid fa-location-dot" style="color:#ef4444;"></i> Farm Location:
                             </span>
+                            <select id="weather-city-select" onchange="onWeatherCitySelectChange(this.value)" style="padding:8px 14px; border-radius:10px; border:1px solid var(--border); background:var(--card-bg); color:var(--text-main); font-weight:600; font-size:0.88rem; outline:none; cursor:pointer;">
+                                <option value="28.6139,77.2090,New Delhi Farm Ridge" selected>New Delhi (Farm Ridge Central)</option>
+                                <option value="18.5204,73.8567,Pune Agri Hub">Pune (Agri Hub)</option>
+                                <option value="30.9010,75.8573,Ludhiana Farm Zone">Ludhiana (Punjab Wheat Belt)</option>
+                                <option value="29.6857,76.9905,Karnal Agro Centre">Karnal (Haryana Basmati Region)</option>
+                                <option value="26.9124,75.7873,Jaipur Semi-Arid Fields">Jaipur (Rajasthan Fields)</option>
+                                <option value="22.7196,75.8577,Indore Black Soil Tract">Indore (Madhya Pradesh Tract)</option>
+                                <option value="12.9716,77.5946,Bengaluru Horticulture Zone">Bengaluru (Horticulture Zone)</option>
+                                <option value="17.3850,78.4867,Hyderabad Deccan Farm">Hyderabad (Deccan Farm)</option>
+                                <option value="26.8467,80.9462,Lucknow Gangetic Plains">Lucknow (Gangetic Plains)</option>
+                                <option value="36.7468,-119.7726,Fresno Central Valley">Fresno (California Central Valley)</option>
+                            </select>
                         </div>
                         <div style="display:flex; align-items:center; gap:8px; flex:1; max-width:500px; min-width:240px;">
                             <input type="text" id="weather-search-input" placeholder="Search city name (e.g. Nashik, Surat)..." onkeydown="if(event.key==='Enter') searchCustomCityWeather()" style="flex:1; padding:8px 14px; border-radius:10px; border:1px solid var(--border); background:var(--card-bg); color:var(--text-main); font-size:0.88rem; outline:none;">
@@ -4894,9 +4906,27 @@
 
         function filterLaserHistory(type) {
             activeLaserFilter = type;
-            document.querySelectorAll('.laser-tab-btn').forEach(btn => {
-                btn.classList.toggle('active', btn.getAttribute('data-filter') === type);
-            });
+            
+            const btnAll = document.getElementById('filter-all');
+            const btnWeeds = document.getElementById('filter-weeds');
+            const btnPests = document.getElementById('filter-pests');
+            
+            if (btnAll) {
+                btnAll.classList.toggle('active', type === 'all');
+                btnAll.style.background = type === 'all' ? 'var(--primary)' : 'var(--card-bg)';
+                btnAll.style.color = type === 'all' ? 'white' : 'var(--text-main)';
+            }
+            if (btnWeeds) {
+                btnWeeds.classList.toggle('active', type === 'weed');
+                btnWeeds.style.background = type === 'weed' ? 'var(--primary)' : 'var(--card-bg)';
+                btnWeeds.style.color = type === 'weed' ? 'white' : 'var(--text-main)';
+            }
+            if (btnPests) {
+                btnPests.classList.toggle('active', type === 'pest');
+                btnPests.style.background = type === 'pest' ? 'var(--primary)' : 'var(--card-bg)';
+                btnPests.style.color = type === 'pest' ? 'white' : 'var(--text-main)';
+            }
+            
             renderLaserHistory();
         }
 
@@ -4906,7 +4936,7 @@
 
             const filtered = activeLaserFilter === 'all'
                 ? currentLaserTargets
-                : currentLaserTargets.filter(t => t.type === activeLaserFilter);
+                : currentLaserTargets.filter(t => t.target_type === activeLaserFilter);
 
             if (filtered.length === 0) {
                 tbody.innerHTML = '<tr><td colspan="7" style="text-align:center; padding:30px; color:var(--text-sub);">No records found for selected filter.</td></tr>';
@@ -4984,7 +5014,8 @@
             
             // Toggle active state visually
             document.querySelectorAll('button[onclick^="setLandfieldPreset"]').forEach(btn => {
-                if (btn.innerText.includes(acres.toString())) {
+                // Ensure exact match instead of includes so "1 Acre" doesn't match "10 Acres"
+                if (btn.innerText.trim() === acres + ' Acre' || btn.innerText.trim() === acres + ' Acres') {
                     btn.classList.add('active');
                     btn.style.background = '#16a34a';
                     btn.style.color = 'white';
@@ -5075,19 +5106,19 @@
                 const C_N_Ratio = data.calculated_cn_ratio.toFixed(1);
                 showToast(`Backend calc: ${data.cn_diagnosis.title}. C:N Ratio: ${C_N_Ratio}:1`, 'success');
 
+                // Update badge, totals, and cost from backend data
+                const elLandBadge = document.getElementById('ge-land-badge');
+                if (elLandBadge) elLandBadge.textContent = `For ${acres} Acre Landfield (${wasteType === 'animal' ? 'Animal-Waste' : 'Crop-Waste'})`;
+
+                const elTotalBags = document.getElementById('ge-total-bags');
+                if (elTotalBags) elTotalBags.textContent = `${totalBags} Bags (${data.total_recipe_kg.toLocaleString('en-IN')} kg) + ${totalLiters}L`;
+
+                const elTotalCost = document.getElementById('ge-total-cost');
+                if (elTotalCost) elTotalCost.textContent = '₹ ' + data.total_estimated_cost_inr.toLocaleString('en-IN');
+
             } catch (e) {
                 console.error("Backend calc failed", e);
             }
-
-            // Update badge, totals, and cost
-            const elLandBadge = document.getElementById('ge-land-badge');
-            if (elLandBadge) elLandBadge.textContent = `For ${acres} Acre Landfield (${wasteType === 'animal' ? 'Animal-Waste' : 'Crop-Waste'})`;
-
-            const elTotalBags = document.getElementById('ge-total-bags');
-            if (elTotalBags) elTotalBags.textContent = `${totalBags} Bags (${totalKg.toLocaleString('en-IN')} kg) + ${totalLiters}L`;
-
-            const elTotalCost = document.getElementById('ge-total-cost');
-            if (elTotalCost) elTotalCost.textContent = '₹ ' + totalCost.toLocaleString('en-IN');
 
             // Update Crop & Soil Health status card
             const healthBadge = document.getElementById('calc-health-badge');
@@ -5291,6 +5322,14 @@
             }
         }
 
+        function onWeatherCitySelectChange(val) {
+            const parts = val.split(',');
+            if (parts.length === 3) {
+                currentFarmLocation = { lat: parseFloat(parts[0]), lon: parseFloat(parts[1]), name: parts[2] };
+                fetchLiveWeather(currentFarmLocation.lat, currentFarmLocation.lon, currentFarmLocation.name);
+            }
+        }
+        
         async function searchCustomCityWeather() {
             const input = document.getElementById('weather-search-input');
             if (!input || !input.value.trim()) return;
