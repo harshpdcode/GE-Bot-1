@@ -515,12 +515,16 @@
             margin-top: auto;
         }
 
-        /* HEADER */
         #main-content {
             flex: 1;
             display: flex;
             flex-direction: column;
-            overflow: hidden;
+            overflow-x: hidden;
+            overflow-y: hidden;
+            width: 100%;
+            max-width: 100vw;
+            min-width: 0;
+            box-sizing: border-box;
         }
 
         /* D-pad held state */
@@ -844,9 +848,23 @@
         .dashboard-scroll {
             flex: 1;
             overflow-y: auto;
+            overflow-x: hidden;
             padding: 32px;
             background: var(--bg-main);
             padding-bottom: 100px;
+            box-sizing: border-box;
+            width: 100%;
+            max-width: 100%;
+            min-width: 0;
+        }
+
+        .intruder-captures-grid {
+            display: grid;
+            grid-template-columns: repeat(auto-fit, minmax(min(100%, 280px), 1fr));
+            gap: 18px;
+            margin-bottom: 28px;
+            width: 100%;
+            box-sizing: border-box;
         }
 
         .sec-title {
@@ -1607,6 +1625,16 @@
             .dashboard-scroll {
                 padding: 16px;
                 padding-bottom: 80px;
+                overflow-x: hidden !important;
+                max-width: 100vw !important;
+                width: 100% !important;
+                box-sizing: border-box !important;
+                min-width: 0 !important;
+            }
+
+            .intruder-captures-grid {
+                grid-template-columns: 1fr !important;
+                gap: 14px !important;
             }
 
             /* Responsive Soil Zoning & Heatmap Map */
@@ -1828,7 +1856,7 @@
                 display: none !important;
             }
 
-            .action-btn {
+            header .action-btn {
                 display: none !important;
             }
 
@@ -3501,7 +3529,7 @@
 
                     <!-- Next Crop Recommendation Cards Container -->
                     <h3 class="sec-title" style="font-size:1.1rem; margin-bottom:16px;"><i class="fa-solid fa-list-ol"></i> Ranked Successor Crops for Soil Rejuvenation</h3>
-                    <div style="display:grid; grid-template-columns:repeat(auto-fit, minmax(320px, 1fr)); gap:20px;" id="crop-recommendations-container">
+                    <div id="crop-recommendations-container" style="display:flex; flex-direction:column; gap:20px; width:100%; box-sizing:border-box;">
                         <!-- Dynamically populated -->
                     </div>
                 </div>
@@ -3686,24 +3714,24 @@
 
                 <!-- 6. PERIMETER SECURITY & INVADER DETERRENCE -->
                 <div class="dashboard-scroll panel-section" id="panel-invader_security" style="display:none;">
-                    <div style="display:flex; justify-content:space-between; align-items:flex-start; flex-wrap:wrap; gap:16px; margin-bottom:24px;">
-                        <div>
-                            <h2 class="sec-title" style="margin-bottom:4px;"><i class="fa-solid fa-shield-halved" style="color:#f59e0b; margin-right:8px;"></i> Farm Perimeter Security & Unauthorized Invader Deterrence</h2>
-                            <p style="color:var(--text-sub); font-size:0.9rem;">Automated detection of wild boars, stray cattle, and unauthorized intruders with non-lethal sonic & strobe countermeasures.</p>
+                    <div style="display:flex; justify-content:space-between; align-items:flex-start; flex-wrap:wrap; gap:16px; margin-bottom:24px; width:100%; box-sizing:border-box;">
+                        <div style="flex:1; min-width:240px;">
+                            <h2 class="sec-title" style="margin-bottom:4px; word-break:break-word;"><i class="fa-solid fa-shield-halved" style="color:#f59e0b; margin-right:8px;"></i> Farm Perimeter Security & Unauthorized Invader Deterrence</h2>
+                            <p style="color:var(--text-sub); font-size:0.9rem; word-break:break-word;">Automated detection of wild boars, stray cattle, and unauthorized intruders with non-lethal sonic & strobe countermeasures.</p>
                         </div>
-                        <div style="display:flex; gap:10px;">
-                            <button class="action-btn" onclick="simulateInvaderBreach()" style="background:#ef4444; color:white; border:none;">
+                        <div style="display:flex; gap:10px; flex-wrap:wrap;">
+                            <button class="action-btn" onclick="simulateInvaderBreach()" style="background:#ef4444; color:white; border:none; padding:8px 14px; border-radius:8px; font-weight:700; font-size:0.85rem; cursor:pointer;">
                                 <i class="fa-solid fa-triangle-exclamation"></i> Test Intrusion Simulation
                             </button>
-                            <button class="action-btn" onclick="loadInvaderAlerts()" style="background:var(--card-bg); border:1px solid var(--border); color:var(--text-main);">
+                            <button class="action-btn" onclick="loadInvaderAlerts()" style="background:var(--card-bg); border:1px solid var(--border); color:var(--text-main); padding:8px 14px; border-radius:8px; font-weight:700; font-size:0.85rem; cursor:pointer;">
                                 <i class="fa-solid fa-rotate-right"></i> Refresh
                             </button>
                         </div>
                     </div>
 
                     <!-- REALISTIC MOCK INTRUSION CAPTURE SNAPSHOTS -->
-                    <h3 class="sec-title" style="font-size:1.05rem; margin-bottom:14px;"><i class="fa-solid fa-camera-retro" style="color:#ef4444;"></i> AI Thermal & Night-Vision Intruder Captures</h3>
-                    <div style="display:grid; grid-template-columns: repeat(auto-fit, minmax(280px, 1fr)); gap:18px; margin-bottom:28px;">
+                    <h3 class="sec-title" style="font-size:1.05rem; margin-bottom:14px; word-break:break-word;"><i class="fa-solid fa-camera-retro" style="color:#ef4444;"></i> AI Thermal & Night-Vision Intruder Captures</h3>
+                    <div class="intruder-captures-grid">
                         <!-- Mock Capture 1: Wild Boar -->
                         <div class="ctrl-card" style="margin-bottom:0; padding:0; overflow:hidden; border:2px solid #ef4444;">
                             <div style="position:relative; width:100%; height:180px; background:#071c12; overflow:hidden; display:flex; align-items:center; justify-content:center;">
@@ -3824,7 +3852,7 @@
                     </div>
 
                     <!-- Deterrent Countermeasure Controls -->
-                    <div style="display:grid; grid-template-columns: repeat(auto-fit, minmax(260px, 1fr)); gap:16px; margin-bottom:28px;">
+                    <div style="display:grid; grid-template-columns: repeat(auto-fit, minmax(min(100%, 260px), 1fr)); gap:16px; margin-bottom:28px; width:100%; box-sizing:border-box;">
                         <button class="info-card" onclick="triggerDeterrentAction('all', 'acoustic_horn')" style="cursor:pointer; text-align:left; border-left:4px solid #f59e0b;">
                             <div style="display:flex; justify-content:space-between; align-items:center; margin-bottom:10px;">
                                 <div style="font-weight:800; font-size:1rem; color:var(--text-main);">Sonic Acoustic Horn</div>
@@ -4465,8 +4493,10 @@
             }
             if (panelId === 'laser_defense') loadLaserHistory();
             if (panelId === 'organic_calculator') calculateGoEarthLandfield();
+            if (panelId === 'crop_rotation') loadCropRecommendations();
             if (panelId === 'weather_irrigation') loadWeatherIrrigation();
             if (panelId === 'invader_security') loadInvaderAlerts();
+            if (panelId === 'farm_reports') loadFarmSchedules();
             if (panelId === 'dashboard') refreshFarmStats();
         }
 
@@ -4830,18 +4860,33 @@
                 const defColor = defLabel.includes('Depleted') ? '#ef4444' : defLabel.includes('Potassium') ? '#f59e0b' : '#22c55e';
 
                 let html = `
-                    <div style="background:var(--bg-main); border:1px solid var(--border); border-radius:12px; padding:16px 20px; margin-bottom:20px; display:flex; gap:24px; flex-wrap:wrap; align-items:center;">
-                        <div style="display:flex; gap:20px; flex-wrap:wrap; flex:1;">
-                            <div style="text-align:center;"><div style="font-size:0.7rem; font-weight:700; color:var(--text-sub); text-transform:uppercase;">Avg Nitrogen</div><div style="font-size:1.3rem; font-weight:800; color:var(--text-main);">${assessment.avg_nitrogen || '—'}<small style="font-size:0.65rem;"> kg/ha</small></div></div>
-                            <div style="text-align:center;"><div style="font-size:0.7rem; font-weight:700; color:var(--text-sub); text-transform:uppercase;">Avg Phosphorus</div><div style="font-size:1.3rem; font-weight:800; color:var(--text-main);">${assessment.avg_phosphorus || '—'}<small style="font-size:0.65rem;"> kg/ha</small></div></div>
-                            <div style="text-align:center;"><div style="font-size:0.7rem; font-weight:700; color:var(--text-sub); text-transform:uppercase;">Avg Potassium</div><div style="font-size:1.3rem; font-weight:800; color:var(--text-main);">${assessment.avg_potassium || '—'}<small style="font-size:0.65rem;"> kg/ha</small></div></div>
-                            <div style="text-align:center;"><div style="font-size:0.7rem; font-weight:700; color:var(--text-sub); text-transform:uppercase;">Avg pH</div><div style="font-size:1.3rem; font-weight:800; color:var(--text-main);">${assessment.avg_ph || '—'}</div></div>
+                    <div style="background:var(--card-bg); border:1.5px solid var(--border); border-radius:14px; padding:18px 24px; margin-bottom:10px; display:flex; justify-content:space-between; align-items:center; flex-wrap:wrap; gap:20px; box-shadow:var(--shadow); width:100%; box-sizing:border-box;">
+                        <div style="display:flex; gap:28px; flex-wrap:wrap; align-items:center;">
+                            <div>
+                                <div style="font-size:0.72rem; font-weight:700; color:var(--text-sub); text-transform:uppercase; letter-spacing:0.5px; margin-bottom:4px;">Avg Nitrogen</div>
+                                <div style="font-size:1.35rem; font-weight:800; color:var(--text-main);">${assessment.avg_nitrogen || '—'}<small style="font-size:0.75rem; font-weight:600; color:var(--text-sub);"> kg/ha</small></div>
+                            </div>
+                            <div style="width:1px; height:36px; background:var(--border);"></div>
+                            <div>
+                                <div style="font-size:0.72rem; font-weight:700; color:var(--text-sub); text-transform:uppercase; letter-spacing:0.5px; margin-bottom:4px;">Avg Phosphorus</div>
+                                <div style="font-size:1.35rem; font-weight:800; color:var(--text-main);">${assessment.avg_phosphorus || '—'}<small style="font-size:0.75rem; font-weight:600; color:var(--text-sub);"> kg/ha</small></div>
+                            </div>
+                            <div style="width:1px; height:36px; background:var(--border);"></div>
+                            <div>
+                                <div style="font-size:0.72rem; font-weight:700; color:var(--text-sub); text-transform:uppercase; letter-spacing:0.5px; margin-bottom:4px;">Avg Potassium</div>
+                                <div style="font-size:1.35rem; font-weight:800; color:var(--text-main);">${assessment.avg_potassium || '—'}<small style="font-size:0.75rem; font-weight:600; color:var(--text-sub);"> kg/ha</small></div>
+                            </div>
+                            <div style="width:1px; height:36px; background:var(--border);"></div>
+                            <div>
+                                <div style="font-size:0.72rem; font-weight:700; color:var(--text-sub); text-transform:uppercase; letter-spacing:0.5px; margin-bottom:4px;">Avg pH</div>
+                                <div style="font-size:1.35rem; font-weight:800; color:var(--text-main);">${assessment.avg_ph || '—'}</div>
+                            </div>
                         </div>
-                        <div style="background:rgba(${defColor === '#22c55e' ? '34,197,94' : defColor === '#ef4444' ? '239,68,68' : '245,158,11'},0.1); border:1px solid ${defColor}; border-radius:10px; padding:8px 14px; font-size:0.85rem; font-weight:700; color:${defColor}; flex-shrink:0;">
-                            ${defLabel === 'Balanced' ? '✅' : '⚠️'} ${defLabel}
+                        <div style="background:rgba(${defColor === '#22c55e' ? '34,197,94' : defColor === '#ef4444' ? '239,68,68' : '245,158,11'},0.12); border:1.5px solid ${defColor}; border-radius:12px; padding:10px 18px; font-size:0.88rem; font-weight:800; color:${defColor}; display:flex; align-items:center; gap:8px; flex-shrink:0;">
+                            ${defLabel === 'Balanced' ? '<i class="fa-solid fa-circle-check"></i>' : '<i class="fa-solid fa-triangle-exclamation"></i>'} ${defLabel}
                         </div>
                     </div>
-                    <div style="display:grid; grid-template-columns:repeat(auto-fit, minmax(280px, 1fr)); gap:16px;">`;
+                    <div style="display:grid; grid-template-columns:repeat(auto-fit, minmax(min(100%, 300px), 1fr)); gap:18px; width:100%; box-sizing:border-box;">`;
 
                 recs.forEach(r => {
                     const score = r.suitability_score || 80;
@@ -4877,6 +4922,61 @@
                         <i class="fa-solid fa-triangle-exclamation" style="font-size:2rem; margin-bottom:12px;"></i>
                         <p>Could not load crop recommendations.</p>
                         <button onclick="loadCropRecommendations()" style="background:var(--primary);color:white;border:none;padding:8px 18px;border-radius:8px;cursor:pointer;font-weight:700;">Retry</button>
+                    </div>`;
+            }
+        }
+
+        async function loadFarmSchedules() {
+            const grid = document.getElementById('rep-schedules-grid');
+            if (!grid) return;
+
+            grid.innerHTML = `
+                <div style="grid-column: 1 / -1; padding: 24px; text-align: center; color: var(--text-sub);">
+                    <i class="fa-solid fa-circle-notch fa-spin" style="font-size: 1.5rem; margin-bottom: 8px; color: var(--primary);"></i>
+                    <p style="margin: 0; font-size: 0.9rem;">Loading operational schedules & cycles...</p>
+                </div>`;
+
+            try {
+                const res = await safeFetch('/api/farm/schedules');
+                if (!res.ok) throw new Error('Status ' + res.status);
+                const schedules = await res.json();
+
+                if (!Array.isArray(schedules) || schedules.length === 0) {
+                    grid.innerHTML = '<div style="grid-column: 1 / -1; padding: 24px; text-align: center; color: var(--text-sub); background: var(--card-bg); border-radius: 12px; border: 1px dashed var(--border);">No upcoming operational schedules found.</div>';
+                    return;
+                }
+
+                grid.innerHTML = schedules.map(s => {
+                    const isDone = s.status === 'completed';
+                    const isProgress = s.status === 'in-progress';
+                    const color = isDone ? '#16a34a' : (isProgress ? '#0284c7' : '#f59e0b');
+                    const badgeBg = isDone ? 'rgba(22, 163, 74, 0.12)' : (isProgress ? 'rgba(2, 132, 199, 0.12)' : 'rgba(245, 158, 11, 0.12)');
+                    const icon = isDone ? 'fa-circle-check' : (isProgress ? 'fa-spinner fa-spin' : 'fa-clock');
+                    const statusLabel = isDone ? 'Completed' : (isProgress ? 'In Progress' : 'Scheduled');
+
+                    return `
+                        <div class="schedule-card" style="border-left: 4px solid ${color};">
+                            <div style="display: flex; justify-content: space-between; align-items: flex-start; gap: 8px;">
+                                <div style="font-weight: 800; font-size: 0.98rem; color: var(--text-main);">${s.title}</div>
+                                <span style="font-size: 0.72rem; font-weight: 800; padding: 3px 8px; border-radius: 8px; background: ${badgeBg}; color: ${color}; white-space: nowrap; display: flex; align-items: center; gap: 4px;">
+                                    <i class="fa-solid ${icon}"></i> ${statusLabel}
+                                </span>
+                            </div>
+                            <div style="font-size: 0.84rem; color: var(--text-sub); line-height: 1.4;">${s.details || ''}</div>
+                            <div style="display: flex; justify-content: space-between; align-items: center; margin-top: auto; padding-top: 8px; border-top: 1px solid var(--border); font-size: 0.78rem;">
+                                <span style="color: var(--text-main); font-weight: 700;"><i class="fa-solid fa-calendar-day" style="color: #6366f1; margin-right: 4px;"></i> Due: ${s.due_date}</span>
+                                <span style="color: var(--text-sub); font-weight: 600;"><i class="fa-solid fa-location-dot" style="color: #10b981; margin-right: 4px;"></i> Sector: ${s.target_sector || 'All'}</span>
+                            </div>
+                        </div>
+                    `;
+                }).join('');
+            } catch (err) {
+                console.error('Failed to load farm schedules:', err);
+                grid.innerHTML = `
+                    <div style="grid-column: 1 / -1; padding: 20px; text-align: center; color: #ef4444; background: var(--card-bg); border-radius: 12px; border: 1px solid rgba(239, 68, 68, 0.2);">
+                        <i class="fa-solid fa-triangle-exclamation" style="font-size: 1.5rem; margin-bottom: 6px;"></i>
+                        <p style="margin: 0; font-size: 0.88rem;">Unable to load schedule data from server.</p>
+                        <button onclick="loadFarmSchedules()" style="margin-top: 10px; background: var(--primary); color: white; border: none; padding: 6px 14px; border-radius: 8px; cursor: pointer; font-weight: 700; font-size: 0.82rem;">Retry</button>
                     </div>`;
             }
         }
