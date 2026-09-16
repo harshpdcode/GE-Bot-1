@@ -31,3 +31,8 @@ npm-debug.log*
 yarn-debug.log*
 yarn-error.log*
 lerna-debug.log*
+
+# ML model binaries (large files - train locally via ml/crop_recommender/train.py)
+ml/**/*.pkl
+ml/**/*.joblib
+ml/**/*.bin

@@ -1542,16 +1542,27 @@
                 border-top-right-radius: 24px;
                 border-bottom-right-radius: 24px;
                 padding-top: 24px;
-                padding-bottom: 120px !important;
+                padding-bottom: calc(160px + env(safe-area-inset-bottom)) !important;
                 z-index: 1000;
                 overflow-y: auto !important;
                 -webkit-overflow-scrolling: touch;
+                overscroll-behavior-y: auto;
+                scroll-behavior: smooth;
+            }
+
+            #sidebar::-webkit-scrollbar {
+                width: 4px;
+            }
+
+            #sidebar::-webkit-scrollbar-thumb {
+                background: rgba(37, 99, 235, 0.25);
+                border-radius: 4px;
             }
 
             #sidebar nav {
                 overflow-y: visible !important;
                 flex: none !important;
-                padding-bottom: 40px !important;
+                padding-bottom: 60px !important;
             }
 
             #sidebar.open {
@@ -1566,17 +1577,21 @@
                 font-size: 1.1rem;
             }
 
-            .status-pill span {
-                display: none !important;
-            }
-
-            .status-pill {
-                border: none !important;
-            }
-
             .dashboard-scroll {
                 padding: 16px;
                 padding-bottom: 80px;
+            }
+
+            /* Responsive Soil Zoning & Heatmap Map */
+            #sectors-grid-container {
+                grid-template-columns: 1fr !important;
+                gap: 14px !important;
+            }
+
+            #farm-map-wrapper,
+            #farm-interactive-map {
+                height: 320px !important;
+                min-height: 320px !important;
             }
 
             .card-grid {
@@ -2274,12 +2289,6 @@
                     <img src="assets/logo.png" alt="Go Earth Organic"
                         style="width:34px; height:34px; border-radius:50%; object-fit:cover; border:1.5px solid #22c55e;">
                     <span>GE-Bot-1</span>
-                </div>
-                <div class="status-pill">
-                    <div class="toggle-switch" id="header-toggle" style="transition:0.3s">
-                        <div class="toggle-knob" style="transition:0.3s"></div>
-                    </div>
-                    <span data-i18n="online">Online</span>
                 </div>
             </div>
             <div class="h-right">
@@ -4582,13 +4591,21 @@
             ];
 
             sectorPolys.forEach(sp => {
-                const sData = currentSectorsData.find(d => d.id === sp.id) || sp;
+                const sData = currentSectorsData.find(d => (d.sector_id === sp.id || d.id === sp.id)) || sp;
                 const polygon = L.polygon(sp.coords, {
                     color: sp.color,
                     weight: 2.5,
                     fillColor: sp.color,
                     fillOpacity: 0.38
                 }).addTo(farmLeafletMap);
+
+                const popN = sData.soil_nitrogen !== undefined ? Math.round(sData.soil_nitrogen) : (sData.n !== undefined ? sData.n : 200);
+                const popP = sData.soil_phosphorus !== undefined ? Math.round(sData.soil_phosphorus) : (sData.p !== undefined ? sData.p : 30);
+                const popK = sData.soil_potassium !== undefined ? Math.round(sData.soil_potassium) : (sData.k !== undefined ? sData.k : 180);
+                const popPh = sData.soil_ph !== undefined ? Number(sData.soil_ph).toFixed(1) : (sData.ph !== undefined ? sData.ph : 6.5);
+                const popOm = sData.organic_matter !== undefined ? Number(sData.organic_matter).toFixed(1) : (sData.om !== undefined ? sData.om : 2.5);
+                const popMoist = sData.moisture !== undefined ? Math.round(sData.moisture) : 40;
+                const popRx = sData.recommended_fertilizer || sData.prescription || 'Go Earth Bio-Compost Gold';
 
                 const popupHtml = `
                     <div style="font-family:'Outfit',sans-serif; min-width:190px; padding:4px;">
@@ -4598,11 +4615,11 @@
                         </span>
                         <hr style="margin:8px 0; border:0; border-top:1px solid #cbd5e1;">
                         <div style="font-size:12px; line-height:1.45; color:#334155;">
-                            <b>NPK:</b> ${sData.n || 200}-${sData.p || 30}-${sData.k || 180} kg/ha<br>
-                            <b>Moisture:</b> ${sData.moisture || 40}% | <b>pH:</b> ${sData.ph || 6.5}<br>
-                            <b>Organic Carbon:</b> ${sData.om || 2.5}%<br>
+                            <b>NPK:</b> ${popN}-${popP}-${popK} kg/ha<br>
+                            <b>Moisture:</b> ${popMoist}% | <b>pH:</b> ${popPh}<br>
+                            <b>Organic Carbon:</b> ${popOm}%<br>
                             <div style="margin-top:6px; padding:4px 6px; background:#f0fdf4; border-left:3px solid #16a34a; font-size:11px; color:#15803d; font-weight:600;">
-                                Rx: ${sData.prescription || 'Go Earth Bio-Compost Gold'}
+                                Rx: ${popRx}
                             </div>
                         </div>
                     </div>
@@ -4652,43 +4669,53 @@
             if (!grid) return;
 
             grid.innerHTML = currentSectorsData.map(s => {
-                const isDanger = s.zone === 'danger' || (s.n < 150);
-                const isMod = s.zone === 'moderate' || (s.p < 20 || s.k < 150);
+                const sId = s.sector_id || s.id || 'A';
+                const sName = s.name || ('Sector ' + sId);
+                const sN = s.soil_nitrogen !== undefined ? Math.round(s.soil_nitrogen) : (s.n !== undefined ? s.n : 180);
+                const sP = s.soil_phosphorus !== undefined ? Math.round(s.soil_phosphorus) : (s.p !== undefined ? s.p : 28);
+                const sK = s.soil_potassium !== undefined ? Math.round(s.soil_potassium) : (s.k !== undefined ? s.k : 160);
+                const sPh = s.soil_ph !== undefined ? Number(s.soil_ph).toFixed(1) : (s.ph !== undefined ? s.ph : 6.5);
+                const sOm = s.organic_matter !== undefined ? Number(s.organic_matter).toFixed(1) : (s.om !== undefined ? s.om : 2.2);
+                const sMoist = s.moisture !== undefined ? Math.round(s.moisture) : 40;
+                const sRx = s.recommended_fertilizer || s.prescription || 'Go Earth Balanced Organic Fertilizer';
+
+                const isDanger = s.zone === 'danger' || s.status === 'critical' || (sN < 150);
+                const isMod = s.zone === 'moderate' || s.status === 'warning' || (sP < 20 || sK < 150);
                 const zoneClass = isDanger ? 'stat-red' : (isMod ? 'stat-amber' : 'stat-green');
                 const badgeColor = isDanger ? '#ef4444' : (isMod ? '#f59e0b' : '#22c55e');
                 const badgeBg = isDanger ? '#fee2e2' : (isMod ? '#fef3c7' : '#dcfce7');
-                const zoneName = isDanger ? '🔴 DANGER ZONE' : (isMod ? '🟠 MODERATE ZONE' : '🟢 SAFE ZONE');
+                const zoneName = isDanger ? '🔴 DANGER' : (isMod ? '🟠 MODERATE' : '🟢 SAFE');
 
                 return `
-                <div class="ctrl-card ${zoneClass}" id="card-sector-${s.id}" style="margin-bottom:0; cursor:pointer;" onclick="selectMapSector('${s.id}', true)">
-                    <div style="display:flex; justify-content:space-between; align-items:center; margin-bottom:12px;">
-                        <div>
-                            <span style="font-weight:800; font-size:1.1rem; color:var(--text-main);">${s.name || 'Sector ' + s.id}</span>
+                <div class="ctrl-card ${zoneClass}" id="card-sector-${sId}" style="margin-bottom:0; cursor:pointer; min-width:0; width:100%;" onclick="selectMapSector('${sId}', true)">
+                    <div style="display:flex; justify-content:space-between; align-items:center; margin-bottom:12px; gap:8px;">
+                        <div style="min-width:0; flex:1;">
+                            <span style="font-weight:800; font-size:1.05rem; color:var(--text-main); display:block; text-overflow:ellipsis; overflow:hidden; white-space:nowrap;">${sName}</span>
                             <div style="font-size:0.75rem; color:var(--text-sub);">Area: 1.0 Acre Plot</div>
                         </div>
-                        <span style="background:${badgeBg}; color:${badgeColor}; font-size:0.75rem; font-weight:800; padding:4px 10px; border-radius:12px;">${zoneName}</span>
+                        <span style="background:${badgeBg}; color:${badgeColor}; font-size:0.72rem; font-weight:800; padding:4px 8px; border-radius:12px; white-space:nowrap; flex-shrink:0;">${zoneName}</span>
                     </div>
-                    <div style="display:grid; grid-template-columns:repeat(3, 1fr); gap:8px; margin-bottom:14px; text-align:center;">
-                        <div style="background:var(--bg-main); padding:8px; border-radius:8px;">
-                            <div style="font-size:0.7rem; color:var(--text-sub); font-weight:700;">NITROGEN</div>
-                            <div style="font-size:1.1rem; font-weight:800; color:${s.n < 150 ? '#ef4444' : 'var(--text-main)'};">${s.n} <small style="font-size:0.65rem;">kg/ha</small></div>
+                    <div style="display:grid; grid-template-columns:repeat(3, 1fr); gap:6px; margin-bottom:12px; text-align:center;">
+                        <div style="background:var(--bg-main); padding:8px 4px; border-radius:8px; min-width:0;">
+                            <div style="font-size:0.65rem; color:var(--text-sub); font-weight:700; text-transform:uppercase;">Nitrogen</div>
+                            <div style="font-size:1.05rem; font-weight:800; color:${sN < 150 ? '#ef4444' : 'var(--text-main)'};">${sN} <small style="font-size:0.6rem;">kg/ha</small></div>
                         </div>
-                        <div style="background:var(--bg-main); padding:8px; border-radius:8px;">
-                            <div style="font-size:0.7rem; color:var(--text-sub); font-weight:700;">PHOSPHORUS</div>
-                            <div style="font-size:1.1rem; font-weight:800; color:${s.p < 20 ? '#f59e0b' : 'var(--text-main)'};">${s.p} <small style="font-size:0.65rem;">kg/ha</small></div>
+                        <div style="background:var(--bg-main); padding:8px 4px; border-radius:8px; min-width:0;">
+                            <div style="font-size:0.65rem; color:var(--text-sub); font-weight:700; text-transform:uppercase;">Phosphorus</div>
+                            <div style="font-size:1.05rem; font-weight:800; color:${sP < 20 ? '#f59e0b' : 'var(--text-main)'};">${sP} <small style="font-size:0.6rem;">kg/ha</small></div>
                         </div>
-                        <div style="background:var(--bg-main); padding:8px; border-radius:8px;">
-                            <div style="font-size:0.7rem; color:var(--text-sub); font-weight:700;">POTASSIUM</div>
-                            <div style="font-size:1.1rem; font-weight:800; color:${s.k < 150 ? '#f59e0b' : 'var(--text-main)'};">${s.k} <small style="font-size:0.65rem;">kg/ha</small></div>
+                        <div style="background:var(--bg-main); padding:8px 4px; border-radius:8px; min-width:0;">
+                            <div style="font-size:0.65rem; color:var(--text-sub); font-weight:700; text-transform:uppercase;">Potassium</div>
+                            <div style="font-size:1.05rem; font-weight:800; color:${sK < 150 ? '#f59e0b' : 'var(--text-main)'};">${sK} <small style="font-size:0.6rem;">kg/ha</small></div>
                         </div>
                     </div>
-                    <div style="display:flex; justify-content:space-between; font-size:0.8rem; color:var(--text-sub); margin-bottom:10px;">
-                        <span>pH: <strong>${s.ph}</strong></span>
-                        <span>Moisture: <strong>${s.moisture}%</strong></span>
-                        <span>Organic Carbon: <strong>${s.om}%</strong></span>
+                    <div style="display:flex; justify-content:space-between; flex-wrap:wrap; gap:6px 12px; font-size:0.78rem; color:var(--text-sub); margin-bottom:10px;">
+                        <span>pH: <strong>${sPh}</strong></span>
+                        <span>Moisture: <strong>${sMoist}%</strong></span>
+                        <span>Organic Carbon: <strong>${sOm}%</strong></span>
                     </div>
-                    <div style="background:rgba(16, 185, 129, 0.08); border-left:3px solid #10b981; padding:8px 12px; border-radius:6px; font-size:0.8rem; color:var(--text-main);">
-                        <strong>Rx:</strong> ${s.prescription || 'Go Earth Balanced Organic Fertilizer'}
+                    <div style="background:rgba(16, 185, 129, 0.08); border-left:3px solid #10b981; padding:8px 10px; border-radius:6px; font-size:0.78rem; color:var(--text-main); word-break:break-word;">
+                        <strong style="color:#10b981;">Rx:</strong> ${sRx}
                     </div>
                 </div>
                 `;
@@ -5739,40 +5766,46 @@
         }
         setInterval(_ensureSensorBound, 1000);
 
-        // Header Status Toggle
-        // Initialize header toggle with GREEN color for online state
+        // Header Status Toggle (safely handled if element present)
         const headerToggle = document.getElementById('header-toggle');
-        // Set style with !important to override CSS
-        headerToggle.setAttribute('style', 'background: #10b981 !important; border-color: #10b981 !important; transition: 0.3s;');
-        headerToggle.classList.add('active');
-        headerToggle.classList.remove('off', 'inactive');
-        headerToggle.children[0].style.right = '2px';
-        headerToggle.children[0].style.left = 'auto';
+        if (headerToggle) {
+            headerToggle.setAttribute('style', 'background: #10b981 !important; border-color: #10b981 !important; transition: 0.3s;');
+            headerToggle.classList.add('active');
+            headerToggle.classList.remove('off', 'inactive');
+            headerToggle.children[0].style.right = '2px';
+            headerToggle.children[0].style.left = 'auto';
 
-        headerToggle.addEventListener('click', function () {
-            this.classList.toggle('off');
-            this.classList.add('active'); // Add pulse animation
-            setTimeout(() => this.classList.remove('active'), 500);
-
-            const pill = this.parentElement;
-            if (this.classList.contains('off')) {
-                this.setAttribute('style', 'background: var(--text-sub) !important; border-color: var(--text-sub) !important; transition: 0.3s;');
-                this.children[0].style.right = 'auto';
-                this.children[0].style.left = '2px';
-                pill.style.color = 'var(--text-sub)';
-                pill.querySelector('span').textContent = 'Offline';
-                this.classList.add('inactive');
-                this.classList.remove('active');
-            } else {
-                this.setAttribute('style', 'background: #10b981 !important; border-color: #10b981 !important; transition: 0.3s;');
-                this.children[0].style.left = 'auto';
-                this.children[0].style.right = '2px';
-                pill.style.color = 'var(--success)';
-                pill.querySelector('span').textContent = 'Online';
-                this.classList.remove('inactive');
+            headerToggle.addEventListener('click', function () {
+                this.classList.toggle('off');
                 this.classList.add('active');
-            }
-        });
+                setTimeout(() => this.classList.remove('active'), 500);
+
+                const pill = this.parentElement;
+                if (this.classList.contains('off')) {
+                    this.setAttribute('style', 'background: var(--text-sub) !important; border-color: var(--text-sub) !important; transition: 0.3s;');
+                    this.children[0].style.right = 'auto';
+                    this.children[0].style.left = '2px';
+                    if (pill) {
+                        pill.style.color = 'var(--text-sub)';
+                        const span = pill.querySelector('span');
+                        if (span) span.textContent = 'Offline';
+                    }
+                    this.classList.add('inactive');
+                    this.classList.remove('active');
+                } else {
+                    this.setAttribute('style', 'background: #10b981 !important; border-color: #10b981 !important; transition: 0.3s;');
+                    this.children[0].style.left = 'auto';
+                    this.children[0].style.right = '2px';
+                    if (pill) {
+                        pill.style.color = 'var(--success)';
+                        const span = pill.querySelector('span');
+                        if (span) span.textContent = 'Online';
+                    }
+                    this.classList.remove('inactive');
+                    this.classList.add('active');
+                }
+            });
+        }
 
         // Chatbot & Voice Assistant Logic
         function closeAIModal() {

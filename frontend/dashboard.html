@@ -66,6 +66,33 @@
             --shadow: 0 4px 6px -1px rgba(0, 0, 0, 0.2), 0 2px 4px -1px rgba(0, 0, 0, 0.1);
         }
 
+        /* === SIMULATED DATA BADGE === */
+        .sim-badge {
+            display: inline-flex;
+            align-items: center;
+            gap: 4px;
+            background: rgba(245, 158, 11, 0.15);
+            border: 1px solid #f59e0b;
+            color: #d97706;
+            font-size: 0.65rem;
+            font-weight: 800;
+            padding: 2px 7px;
+            border-radius: 20px;
+            letter-spacing: 0.04em;
+            vertical-align: middle;
+            margin-left: 6px;
+            animation: simPulse 2.5s ease-in-out infinite;
+        }
+        @keyframes simPulse {
+            0%, 100% { opacity: 1; }
+            50% { opacity: 0.6; }
+        }
+        body.dark-mode .sim-badge {
+            background: rgba(245, 158, 11, 0.22);
+            border-color: #d97706;
+            color: #fbbf24;
+        }
+
         /* === LIGHT MODE BLUE ACCENTS (default theme) === */
         body:not(.dark-mode) #sidebar {
             border-right: 2px solid #dbeafe;
@@ -1542,16 +1569,27 @@
                 border-top-right-radius: 24px;
                 border-bottom-right-radius: 24px;
                 padding-top: 24px;
-                padding-bottom: 120px !important;
+                padding-bottom: calc(160px + env(safe-area-inset-bottom)) !important;
                 z-index: 1000;
                 overflow-y: auto !important;
                 -webkit-overflow-scrolling: touch;
+                overscroll-behavior-y: auto;
+                scroll-behavior: smooth;
+            }
+
+            #sidebar::-webkit-scrollbar {
+                width: 4px;
+            }
+
+            #sidebar::-webkit-scrollbar-thumb {
+                background: rgba(37, 99, 235, 0.25);
+                border-radius: 4px;
             }
 
             #sidebar nav {
                 overflow-y: visible !important;
                 flex: none !important;
-                padding-bottom: 40px !important;
+                padding-bottom: 60px !important;
             }
 
             #sidebar.open {
@@ -1566,17 +1604,21 @@
                 font-size: 1.1rem;
             }
 
-            .status-pill span {
-                display: none !important;
-            }
-
-            .status-pill {
-                border: none !important;
-            }
-
             .dashboard-scroll {
                 padding: 16px;
                 padding-bottom: 80px;
+            }
+
+            /* Responsive Soil Zoning & Heatmap Map */
+            #sectors-grid-container {
+                grid-template-columns: 1fr !important;
+                gap: 14px !important;
+            }
+
+            #farm-map-wrapper,
+            #farm-interactive-map {
+                height: 320px !important;
+                min-height: 320px !important;
             }
 
             .card-grid {
@@ -2274,12 +2316,6 @@
                     <img src="assets/logo.png" alt="Go Earth Organic"
                         style="width:34px; height:34px; border-radius:50%; object-fit:cover; border:1.5px solid #22c55e;">
                     <span>GE-Bot-1</span>
-                </div>
-                <div class="status-pill">
-                    <div class="toggle-switch" id="header-toggle" style="transition:0.3s">
-                        <div class="toggle-knob" style="transition:0.3s"></div>
-                    </div>
-                    <span data-i18n="online">Online</span>
                 </div>
             </div>
             <div class="h-right">
@@ -3039,6 +3075,25 @@
                                 <i class="fa-solid fa-circle-notch fa-spin"
                                     style="font-size:2rem; margin-bottom:12px; color:var(--primary);"></i>
                                 <p>Loading real-time field soil zoning telemetry...</p>
+                            </div>
+                        </div>
+
+                        <!-- CROP ROTATION RECOMMENDATION PANEL (AI-powered via /api/farm/crop-recommendation) -->
+                        <div style="margin-top:28px;">
+                            <div style="display:flex; justify-content:space-between; align-items:center; margin-bottom:16px; flex-wrap:wrap; gap:12px;">
+                                <div>
+                                    <h3 style="font-size:1.05rem; font-weight:800; color:var(--text-main); margin:0 0 4px;"><i class="fa-solid fa-rotate" style="color:#8b5cf6; margin-right:8px;"></i>AI Crop Rotation Recommendations</h3>
+                                    <p style="font-size:0.82rem; color:var(--text-sub); margin:0;">Based on real soil N/P/K/pH from your 6 sectors — updated on every scan.</p>
+                                </div>
+                                <button class="action-btn" onclick="loadCropRecommendations()" style="background:var(--card-bg); border:1px solid var(--border); color:var(--text-main); flex-shrink:0;">
+                                    <i class="fa-solid fa-rotate-right"></i> Refresh
+                                </button>
+                            </div>
+                            <div id="crop-recommendations-container">
+                                <div style="padding:30px; text-align:center; color:var(--text-sub);">
+                                    <i class="fa-solid fa-circle-notch fa-spin" style="font-size:1.8rem; margin-bottom:12px; color:var(--primary);"></i>
+                                    <p>Analyzing soil data for crop rotation recommendations...</p>
+                                </div>
                             </div>
                         </div>
         </div>
@@ -4397,6 +4452,7 @@
             if (panelId === 'camera_live' && !laptopStream) startLaptopCamera();
             if (panelId === 'soil_zoning') {
                 loadSoilZoning();
+                loadCropRecommendations(); // Wire crop recommendation on soil panel open
                 if (window.farmLeafletMap) {
                     setTimeout(() => window.farmLeafletMap.invalidateSize(), 150);
                 }
@@ -4582,13 +4638,21 @@
             ];
 
             sectorPolys.forEach(sp => {
-                const sData = currentSectorsData.find(d => d.id === sp.id) || sp;
+                const sData = currentSectorsData.find(d => (d.sector_id === sp.id || d.id === sp.id)) || sp;
                 const polygon = L.polygon(sp.coords, {
                     color: sp.color,
                     weight: 2.5,
                     fillColor: sp.color,
                     fillOpacity: 0.38
                 }).addTo(farmLeafletMap);
+
+                const popN = sData.soil_nitrogen !== undefined ? Math.round(sData.soil_nitrogen) : (sData.n !== undefined ? sData.n : 200);
+                const popP = sData.soil_phosphorus !== undefined ? Math.round(sData.soil_phosphorus) : (sData.p !== undefined ? sData.p : 30);
+                const popK = sData.soil_potassium !== undefined ? Math.round(sData.soil_potassium) : (sData.k !== undefined ? sData.k : 180);
+                const popPh = sData.soil_ph !== undefined ? Number(sData.soil_ph).toFixed(1) : (sData.ph !== undefined ? sData.ph : 6.5);
+                const popOm = sData.organic_matter !== undefined ? Number(sData.organic_matter).toFixed(1) : (sData.om !== undefined ? sData.om : 2.5);
+                const popMoist = sData.moisture !== undefined ? Math.round(sData.moisture) : 40;
+                const popRx = sData.recommended_fertilizer || sData.prescription || 'Go Earth Bio-Compost Gold';
 
                 const popupHtml = `
                     <div style="font-family:'Outfit',sans-serif; min-width:190px; padding:4px;">
@@ -4598,11 +4662,11 @@
                         </span>
                         <hr style="margin:8px 0; border:0; border-top:1px solid #cbd5e1;">
                         <div style="font-size:12px; line-height:1.45; color:#334155;">
-                            <b>NPK:</b> ${sData.n || 200}-${sData.p || 30}-${sData.k || 180} kg/ha<br>
-                            <b>Moisture:</b> ${sData.moisture || 40}% | <b>pH:</b> ${sData.ph || 6.5}<br>
-                            <b>Organic Carbon:</b> ${sData.om || 2.5}%<br>
+                            <b>NPK:</b> ${popN}-${popP}-${popK} kg/ha<br>
+                            <b>Moisture:</b> ${popMoist}% | <b>pH:</b> ${popPh}<br>
+                            <b>Organic Carbon:</b> ${popOm}%<br>
                             <div style="margin-top:6px; padding:4px 6px; background:#f0fdf4; border-left:3px solid #16a34a; font-size:11px; color:#15803d; font-weight:600;">
-                                Rx: ${sData.prescription || 'Go Earth Bio-Compost Gold'}
+                                Rx: ${popRx}
                             </div>
                         </div>
                     </div>
@@ -4652,43 +4716,53 @@
             if (!grid) return;
 
             grid.innerHTML = currentSectorsData.map(s => {
-                const isDanger = s.zone === 'danger' || (s.n < 150);
-                const isMod = s.zone === 'moderate' || (s.p < 20 || s.k < 150);
+                const sId = s.sector_id || s.id || 'A';
+                const sName = s.name || ('Sector ' + sId);
+                const sN = s.soil_nitrogen !== undefined ? Math.round(s.soil_nitrogen) : (s.n !== undefined ? s.n : 180);
+                const sP = s.soil_phosphorus !== undefined ? Math.round(s.soil_phosphorus) : (s.p !== undefined ? s.p : 28);
+                const sK = s.soil_potassium !== undefined ? Math.round(s.soil_potassium) : (s.k !== undefined ? s.k : 160);
+                const sPh = s.soil_ph !== undefined ? Number(s.soil_ph).toFixed(1) : (s.ph !== undefined ? s.ph : 6.5);
+                const sOm = s.organic_matter !== undefined ? Number(s.organic_matter).toFixed(1) : (s.om !== undefined ? s.om : 2.2);
+                const sMoist = s.moisture !== undefined ? Math.round(s.moisture) : 40;
+                const sRx = s.recommended_fertilizer || s.prescription || 'Go Earth Balanced Organic Fertilizer';
+
+                const isDanger = s.zone === 'danger' || s.status === 'critical' || (sN < 150);
+                const isMod = s.zone === 'moderate' || s.status === 'warning' || (sP < 20 || sK < 150);
                 const zoneClass = isDanger ? 'stat-red' : (isMod ? 'stat-amber' : 'stat-green');
                 const badgeColor = isDanger ? '#ef4444' : (isMod ? '#f59e0b' : '#22c55e');
                 const badgeBg = isDanger ? '#fee2e2' : (isMod ? '#fef3c7' : '#dcfce7');
-                const zoneName = isDanger ? '🔴 DANGER ZONE' : (isMod ? '🟠 MODERATE ZONE' : '🟢 SAFE ZONE');
+                const zoneName = isDanger ? '🔴 DANGER' : (isMod ? '🟠 MODERATE' : '🟢 SAFE');
 
                 return `
-                <div class="ctrl-card ${zoneClass}" id="card-sector-${s.id}" style="margin-bottom:0; cursor:pointer;" onclick="selectMapSector('${s.id}', true)">
-                    <div style="display:flex; justify-content:space-between; align-items:center; margin-bottom:12px;">
-                        <div>
-                            <span style="font-weight:800; font-size:1.1rem; color:var(--text-main);">${s.name || 'Sector ' + s.id}</span>
+                <div class="ctrl-card ${zoneClass}" id="card-sector-${sId}" style="margin-bottom:0; cursor:pointer; min-width:0; width:100%;" onclick="selectMapSector('${sId}', true)">
+                    <div style="display:flex; justify-content:space-between; align-items:center; margin-bottom:12px; gap:8px;">
+                        <div style="min-width:0; flex:1;">
+                            <span style="font-weight:800; font-size:1.05rem; color:var(--text-main); display:block; text-overflow:ellipsis; overflow:hidden; white-space:nowrap;">${sName}</span>
                             <div style="font-size:0.75rem; color:var(--text-sub);">Area: 1.0 Acre Plot</div>
                         </div>
-                        <span style="background:${badgeBg}; color:${badgeColor}; font-size:0.75rem; font-weight:800; padding:4px 10px; border-radius:12px;">${zoneName}</span>
+                        <span style="background:${badgeBg}; color:${badgeColor}; font-size:0.72rem; font-weight:800; padding:4px 8px; border-radius:12px; white-space:nowrap; flex-shrink:0;">${zoneName}</span>
                     </div>
-                    <div style="display:grid; grid-template-columns:repeat(3, 1fr); gap:8px; margin-bottom:14px; text-align:center;">
-                        <div style="background:var(--bg-main); padding:8px; border-radius:8px;">
-                            <div style="font-size:0.7rem; color:var(--text-sub); font-weight:700;">NITROGEN</div>
-                            <div style="font-size:1.1rem; font-weight:800; color:${s.n < 150 ? '#ef4444' : 'var(--text-main)'};">${s.n} <small style="font-size:0.65rem;">kg/ha</small></div>
+                    <div style="display:grid; grid-template-columns:repeat(3, 1fr); gap:6px; margin-bottom:12px; text-align:center;">
+                        <div style="background:var(--bg-main); padding:8px 4px; border-radius:8px; min-width:0;">
+                            <div style="font-size:0.65rem; color:var(--text-sub); font-weight:700; text-transform:uppercase;">Nitrogen</div>
+                            <div style="font-size:1.05rem; font-weight:800; color:${sN < 150 ? '#ef4444' : 'var(--text-main)'};">${sN} <small style="font-size:0.6rem;">kg/ha</small></div>
                         </div>
-                        <div style="background:var(--bg-main); padding:8px; border-radius:8px;">
-                            <div style="font-size:0.7rem; color:var(--text-sub); font-weight:700;">PHOSPHORUS</div>
-                            <div style="font-size:1.1rem; font-weight:800; color:${s.p < 20 ? '#f59e0b' : 'var(--text-main)'};">${s.p} <small style="font-size:0.65rem;">kg/ha</small></div>
+                        <div style="background:var(--bg-main); padding:8px 4px; border-radius:8px; min-width:0;">
+                            <div style="font-size:0.65rem; color:var(--text-sub); font-weight:700; text-transform:uppercase;">Phosphorus</div>
+                            <div style="font-size:1.05rem; font-weight:800; color:${sP < 20 ? '#f59e0b' : 'var(--text-main)'};">${sP} <small style="font-size:0.6rem;">kg/ha</small></div>
                         </div>
-                        <div style="background:var(--bg-main); padding:8px; border-radius:8px;">
-                            <div style="font-size:0.7rem; color:var(--text-sub); font-weight:700;">POTASSIUM</div>
-                            <div style="font-size:1.1rem; font-weight:800; color:${s.k < 150 ? '#f59e0b' : 'var(--text-main)'};">${s.k} <small style="font-size:0.65rem;">kg/ha</small></div>
+                        <div style="background:var(--bg-main); padding:8px 4px; border-radius:8px; min-width:0;">
+                            <div style="font-size:0.65rem; color:var(--text-sub); font-weight:700; text-transform:uppercase;">Potassium</div>
+                            <div style="font-size:1.05rem; font-weight:800; color:${sK < 150 ? '#f59e0b' : 'var(--text-main)'};">${sK} <small style="font-size:0.6rem;">kg/ha</small></div>
                         </div>
                     </div>
-                    <div style="display:flex; justify-content:space-between; font-size:0.8rem; color:var(--text-sub); margin-bottom:10px;">
-                        <span>pH: <strong>${s.ph}</strong></span>
-                        <span>Moisture: <strong>${s.moisture}%</strong></span>
-                        <span>Organic Carbon: <strong>${s.om}%</strong></span>
+                    <div style="display:flex; justify-content:space-between; flex-wrap:wrap; gap:6px 12px; font-size:0.78rem; color:var(--text-sub); margin-bottom:10px;">
+                        <span>pH: <strong>${sPh}</strong></span>
+                        <span>Moisture: <strong>${sMoist}%</strong></span>
+                        <span>Organic Carbon: <strong>${sOm}%</strong></span>
                     </div>
-                    <div style="background:rgba(16, 185, 129, 0.08); border-left:3px solid #10b981; padding:8px 12px; border-radius:6px; font-size:0.8rem; color:var(--text-main);">
-                        <strong>Rx:</strong> ${s.prescription || 'Go Earth Balanced Organic Fertilizer'}
+                    <div style="background:rgba(16, 185, 129, 0.08); border-left:3px solid #10b981; padding:8px 10px; border-radius:6px; font-size:0.78rem; color:var(--text-main); word-break:break-word;">
+                        <strong style="color:#10b981;">Rx:</strong> ${sRx}
                     </div>
                 </div>
                 `;
@@ -4725,6 +4799,82 @@
         // ══════════════════════════════════════════════════════════════════════
         //  LASER DEFENSE (HISTORY & TOTAL COUNTS ONLY)
         // ══════════════════════════════════════════════════════════════════════
+        // ══════════════════════════════════════════════════════════════════════
+        //  CROP ROTATION RECOMMENDATION (calls real backend engine)
+        // ══════════════════════════════════════════════════════════════════════
+        async function loadCropRecommendations() {
+            const container = document.getElementById('crop-recommendations-container');
+            if (!container) return;
+
+            container.innerHTML = `
+                <div style="padding:30px; text-align:center; color:var(--text-sub);">
+                    <i class="fa-solid fa-circle-notch fa-spin" style="font-size:1.8rem; margin-bottom:12px; color:var(--primary);"></i>
+                    <p>Analyzing soil data for crop rotation recommendations...</p>
+                </div>`;
+
+            try {
+                const res = await safeFetch('/api/farm/crop-recommendation');
+                if (!res.ok) throw new Error('API ' + res.status);
+                const data = await res.json();
+
+                const assessment = data.current_soil_assessment || {};
+                const recs = data.recommended_rotation || [];
+
+                const defLabel = assessment.primary_deficiency || 'Balanced';
+                const defColor = defLabel.includes('Depleted') ? '#ef4444' : defLabel.includes('Potassium') ? '#f59e0b' : '#22c55e';
+
+                let html = `
+                    <div style="background:var(--bg-main); border:1px solid var(--border); border-radius:12px; padding:16px 20px; margin-bottom:20px; display:flex; gap:24px; flex-wrap:wrap; align-items:center;">
+                        <div style="display:flex; gap:20px; flex-wrap:wrap; flex:1;">
+                            <div style="text-align:center;"><div style="font-size:0.7rem; font-weight:700; color:var(--text-sub); text-transform:uppercase;">Avg Nitrogen</div><div style="font-size:1.3rem; font-weight:800; color:var(--text-main);">${assessment.avg_nitrogen || '—'}<small style="font-size:0.65rem;"> kg/ha</small></div></div>
+                            <div style="text-align:center;"><div style="font-size:0.7rem; font-weight:700; color:var(--text-sub); text-transform:uppercase;">Avg Phosphorus</div><div style="font-size:1.3rem; font-weight:800; color:var(--text-main);">${assessment.avg_phosphorus || '—'}<small style="font-size:0.65rem;"> kg/ha</small></div></div>
+                            <div style="text-align:center;"><div style="font-size:0.7rem; font-weight:700; color:var(--text-sub); text-transform:uppercase;">Avg Potassium</div><div style="font-size:1.3rem; font-weight:800; color:var(--text-main);">${assessment.avg_potassium || '—'}<small style="font-size:0.65rem;"> kg/ha</small></div></div>
+                            <div style="text-align:center;"><div style="font-size:0.7rem; font-weight:700; color:var(--text-sub); text-transform:uppercase;">Avg pH</div><div style="font-size:1.3rem; font-weight:800; color:var(--text-main);">${assessment.avg_ph || '—'}</div></div>
+                        </div>
+                        <div style="background:rgba(${defColor === '#22c55e' ? '34,197,94' : defColor === '#ef4444' ? '239,68,68' : '245,158,11'},0.1); border:1px solid ${defColor}; border-radius:10px; padding:8px 14px; font-size:0.85rem; font-weight:700; color:${defColor}; flex-shrink:0;">
+                            ${defLabel === 'Balanced' ? '✅' : '⚠️'} ${defLabel}
+                        </div>
+                    </div>
+                    <div style="display:grid; grid-template-columns:repeat(auto-fit, minmax(280px, 1fr)); gap:16px;">`;
+
+                recs.forEach(r => {
+                    const score = r.suitability_score || 80;
+                    const barColor = score >= 90 ? '#22c55e' : score >= 80 ? '#10b981' : '#f59e0b';
+                    html += `
+                        <div class="ctrl-card" style="margin:0; border-left:4px solid ${barColor};">
+                            <div style="display:flex; justify-content:space-between; align-items:flex-start; margin-bottom:10px; gap:8px;">
+                                <div style="font-weight:800; font-size:0.95rem; color:var(--text-main); flex:1;">${r.crop}</div>
+                                <div style="font-size:1.1rem; font-weight:900; color:${barColor}; flex-shrink:0;">${score}%</div>
+                            </div>
+                            <div style="background:var(--bg-main); border-radius:20px; height:6px; margin-bottom:12px; overflow:hidden;">
+                                <div style="height:100%; width:${score}%; background:${barColor}; border-radius:20px; transition:width 0.8s ease;"></div>
+                            </div>
+                            <div style="font-size:0.75rem; font-weight:700; color:var(--text-sub); text-transform:uppercase; margin-bottom:4px;">${r.category || ''}</div>
+                            <div style="font-size:0.82rem; color:var(--text-main); margin-bottom:8px; line-height:1.4;">${r.soil_benefit || ''}</div>
+                            <div style="display:flex; flex-wrap:wrap; gap:8px; font-size:0.78rem; margin-bottom:8px;">
+                                <span style="background:#e0f2fe; color:#0284c7; padding:2px 8px; border-radius:6px; font-weight:700;">💧 ${r.water_requirement || 'Medium'}</span>
+                                <span style="background:#dcfce7; color:#16a34a; padding:2px 8px; border-radius:6px; font-weight:700;">📦 ${r.estimated_yield || '—'}</span>
+                            </div>
+                            <div style="background:rgba(16,185,129,0.08); border-left:3px solid #10b981; padding:8px 10px; border-radius:6px; font-size:0.78rem; color:var(--text-main);">
+                                <strong style="color:#10b981;">Rotation Reason:</strong> ${r.rotation_reason || '—'}
+                            </div>
+                            <div style="margin-top:8px; font-weight:800; color:#16a34a; font-size:0.88rem;">💰 ${r.expected_profit || '—'}</div>
+                        </div>`;
+                });
+
+                html += '</div>';
+                container.innerHTML = html;
+            } catch (e) {
+                console.error('Crop recommendation error:', e);
+                container.innerHTML = `
+                    <div style="text-align:center; padding:30px; color:#f59e0b;">
+                        <i class="fa-solid fa-triangle-exclamation" style="font-size:2rem; margin-bottom:12px;"></i>
+                        <p>Could not load crop recommendations.</p>
+                        <button onclick="loadCropRecommendations()" style="background:var(--primary);color:white;border:none;padding:8px 18px;border-radius:8px;cursor:pointer;font-weight:700;">Retry</button>
+                    </div>`;
+            }
+        }
+
         let currentLaserTargets = [
             { id: 1, type: 'weed', name: 'Parthenium hysterophorus (Congress Grass)', sector: 'A', timestamp: '10 mins ago', laser_power: '100W Fiber Pulsed', status: 'Eliminated', duration: '140ms' },
             { id: 2, type: 'pest', name: 'Helicoverpa armigera (Cotton Bollworm)', sector: 'C', timestamp: '24 mins ago', laser_power: '60W High-Speed', status: 'Neutralized', duration: '85ms' },
@@ -5067,6 +5217,27 @@
                 if (!res.ok) throw new Error('Weather API error');
                 const data = await res.json();
                 renderLiveWeatherData(data, locationName || currentFarmLocation.name, lat, lon);
+
+                // Push real weather data to backend cache so irrigation rain-delay uses real data
+                if (!isFileMode) {
+                    const cur = data.current || {};
+                    const rainProb = data.daily && data.daily.precipitation_probability_max
+                        ? (data.daily.precipitation_probability_max[0] || 0) : 0;
+                    safeFetch('/api/farm/weather-cache', {
+                        method: 'POST',
+                        headers: { 'Content-Type': 'application/json' },
+                        body: JSON.stringify({
+                            current: {
+                                temperature_c: cur.temperature_2m,
+                                humidity_pct: cur.relative_humidity_2m,
+                                wind_speed_kmh: cur.wind_speed_10m,
+                                rainfall_prob_12h: rainProb,
+                                condition: 'Live — Open-Meteo'
+                            },
+                            rainProb12h: rainProb
+                        })
+                    }).catch(() => {});
+                }
             } catch (err) {
                 console.warn('Open-Meteo fetch failed, using fallback:', err);
             }
@@ -5181,10 +5352,15 @@
                 const res = await safeFetch('/api/farm/irrigation/status');
                 if (res.ok) {
                     const data = await res.json();
-                    isIrrigationOn = !!data.valveOpen;
+                    // Accept both field names: valve_active (backend) or valveOpen (legacy)
+                    isIrrigationOn = !!(data.valve_active ?? data.valveOpen);
                     updateIrrigationUI();
+                } else {
+                    console.warn('Irrigation status load failed:', res.status);
                 }
-            } catch (e) {}
+            } catch (e) {
+                console.warn('Irrigation status error:', e);
+            }
             fetchLiveWeather(currentFarmLocation.lat, currentFarmLocation.lon, currentFarmLocation.name);
         }
 
@@ -5225,19 +5401,34 @@
         //  INVADER SECURITY & ALERTS
         // ══════════════════════════════════════════════════════════════════════
         async function loadInvaderAlerts() {
+            const tbody = document.getElementById('invader-logs-tbody') || document.getElementById('tbody-invader-alerts');
+            if (tbody) tbody.innerHTML = '<tr><td colspan="7" style="text-align:center; padding:20px; color:var(--text-sub);"><i class="fa-solid fa-circle-notch fa-spin" style="margin-right:8px;"></i>Loading security logs...</td></tr>';
+
             try {
                 const res = await safeFetch('/api/farm/invader-alerts');
                 if (res.ok) {
-                    const data = await res.json();
-                    renderInvaderTable(data);
-                    return;
+                    const raw = await res.json();
+                    if (raw && raw.length > 0) {
+                        // Normalize DB field names → renderer field names
+                        const normalized = raw.map(a => ({
+                            id: a.id,
+                            type: a.invader_type || a.type || 'Unknown',
+                            sector: a.sector_id || a.sector || 'X',
+                            confidence: a.kill_confidence ? a.kill_confidence + '%' : (a.confidence || '—'),
+                            time: a.detected_at ? new Date(a.detected_at).toLocaleString() : (a.time || 'Unknown'),
+                            countermeasure: a.deterrent_action || a.countermeasure || 'Acoustic Deterrent',
+                            status: a.is_active === 0 ? 'Deterred' : (a.is_active === 1 ? 'Active' : (a.status || 'Deterred'))
+                        }));
+                        renderInvaderTable(normalized);
+                        return;
+                    }
                 }
-            } catch (e) {}
-            renderInvaderTable([
-                { id: 1, type: 'Wild Boar (Sus scrofa)', sector: 'C', confidence: '94.2%', time: 'Just now', countermeasure: '110dB Siren & Strobe', status: 'Deterred' },
-                { id: 2, type: 'Stray Cattle (Bos taurus)', sector: 'D', confidence: '91.8%', time: '42 mins ago', countermeasure: '4000-Lumen Strobe', status: 'Deterred' },
-                { id: 3, type: 'Porcupine / Burrowing Rodent', sector: 'B', confidence: '88.5%', time: '2 hrs ago', countermeasure: '24 kHz Ultrasonic Pulse', status: 'Deterred' }
-            ]);
+                // Show inline error if API fails
+                if (tbody) tbody.innerHTML = '<tr><td colspan="7" style="text-align:center; padding:20px; color:#f59e0b;"><i class="fa-solid fa-triangle-exclamation" style="margin-right:6px;"></i>Could not load security logs. <button onclick="loadInvaderAlerts()" style="background:none;border:1px solid #f59e0b;color:#f59e0b;padding:2px 8px;border-radius:6px;cursor:pointer;font-size:0.8rem;">Retry</button></td></tr>';
+            } catch (e) {
+                console.error('Invader alerts fetch error:', e);
+                if (tbody) tbody.innerHTML = '<tr><td colspan="7" style="text-align:center; padding:20px; color:#ef4444;"><i class="fa-solid fa-wifi" style="margin-right:6px;"></i>Network error loading security logs. <button onclick="loadInvaderAlerts()" style="background:none;border:1px solid #ef4444;color:#ef4444;padding:2px 8px;border-radius:6px;cursor:pointer;font-size:0.8rem;">Retry</button></td></tr>';
+            }
         }
 
         function renderInvaderTable(alerts) {
@@ -5739,40 +5930,46 @@
         }
         setInterval(_ensureSensorBound, 1000);
 
-        // Header Status Toggle
-        // Initialize header toggle with GREEN color for online state
+        // Header Status Toggle (safely handled if element present)
         const headerToggle = document.getElementById('header-toggle');
-        // Set style with !important to override CSS
-        headerToggle.setAttribute('style', 'background: #10b981 !important; border-color: #10b981 !important; transition: 0.3s;');
-        headerToggle.classList.add('active');
-        headerToggle.classList.remove('off', 'inactive');
-        headerToggle.children[0].style.right = '2px';
-        headerToggle.children[0].style.left = 'auto';
+        if (headerToggle) {
+            headerToggle.setAttribute('style', 'background: #10b981 !important; border-color: #10b981 !important; transition: 0.3s;');
+            headerToggle.classList.add('active');
+            headerToggle.classList.remove('off', 'inactive');
+            headerToggle.children[0].style.right = '2px';
+            headerToggle.children[0].style.left = 'auto';
 
-        headerToggle.addEventListener('click', function () {
-            this.classList.toggle('off');
-            this.classList.add('active'); // Add pulse animation
-            setTimeout(() => this.classList.remove('active'), 500);
-
-            const pill = this.parentElement;
-            if (this.classList.contains('off')) {
-                this.setAttribute('style', 'background: var(--text-sub) !important; border-color: var(--text-sub) !important; transition: 0.3s;');
-                this.children[0].style.right = 'auto';
-                this.children[0].style.left = '2px';
-                pill.style.color = 'var(--text-sub)';
-                pill.querySelector('span').textContent = 'Offline';
-                this.classList.add('inactive');
-                this.classList.remove('active');
-            } else {
-                this.setAttribute('style', 'background: #10b981 !important; border-color: #10b981 !important; transition: 0.3s;');
-                this.children[0].style.left = 'auto';
-                this.children[0].style.right = '2px';
-                pill.style.color = 'var(--success)';
-                pill.querySelector('span').textContent = 'Online';
-                this.classList.remove('inactive');
+            headerToggle.addEventListener('click', function () {
+                this.classList.toggle('off');
                 this.classList.add('active');
-            }
-        });
+                setTimeout(() => this.classList.remove('active'), 500);
+
+                const pill = this.parentElement;
+                if (this.classList.contains('off')) {
+                    this.setAttribute('style', 'background: var(--text-sub) !important; border-color: var(--text-sub) !important; transition: 0.3s;');
+                    this.children[0].style.right = 'auto';
+                    this.children[0].style.left = '2px';
+                    if (pill) {
+                        pill.style.color = 'var(--text-sub)';
+                        const span = pill.querySelector('span');
+                        if (span) span.textContent = 'Offline';
+                    }
+                    this.classList.add('inactive');
+                    this.classList.remove('active');
+                } else {
+                    this.setAttribute('style', 'background: #10b981 !important; border-color: #10b981 !important; transition: 0.3s;');
+                    this.children[0].style.left = 'auto';
+                    this.children[0].style.right = '2px';
+                    if (pill) {
+                        pill.style.color = 'var(--success)';
+                        const span = pill.querySelector('span');
+                        if (span) span.textContent = 'Online';
+                    }
+                    this.classList.remove('inactive');
+                    this.classList.add('active');
+                }
+            });
+        }
 
         // Chatbot & Voice Assistant Logic
         function closeAIModal() {
@@ -6005,7 +6202,38 @@
             renderLaserHistory();
             loadInvaderAlerts();
             loadWeatherIrrigation();
+            loadCropRecommendations(); // Wire crop recommendations on initial load
+            initSimulatedBadges();    // Mark simulated data widgets
         });
+
+        // ══════════════════════════════════════════════════════════════════════
+        //  SIMULATED DATA BADGE HELPER
+        //  Marks widgets that are backed by random jitter / mock data.
+        //  Call initSimulatedBadges() on load; badges auto-remove when
+        //  robotBridge reports isConnected (via robotConnectionStatus socket event).
+        // ══════════════════════════════════════════════════════════════════════
+        function markSimulated(elementId, labelText = '⚙ SIMULATED') {
+            const el = document.getElementById(elementId);
+            if (!el) return;
+            if (el.querySelector('.sim-badge')) return; // already marked
+            const badge = document.createElement('span');
+            badge.className = 'sim-badge';
+            badge.setAttribute('data-sim', 'true');
+            badge.textContent = labelText;
+            el.appendChild(badge);
+        }
+        function clearSimulated(elementId) {
+            const el = document.getElementById(elementId);
+            if (!el) return;
+            el.querySelectorAll('.sim-badge').forEach(b => b.remove());
+        }
+
+        function initSimulatedBadges() {
+            // These widgets are jitter/mock-backed unless real ESP32 telemetry arrives
+            markSimulated('diag-card-laser', '⚙ COORDINATES SIMULATED');
+            // Sensor cards: battery, mode etc. are simulated when ESP32 not connected
+            // Badges removed on robotConnectionStatus event (see Socket.io listener below)
+        }
     </script>
 </body>
 
