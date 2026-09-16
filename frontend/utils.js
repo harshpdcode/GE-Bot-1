@@ -123,26 +123,27 @@ window.alert = function(msg) { showToast(msg, 'warning'); };
     };
 
     function showPWAInstallPrompt() {
-        // Prevent duplicate banners
+        // Prevent duplicate banners or if previously dismissed
+        if (localStorage.getItem('pwa_prompt_dismissed') === 'true') return;
         if (document.getElementById('pwa-install-banner')) return;
 
         const banner = document.createElement('div');
         banner.id = 'pwa-install-banner';
         banner.style.cssText = `
             position: fixed;
-            bottom: 24px;
-            right: 24px;
-            z-index: 10000;
+            bottom: 16px;
+            right: 16px;
+            z-index: 999;
             background: rgba(255, 255, 255, 0.98);
             backdrop-filter: blur(12px);
             border: 1px solid rgba(37, 99, 235, 0.25);
-            box-shadow: 0 20px 40px rgba(0, 0, 0, 0.15), 0 0 0 1px rgba(37, 99, 235, 0.1);
-            border-radius: 18px;
-            padding: 16px 20px;
+            box-shadow: 0 16px 36px rgba(0, 0, 0, 0.16);
+            border-radius: 16px;
+            padding: 12px 16px;
             display: flex;
             align-items: center;
-            gap: 16px;
-            max-width: 420px;
+            gap: 12px;
+            max-width: 380px;
             animation: pwaSlideUp 0.4s cubic-bezier(0.16, 1, 0.3, 1);
             font-family: -apple-system, BlinkMacSystemFont, 'Outfit', 'Segoe UI', Roboto, sans-serif;
             color: #0f172a;
@@ -164,33 +165,43 @@ window.alert = function(msg) { showToast(msg, 'warning'); };
                     transform: translateY(-2px);
                     box-shadow: 0 6px 16px rgba(37, 99, 235, 0.35);
                 }
+                @media (max-width: 600px) {
+                    #pwa-install-banner {
+                        left: 12px !important;
+                        right: 12px !important;
+                        bottom: 12px !important;
+                        max-width: calc(100% - 24px) !important;
+                        padding: 10px 14px !important;
+                    }
+                }
             </style>
-            <img src="/assets/logo.png" alt="GE-Bot-1" style="width: 46px; height: 46px; border-radius: 50%; object-fit: contain; box-shadow: 0 4px 10px rgba(34,197,94,0.3); border: 2px solid #22c55e; flex-shrink: 0;">
+            <img src="/assets/logo.png" alt="GE-Bot-1" style="width: 40px; height: 40px; border-radius: 50%; object-fit: contain; box-shadow: 0 4px 10px rgba(34,197,94,0.3); border: 2px solid #22c55e; flex-shrink: 0;">
             <div style="flex: 1; min-width: 0;">
-                <div style="font-weight: 800; font-size: 0.95rem; line-height: 1.2; display: flex; align-items: center; gap: 6px;">
+                <div style="font-weight: 800; font-size: 0.92rem; line-height: 1.2; display: flex; align-items: center; gap: 6px;">
                     GE-Bot-1
                     <span style="font-size: 0.65rem; background: #dbeafe; color: #1d4ed8; padding: 2px 8px; border-radius: 12px; font-weight: 700;">APP</span>
                 </div>
-                <div style="font-size: 0.78rem; color: #64748b; margin-top: 3px; line-height: 1.3;">Install for fast standalone access and offline telemetry</div>
+                <div style="font-size: 0.76rem; color: #64748b; margin-top: 2px; line-height: 1.25;">Fast standalone access & offline telemetry</div>
             </div>
             <div style="display: flex; align-items: center; gap: 8px;">
                 <button id="pwa-btn-install" onclick="window.triggerPWAInstall()" style="
                     background: linear-gradient(135deg, #2563eb, #1d4ed8);
                     color: white;
                     border: none;
-                    padding: 8px 16px;
+                    padding: 8px 14px;
                     border-radius: 10px;
                     font-weight: 700;
-                    font-size: 0.85rem;
+                    font-size: 0.82rem;
                     cursor: pointer;
                     display: flex;
                     align-items: center;
                     gap: 6px;
                     transition: 0.2s;
+                    white-space: nowrap;
                 ">
                     <i class="fa-solid fa-download" style="font-size: 0.8rem;"></i> Install
                 </button>
-                <button onclick="document.getElementById('pwa-install-banner').remove()" style="
+                <button onclick="localStorage.setItem('pwa_prompt_dismissed', 'true'); document.getElementById('pwa-install-banner')?.remove()" style="
                     background: transparent;
                     border: none;
                     color: #94a3b8;
@@ -209,12 +220,12 @@ window.alert = function(msg) { showToast(msg, 'warning'); };
         document.body.appendChild(banner);
     }
 
-    // Auto-show install prompt after 2.5 seconds if supported
+    // Auto-show install prompt after 3.5 seconds if supported and not dismissed
     setTimeout(() => {
-        if (window.deferredPrompt) {
+        if (window.deferredPrompt && localStorage.getItem('pwa_prompt_dismissed') !== 'true') {
             showPWAInstallPrompt();
         }
-    }, 2500);
+    }, 3500);
 })();
 
 

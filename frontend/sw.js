@@ -37,6 +37,8 @@ self.addEventListener('activate', (event) => {
 // Network-first for dynamic navigation, cache fallback for offline
 self.addEventListener('fetch', (event) => {
     if (event.request.method !== 'GET') return;
+    // Ignore non-http/https schemes (e.g. chrome-extension://, moz-extension://)
+    if (!event.request.url.startsWith('http://') && !event.request.url.startsWith('https://')) return;
     const url = new URL(event.request.url);
     if (url.pathname.startsWith('/api/') || url.pathname.startsWith('/socket.io/')) {
         return;
@@ -45,9 +47,13 @@ self.addEventListener('fetch', (event) => {
     event.respondWith(
         fetch(event.request)
             .then((response) => {
-                if (response && response.status === 200 && response.type === 'basic') {
-                    const clone = response.clone();
-                    caches.open(CACHE_NAME).then((cache) => cache.put(event.request, clone));
+                if (response && response.status === 200 && response.type === 'basic' && event.request.url.startsWith('http')) {
+                    try {
+                        const clone = response.clone();
+                        caches.open(CACHE_NAME).then((cache) => {
+                            cache.put(event.request, clone).catch(() => {});
+                        }).catch(() => {});
+                    } catch (e) {}
                 }
                 return response;
             })
