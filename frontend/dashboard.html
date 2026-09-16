@@ -3106,12 +3106,6 @@
                             </div>
                         </div>
 
-                        <div class="panel-section" id="panel-crops" style="display:none; animation: fadeIn 0.3s;">
-                            <!-- We use the one further down -->
-                            <div id="crop-recs-old-container">
-                            </div>
-                        </div>
-
                         <!-- CROP ROTATION RECOMMENDATION PANEL (AI-powered via /api/farm/crop-recommendation) -->
                         <div style="margin-top:28px;">
                             <div style="display:flex; justify-content:space-between; align-items:center; margin-bottom:16px; flex-wrap:wrap; gap:12px;">
@@ -3123,7 +3117,7 @@
                                     <i class="fa-solid fa-rotate-right"></i> Refresh
                                 </button>
                             </div>
-                            <div id="crop-recs-old-container">
+                            <div id="soil-crop-recommendations-container" style="display:flex; flex-direction:column; gap:16px; width:100%; box-sizing:border-box;">
                                 <div style="padding:30px; text-align:center; color:var(--text-sub);">
                                     <i class="fa-solid fa-circle-notch fa-spin" style="font-size:1.8rem; margin-bottom:12px; color:var(--primary);"></i>
                                     <p>Analyzing soil data for crop rotation recommendations...</p>
@@ -4839,14 +4833,19 @@
         //  CROP ROTATION RECOMMENDATION (calls real backend engine)
         // ══════════════════════════════════════════════════════════════════════
         async function loadCropRecommendations() {
-            const container = document.getElementById('crop-recommendations-container');
-            if (!container) return;
+            const nextCropContainer = document.getElementById('crop-recommendations-container');
+            const soilCropContainer = document.getElementById('soil-crop-recommendations-container');
 
-            container.innerHTML = `
+            const loadingHtml = `
                 <div style="padding:30px; text-align:center; color:var(--text-sub);">
                     <i class="fa-solid fa-circle-notch fa-spin" style="font-size:1.8rem; margin-bottom:12px; color:var(--primary);"></i>
                     <p>Analyzing soil data for crop rotation recommendations...</p>
                 </div>`;
+
+            if (nextCropContainer) nextCropContainer.innerHTML = loadingHtml;
+            if (soilCropContainer) soilCropContainer.innerHTML = loadingHtml;
+
+            if (!nextCropContainer && !soilCropContainer) return;
 
             try {
                 const res = await safeFetch('/api/farm/crop-recommendation');
@@ -4859,7 +4858,36 @@
                 const defLabel = assessment.primary_deficiency || 'Balanced';
                 const defColor = defLabel.includes('Depleted') ? '#ef4444' : defLabel.includes('Potassium') ? '#f59e0b' : '#22c55e';
 
-                let html = `
+                let cardsHtml = `<div style="display:grid; grid-template-columns:repeat(auto-fit, minmax(min(100%, 300px), 1fr)); gap:18px; width:100%; box-sizing:border-box;">`;
+
+                recs.forEach(r => {
+                    const score = r.suitability_score || 80;
+                    const barColor = score >= 90 ? '#22c55e' : score >= 80 ? '#10b981' : '#f59e0b';
+                    cardsHtml += `
+                        <div class="ctrl-card" style="margin:0; border-left:4px solid ${barColor};">
+                            <div style="display:flex; justify-content:space-between; align-items:flex-start; margin-bottom:10px; gap:8px;">
+                                <div style="font-weight:800; font-size:0.95rem; color:var(--text-main); flex:1;">${r.crop}</div>
+                                <div style="font-size:1.1rem; font-weight:900; color:${barColor}; flex-shrink:0;">${score}%</div>
+                            </div>
+                            <div style="background:var(--bg-main); border-radius:20px; height:6px; margin-bottom:12px; overflow:hidden;">
+                                <div style="height:100%; width:${score}%; background:${barColor}; border-radius:20px; transition:width 0.8s ease;"></div>
+                            </div>
+                            <div style="font-size:0.75rem; font-weight:700; color:var(--text-sub); text-transform:uppercase; margin-bottom:4px;">${r.category || ''}</div>
+                            <div style="font-size:0.82rem; color:var(--text-main); margin-bottom:8px; line-height:1.4;">${r.soil_benefit || ''}</div>
+                            <div style="display:flex; flex-wrap:wrap; gap:8px; font-size:0.78rem; margin-bottom:8px;">
+                                <span style="background:#e0f2fe; color:#0284c7; padding:2px 8px; border-radius:6px; font-weight:700;">💧 ${r.water_requirement || 'Medium'}</span>
+                                <span style="background:#dcfce7; color:#16a34a; padding:2px 8px; border-radius:6px; font-weight:700;">📦 ${r.estimated_yield || '—'}</span>
+                            </div>
+                            <div style="background:rgba(16,185,129,0.08); border-left:3px solid #10b981; padding:8px 10px; border-radius:6px; font-size:0.78rem; color:var(--text-main);">
+                                <strong style="color:#10b981;">Rotation Reason:</strong> ${r.rotation_reason || '—'}
+                            </div>
+                            <div style="margin-top:8px; font-weight:800; color:#16a34a; font-size:0.88rem;">💰 ${r.expected_profit || '—'}</div>
+                        </div>`;
+                });
+
+                cardsHtml += '</div>';
+
+                const assessmentBarHtml = `
                     <div style="background:var(--card-bg); border:1.5px solid var(--border); border-radius:14px; padding:18px 24px; margin-bottom:10px; display:flex; justify-content:space-between; align-items:center; flex-wrap:wrap; gap:20px; box-shadow:var(--shadow); width:100%; box-sizing:border-box;">
                         <div style="display:flex; gap:28px; flex-wrap:wrap; align-items:center;">
                             <div>
@@ -4885,44 +4913,24 @@
                         <div style="background:rgba(${defColor === '#22c55e' ? '34,197,94' : defColor === '#ef4444' ? '239,68,68' : '245,158,11'},0.12); border:1.5px solid ${defColor}; border-radius:12px; padding:10px 18px; font-size:0.88rem; font-weight:800; color:${defColor}; display:flex; align-items:center; gap:8px; flex-shrink:0;">
                             ${defLabel === 'Balanced' ? '<i class="fa-solid fa-circle-check"></i>' : '<i class="fa-solid fa-triangle-exclamation"></i>'} ${defLabel}
                         </div>
-                    </div>
-                    <div style="display:grid; grid-template-columns:repeat(auto-fit, minmax(min(100%, 300px), 1fr)); gap:18px; width:100%; box-sizing:border-box;">`;
+                    </div>`;
 
-                recs.forEach(r => {
-                    const score = r.suitability_score || 80;
-                    const barColor = score >= 90 ? '#22c55e' : score >= 80 ? '#10b981' : '#f59e0b';
-                    html += `
-                        <div class="ctrl-card" style="margin:0; border-left:4px solid ${barColor};">
-                            <div style="display:flex; justify-content:space-between; align-items:flex-start; margin-bottom:10px; gap:8px;">
-                                <div style="font-weight:800; font-size:0.95rem; color:var(--text-main); flex:1;">${r.crop}</div>
-                                <div style="font-size:1.1rem; font-weight:900; color:${barColor}; flex-shrink:0;">${score}%</div>
-                            </div>
-                            <div style="background:var(--bg-main); border-radius:20px; height:6px; margin-bottom:12px; overflow:hidden;">
-                                <div style="height:100%; width:${score}%; background:${barColor}; border-radius:20px; transition:width 0.8s ease;"></div>
-                            </div>
-                            <div style="font-size:0.75rem; font-weight:700; color:var(--text-sub); text-transform:uppercase; margin-bottom:4px;">${r.category || ''}</div>
-                            <div style="font-size:0.82rem; color:var(--text-main); margin-bottom:8px; line-height:1.4;">${r.soil_benefit || ''}</div>
-                            <div style="display:flex; flex-wrap:wrap; gap:8px; font-size:0.78rem; margin-bottom:8px;">
-                                <span style="background:#e0f2fe; color:#0284c7; padding:2px 8px; border-radius:6px; font-weight:700;">💧 ${r.water_requirement || 'Medium'}</span>
-                                <span style="background:#dcfce7; color:#16a34a; padding:2px 8px; border-radius:6px; font-weight:700;">📦 ${r.estimated_yield || '—'}</span>
-                            </div>
-                            <div style="background:rgba(16,185,129,0.08); border-left:3px solid #10b981; padding:8px 10px; border-radius:6px; font-size:0.78rem; color:var(--text-main);">
-                                <strong style="color:#10b981;">Rotation Reason:</strong> ${r.rotation_reason || '—'}
-                            </div>
-                            <div style="margin-top:8px; font-weight:800; color:#16a34a; font-size:0.88rem;">💰 ${r.expected_profit || '—'}</div>
-                        </div>`;
-                });
-
-                html += '</div>';
-                container.innerHTML = html;
+                if (nextCropContainer) {
+                    nextCropContainer.innerHTML = assessmentBarHtml + cardsHtml;
+                }
+                if (soilCropContainer) {
+                    soilCropContainer.innerHTML = cardsHtml;
+                }
             } catch (e) {
                 console.error('Crop recommendation error:', e);
-                container.innerHTML = `
+                const errorHtml = `
                     <div style="text-align:center; padding:30px; color:#f59e0b;">
                         <i class="fa-solid fa-triangle-exclamation" style="font-size:2rem; margin-bottom:12px;"></i>
                         <p>Could not load crop recommendations.</p>
                         <button onclick="loadCropRecommendations()" style="background:var(--primary);color:white;border:none;padding:8px 18px;border-radius:8px;cursor:pointer;font-weight:700;">Retry</button>
                     </div>`;
+                if (nextCropContainer) nextCropContainer.innerHTML = errorHtml;
+                if (soilCropContainer) soilCropContainer.innerHTML = errorHtml;
             }
         }
 
