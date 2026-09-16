@@ -463,6 +463,19 @@
         .uc-role-badge.user { background: #f0f9ff; color: #0284c7; }
         .uc-arrow { color: var(--text-muted); font-size: 1rem; }
 
+        /* FILTER TABS (Base) */
+        .filter-tabs { display: flex; gap: 12px; margin-bottom: 24px; overflow-x: auto; padding-bottom: 8px; }
+        .filter-btn {
+            padding: 8px 20px; border-radius: 20px; background: white; border: 1px solid var(--border);
+            color: var(--text-muted); font-weight: 600; font-size: 0.85rem; cursor: pointer; transition: var(--transition);
+            white-space: nowrap;
+        }
+        .filter-btn:hover { border-color: var(--primary); color: var(--primary); }
+        .filter-btn.active { background: var(--primary); color: white; border-color: var(--primary); box-shadow: 0 4px 10px rgba(14,165,233,0.3); }
+        body.dark-mode .filter-btn { background: #1e293b; border-color: #334155; color: #94a3b8; }
+        body.dark-mode .filter-btn:hover { border-color: var(--primary); color: var(--primary); }
+        body.dark-mode .filter-btn.active { background: var(--primary); color: white; border-color: var(--primary); }
+
         /* --- USER DASHBOARD MODAL --- */
         .ud-overlay {
             display: none; position: fixed; inset: 0; z-index: 9000;
@@ -528,6 +541,7 @@
             .panels-grid { grid-template-columns: 1fr; }
             .control-section { grid-template-columns: 1fr; }
         }
+        @media (max-width: 768px) {
             .sidebar {
                 position: fixed;
                 left: -285px;
@@ -555,7 +569,7 @@
             .header-left { gap: 12px; }
             .header-right { gap: 12px; }
             .time-display { display: none; }
-            .dashboard-scroll { padding: 16px; padding-bottom: 80px; }
+            .dashboard-scroll { padding: 16px; padding-bottom: 80px; max-width: 100vw; box-sizing: border-box; }
             .metrics-grid { grid-template-columns: repeat(2, 1fr); }
             .metric-card { padding: 16px; }
             .panels-grid { grid-template-columns: 1fr; }
@@ -566,6 +580,8 @@
             .farm-map { height: 300px; }
             .btn { min-height: 44px; padding: 12px; font-size: 0.95rem; }
             .ai-fab { width: 56px; height: 56px; font-size: 1.4rem; bottom: 20px; right: 20px; }
+            .filter-tabs { display: flex; flex-wrap: wrap; gap: 8px; margin-bottom: 20px; width: 100%; box-sizing: border-box; }
+            .filter-btn { flex: 1 1 auto; padding: 8px 16px; }
         }
         @media (max-width: 480px) {
             .header { height: 60px; padding: 0 12px; background: var(--bg-surface); border-bottom: 1px solid var(--border); display: flex; align-items: center; justify-content: space-between; position: sticky; top: 0; gap: 8px; }
@@ -577,7 +593,7 @@
             .status-badge { display: none !important; }
             .time-display { display: none !important; }
             
-            .dashboard-scroll { padding: 12px; padding-bottom: 80px; }
+            .dashboard-scroll { padding: 12px; padding-bottom: 80px; max-width: 100vw; box-sizing: border-box; }
             .metrics-grid { grid-template-columns: 1fr; gap: 12px; }
             .metric-card { padding: 14px; }
             .metric-value { font-size: 1.4rem; }
@@ -592,8 +608,19 @@
             .sec-status { font-size: 0.75rem; padding: 4px 8px; }
             .map-sector.alert .sec-status { background: #fee2e2; color: var(--danger); }
             
-            .users-grid { grid-template-columns: 1fr; }
-            .user-card { padding: 12px; flex-direction: column; }
+            .users-section-title { font-size: 1.05rem; }
+            .filter-tabs { display: flex !important; flex-wrap: wrap !important; gap: 8px !important; margin-bottom: 18px !important; width: 100% !important; box-sizing: border-box !important; overflow-x: visible !important; }
+            .filter-btn { flex: 1 1 calc(50% - 8px) !important; min-height: 42px !important; padding: 8px 10px !important; font-size: 0.8rem !important; text-align: center !important; display: inline-flex !important; align-items: center !important; justify-content: center !important; box-sizing: border-box !important; }
+            
+            .users-grid { grid-template-columns: 1fr !important; gap: 12px !important; }
+            .user-card { padding: 14px !important; flex-direction: row !important; align-items: center !important; gap: 12px !important; max-width: 100% !important; box-sizing: border-box !important; }
+            .user-card .uc-avatar { width: 44px !important; height: 44px !important; font-size: 1.2rem !important; flex-shrink: 0 !important; }
+            .user-card .uc-info { min-width: 0 !important; flex: 1 !important; }
+            .uc-name, .uc-email { overflow: hidden !important; text-overflow: ellipsis !important; white-space: nowrap !important; max-width: 100% !important; }
+            .fleet-grid { grid-template-columns: 1fr !important; }
+            .admin-section { padding: 12px !important; }
+            .section-header { gap: 10px !important; }
+            .section-title { font-size: 1.15rem !important; }
             .user-info { display: none; }
             .user-profile { gap: 0; padding: 8px; }
             
@@ -649,22 +676,10 @@
             #custom-toast { left: 16px !important; right: 16px !important; transform: translateY(-100px) !important; width: auto !important; max-width: 100% !important; }
             #custom-toast.show { transform: translateY(0) !important; }
             .alarm-banner { position: fixed !important; top: 0; left: 0; right: 0; z-index: 10000; border-radius: 0; }
+            .btn-sync-label { display: none !important; }
         }
 
         @keyframes fadeIn { from{opacity:0; transform:scale(0.95)} to{opacity:1; transform:scale(1)} }
-
-        /* FILTER TABS */
-        .filter-tabs { display: flex; gap: 12px; margin-bottom: 24px; overflow-x: auto; padding-bottom: 8px; }
-        .filter-btn {
-            padding: 8px 20px; border-radius: 20px; background: white; border: 1px solid var(--border);
-            color: var(--text-muted); font-weight: 600; font-size: 0.85rem; cursor: pointer; transition: var(--transition);
-            white-space: nowrap;
-        }
-        .filter-btn:hover { border-color: var(--primary); color: var(--primary); }
-        .filter-btn.active { background: var(--primary); color: white; border-color: var(--primary); box-shadow: 0 4px 10px rgba(14,165,233,0.3); }
-        body.dark-mode .filter-btn { background: #1e293b; border-color: #334155; color: #94a3b8; }
-        body.dark-mode .filter-btn:hover { border-color: var(--primary); color: var(--primary); }
-        body.dark-mode .filter-btn.active { background: var(--primary); color: white; border-color: var(--primary); }
 
         /* TOAST NOTIFICATION */
         #custom-toast {
@@ -891,6 +906,11 @@
 
             <div class="header-right">
                 <div class="time-display" id="clock">Loading...</div>
+                <!-- DATABASE SYNC & GITHUB PUSH (ADMIN EXCLUSIVE) -->
+                <button class="btn btn-primary" id="btn-sync-db-git" onclick="syncDatabaseAndPushToGit()" title="Update Database Tables & Push to GitHub" style="background:linear-gradient(135deg, #10b981, #059669); color:white; border:none; padding:8px 14px; font-weight:700; font-size:0.85rem; border-radius:10px; display:inline-flex; align-items:center; gap:8px; box-shadow:0 4px 12px rgba(16,185,129,0.3); cursor:pointer; white-space:nowrap;">
+                    <i class="fa-solid fa-database"></i><i class="fa-brands fa-github"></i>
+                    <span class="btn-sync-label">Sync DB & Push to GitHub</span>
+                </button>
                 <button class="btn" id="dark-mode-toggle" style="width:40px; height:40px; border-radius:10px; display:flex; align-items:center; justify-content:center; padding:0; background:rgba(14, 165, 233, 0.05); border:1px solid rgba(14, 165, 233, 0.1); color:var(--text-main);" onclick="toggleDarkMode()">
                     <i class="fa-solid fa-moon"></i>
                 </button>
@@ -1441,6 +1461,23 @@
                             <div class="info-row"><span>ESP32 Connection</span><strong id="cfg-robot-conn">Checking...</strong></div>
                             <div class="info-row"><span>Database</span><strong>SQLite (Local)</strong></div>
                             <div class="info-row"><span>AI Model</span><strong>Gemini 1.5 Flash</strong></div>
+                        </div>
+                    </div>
+
+                    <!-- Database Schema & GitHub Synchronization Panel -->
+                    <div class="panel" style="border-left: 4px solid #10b981; grid-column: 1 / -1;">
+                        <div class="panel-header">
+                            <h3 class="panel-title"><i class="fa-solid fa-database" style="color:#10b981;"></i> Database Schema & GitHub Synchronization</h3>
+                            <span class="glass-badge" style="background:#dcfce7; color:#15803d; font-weight:700; font-size:0.75rem;"><i class="fa-solid fa-circle-check"></i> 15 Tables Active</span>
+                        </div>
+                        <p style="font-size:0.85rem; color:var(--text-muted); margin-bottom:14px; line-height:1.5;">
+                            Clicking below inspects the SQLite database, creates or updates missing tables and columns, generates the latest <code>database/schema.sql</code>, and commits and pushes all changes directly to the GitHub repository.
+                        </p>
+                        <div style="display:flex; flex-wrap:wrap; align-items:center; gap:12px;">
+                            <button class="btn btn-primary" id="btn-sync-db-git-panel" onclick="syncDatabaseAndPushToGit()" style="background: linear-gradient(135deg, #10b981, #059669); color: white; border: none; font-weight: 800; font-size:0.92rem; padding: 12px 22px; border-radius: 10px; display: inline-flex; align-items: center; gap: 10px; box-shadow: 0 4px 14px rgba(16,185,129,0.25); cursor: pointer;">
+                                <i class="fa-solid fa-cloud-arrow-up"></i> Update Database Tables & Push to GitHub
+                            </button>
+                            <span id="db-sync-status-indicator" style="font-size:0.82rem; font-weight:600; color:var(--text-muted);">Status: Ready for synchronization</span>
                         </div>
                     </div>
 
@@ -2731,6 +2768,82 @@
             localStorage.setItem('dyno_cfg_conf', conf);
 
             showToast('System configuration saved successfully!', 'success');
+        }
+
+        // ====================================================
+        // DATABASE SYNC & GITHUB PUSH ACTION (ADMIN EXCLUSIVE)
+        // ====================================================
+        async function syncDatabaseAndPushToGit() {
+            const confirmed = confirm(
+                "Sync Database & Push to GitHub?\n\n" +
+                "• Verifies and updates all database tables & seed data\n" +
+                "• Exports full schema to database/schema.sql\n" +
+                "• Commits and pushes changes directly to GitHub\n\n" +
+                "Do you want to proceed?"
+            );
+            if (!confirmed) return;
+
+            const btnHeader = document.getElementById('btn-sync-db-git');
+            const btnPanel = document.getElementById('btn-sync-db-git-panel');
+            const statusInd = document.getElementById('db-sync-status-indicator');
+
+            const setButtonsLoading = (loading) => {
+                if (btnHeader) {
+                    btnHeader.disabled = loading;
+                    btnHeader.innerHTML = loading
+                        ? '<i class="fa-solid fa-spinner fa-spin"></i> <span class="btn-sync-label">Syncing...</span>'
+                        : '<i class="fa-solid fa-database"></i><i class="fa-brands fa-github"></i> <span class="btn-sync-label">Sync DB & Push to GitHub</span>';
+                }
+                if (btnPanel) {
+                    btnPanel.disabled = loading;
+                    btnPanel.innerHTML = loading
+                        ? '<i class="fa-solid fa-spinner fa-spin"></i> Updating Tables & Pushing to GitHub...'
+                        : '<i class="fa-solid fa-cloud-arrow-up"></i> Update Database Tables & Push to GitHub';
+                }
+                if (statusInd) {
+                    statusInd.textContent = loading ? 'In Progress: Running schema sync & git push...' : '';
+                    statusInd.style.color = loading ? '#0284c7' : 'var(--text-muted)';
+                }
+            };
+
+            setButtonsLoading(true);
+            showToast('Verifying database tables & pushing to GitHub...', 'info');
+
+            try {
+                const res = await safeFetch('/api/admin/sync-database-and-git', {
+                    method: 'POST',
+                    headers: { 'Content-Type': 'application/json' }
+                });
+                const data = await res.json();
+
+                if (res.ok && data.success) {
+                    const commitInfo = data.git && data.git.commit ? ` [Commit ${data.git.commit}]` : '';
+                    showToast(`Database updated (${data.tablesCount} tables) & pushed to GitHub!${commitInfo}`, 'success');
+                    if (statusInd) {
+                        statusInd.textContent = `Last sync: ${new Date().toLocaleTimeString()} • ${data.tablesCount} tables • ${data.git.commitMessage || 'Pushed'}`;
+                        statusInd.style.color = '#16a34a';
+                    }
+                    if (typeof addLog === 'function') {
+                        addLog('Database Engine', `Synced ${data.tablesCount} tables & pushed to GitHub (${data.git.commit || 'HEAD'})`, 'sys');
+                    }
+                } else {
+                    const errMsg = data.error || data.message || 'Database sync or git push failed';
+                    showToast(errMsg, 'danger');
+                    if (statusInd) {
+                        statusInd.textContent = `Failed: ${errMsg}`;
+                        statusInd.style.color = '#ef4444';
+                    }
+                }
+            } catch (err) {
+                console.error(err);
+                showToast('Network error during database sync: ' + (err.message || 'Server unreachable'), 'danger');
+                if (statusInd) {
+                    statusInd.textContent = 'Error: ' + err.message;
+                    statusInd.style.color = '#ef4444';
+                }
+            } finally {
+                setButtonsLoading(false);
+            }
         }
 
         // INIT
