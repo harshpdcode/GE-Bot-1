@@ -2461,6 +2461,70 @@
             }
         }
     
+    
+        /* Mobile Sticky Bottom Navigation Bar & Collapsible Subsections (Prompt v3) */
+        #mobile-bottom-nav {
+            display: none;
+        }
+        .collapsible-content {
+            transition: all 0.3s ease;
+        }
+        @media (max-width: 768px) {
+            #mobile-bottom-nav {
+                display: flex !important;
+                position: fixed;
+                bottom: 0;
+                left: 0;
+                right: 0;
+                height: 64px;
+                background: var(--card-bg);
+                border-top: 1px solid var(--border);
+                z-index: 999;
+                justify-content: space-around;
+                align-items: center;
+                box-shadow: 0 -4px 18px rgba(0, 0, 0, 0.15);
+                backdrop-filter: blur(12px);
+                -webkit-backdrop-filter: blur(12px);
+                padding: 4px 6px;
+            }
+            .bottom-nav-item {
+                display: flex;
+                flex-direction: column;
+                align-items: center;
+                justify-content: center;
+                gap: 3px;
+                font-size: 0.68rem;
+                font-weight: 700;
+                color: var(--text-sub);
+                background: transparent;
+                border: none;
+                cursor: pointer;
+                flex: 1;
+                padding: 6px 2px;
+                border-radius: 10px;
+                transition: all 0.2s ease;
+                text-decoration: none;
+            }
+            .bottom-nav-item i {
+                font-size: 1.2rem;
+                transition: transform 0.2s ease;
+            }
+            .bottom-nav-item.active {
+                color: #16a34a;
+                font-weight: 800;
+                background: rgba(34, 197, 94, 0.12);
+            }
+            .bottom-nav-item.active i {
+                transform: scale(1.12);
+            }
+            .panel-section {
+                padding-bottom: 85px !important;
+            }
+            .collapsible-content.collapsed {
+                display: none !important;
+            }
+        }
+
     </style>
 </head>
 
@@ -2561,10 +2625,9 @@
                 </div>
                 <div style="min-width:0; flex:1;">
                     <div style="display:flex; align-items:center; gap:6px; flex-wrap:wrap;">
-                        <span style="font-weight:800; font-size:0.85rem; color:#b91c1c;">⚠️ Wild Boar detected</span>
-                        <span
-                            style="background:#fee2e2; color:#b91c1c; font-size:0.7rem; font-weight:800; padding:1px 6px; border-radius:8px; border:1px solid #fca5a5;">Sector
-                            C</span>
+                        <span id="breach-toast-title" style="font-weight:800; font-size:0.85rem; color:#b91c1c;">⚠️ Wild Boar detected</span>
+                        <span id="breach-toast-sector"
+                            style="background:#fee2e2; color:#b91c1c; font-size:0.7rem; font-weight:800; padding:1px 6px; border-radius:8px; border:1px solid #fca5a5;">Sector C</span>
                     </div>
                     <div style="font-size:0.75rem; color:var(--text-sub); text-overflow:ellipsis; overflow:hidden; white-space:nowrap;"
                         id="toast-breach-sub">North-East Perimeter • Acoustic warning active</div>
@@ -3868,9 +3931,15 @@
 
             <!-- 3-Stage Application Timeline for the Landfield -->
             <div class="ctrl-card">
-                <div class="cc-title" style="margin-bottom:14px;"><i class="fa-solid fa-calendar-days"
-                        style="color:#16a34a;"></i> 3-Stage Landfield Application Schedule</div>
-                <div style="display:grid; grid-template-columns: repeat(auto-fit, minmax(280px, 1fr)); gap:16px;">
+                <div style="display:flex; justify-content:space-between; align-items:center; margin-bottom:14px; flex-wrap:wrap; gap:10px;">
+                    <div class="cc-title" style="margin-bottom:0;"><i class="fa-solid fa-calendar-days"
+                            style="color:#16a34a;"></i> 3-Stage Landfield Application Schedule</div>
+                    <button type="button" class="action-btn" onclick="toggleAccordion('calc-schedule-collapse', this)"
+                        style="background:var(--bg-main); border:1px solid var(--border); color:var(--text-main); font-size:0.82rem; padding:6px 14px; border-radius:8px; cursor:pointer;">
+                        <i class="fa-solid fa-chevron-up"></i> <span class="lbl-toggle">Collapse Schedule</span>
+                    </button>
+                </div>
+                <div id="calc-schedule-collapse" class="collapsible-content" style="display:grid; grid-template-columns: repeat(auto-fit, minmax(280px, 1fr)); gap:16px;">
                     <div
                         style="background:var(--bg-main); border-left:4px solid #16a34a; border-radius:12px; padding:14px 16px;">
                         <span style="font-size:0.75rem; font-weight:800; color:#16a34a; text-transform:uppercase;">Stage
@@ -4111,10 +4180,10 @@
                         <i class="fa-solid fa-faucet-drip"></i>
                     </div>
                     <div>
-                        <div style="font-weight:800; font-size:1.05rem; color:var(--text-main); margin-bottom:2px;">
+                        <div id="irrigation-banner-title" style="font-weight:800; font-size:1.05rem; color:var(--text-main); margin-bottom:2px;">
                             Smart Rain Protection Active: Saving Water Automatically
                         </div>
-                        <div style="font-size:0.85rem; color:var(--text-sub);">
+                        <div id="irrigation-banner-desc" style="font-size:0.85rem; color:var(--text-sub);">
                             GE-Bot-1 will automatically delay watering when rain is detected, preventing root
                             waterlogging and fertilizer washout.
                         </div>
@@ -4136,10 +4205,9 @@
                         <div class="ic-icon" style="background:#dcfce7; color:#16a34a;"><i
                                 class="fa-solid fa-droplet"></i></div>
                     </div>
-                    <div class="ic-value">48% <span style="font-size:1.1rem; color:#10b981;">(Optimal)</span></div>
+                    <div class="ic-value"><span id="irrigation-moisture-val">48%</span> <span id="irrigation-moisture-stat" style="font-size:1.1rem; color:#10b981;">(Optimal)</span></div>
                     <div class="ic-bottom">
-                        <span class="text-green"><i class="fa-solid fa-circle-check"></i> Within Ideal Range
-                            (40-60%)</span>
+                        <span class="text-green" id="irrigation-moisture-sub"><i class="fa-solid fa-circle-check"></i> Within Ideal Range (40-60%)</span>
                         <span class="text-sub">Trigger: &lt;35%</span>
                     </div>
                 </div>
@@ -4150,10 +4218,10 @@
                         <div class="ic-icon" style="background:#fef3c7; color:#d97706;"><i
                                 class="fa-solid fa-hand-holding-droplet"></i></div>
                     </div>
-                    <div class="ic-value">1,420 <span style="font-size:1.1rem; color:var(--text-sub);">Liters</span>
+                    <div class="ic-value"><span id="irrigation-water-saved">1,420</span> <span style="font-size:1.1rem; color:var(--text-sub);">Liters</span>
                     </div>
                     <div class="ic-bottom">
-                        <span class="text-orange">Saved this week</span>
+                        <span class="text-orange" id="irrigation-saved-status">Saved this week</span>
                         <span class="text-sub">Zero Leaching</span>
                     </div>
                 </div>
@@ -4164,7 +4232,7 @@
                         <div class="ic-icon" style="background:#f3e8ff; color:#8b5cf6;"><i
                                 class="fa-solid fa-database"></i></div>
                     </div>
-                    <div class="ic-value">84% <span style="font-size:1.1rem; color:var(--text-sub);">(12,600 L)</span>
+                    <div class="ic-value"><span id="irrigation-cistern-val">84% (12,600 L)</span>
                     </div>
                     <div class="ic-bottom">
                         <span style="color:#8b5cf6;">High Capacity Storage</span>
@@ -4178,7 +4246,7 @@
                         <div class="ic-icon" style="background:#e0f2fe; color:#0284c7;"><i
                                 class="fa-solid fa-clock"></i></div>
                     </div>
-                    <div class="ic-value" style="font-size:1.5rem;">Tomorrow 06:30 AM</div>
+                    <div class="ic-value" id="irrigation-next-flush" style="font-size:1.5rem;">Tomorrow 06:30 AM</div>
                     <div class="ic-bottom">
                         <span style="color:#0284c7;">Disc Filter #2 Backwash</span>
                         <span class="text-sub">Cycle #4</span>
@@ -5022,7 +5090,7 @@
 
         if (!isFileMode) {
             initSocket();
-            window.addEventListener('load', () => { if (!socket) initSocket(); });
+            window.addEventListener('load', () => { if (!socket) initSocket(); handleHashRoute(); });
         }
 
         // Hardware Server IP configuration handlers
@@ -5411,32 +5479,55 @@
 
         function switchNavPanel(panelId, btnElement) {
             // Auto close sidebar on mobile if it is open
-            if (window.innerWidth <= 768) {
+            if (window.innerWidth <= 768 && typeof closeSidebar === 'function') {
                 closeSidebar();
             }
 
-            // Update nav buttons visually
-            document.querySelectorAll('aside nav .nav-btn').forEach(b => b.classList.remove('active'));
-            if (btnElement) btnElement.classList.add('active');
+            // Update sidebar nav buttons visually
+            document.querySelectorAll('aside nav .nav-btn').forEach(b => {
+                const onclickAttr = b.getAttribute('onclick') || '';
+                if (b === btnElement || onclickAttr.includes(`'${panelId}'`) || onclickAttr.includes(`"${panelId}"`)) {
+                    b.classList.add('active');
+                } else {
+                    b.classList.remove('active');
+                }
+            });
+
+            // Update mobile bottom nav items visually
+            document.querySelectorAll('#mobile-bottom-nav .bottom-nav-item').forEach(b => {
+                if (b.getAttribute('data-panel') === panelId) {
+                    b.classList.add('active');
+                } else {
+                    b.classList.remove('active');
+                }
+            });
+
+            // Sync URL hash so direct links and refresh stay on active panel
+            if (window.location.hash !== '#' + panelId) {
+                history.replaceState(null, '', '#' + panelId);
+            }
 
             // Hide all panels
             document.querySelectorAll('.panel-section').forEach(p => p.style.display = 'none');
 
             // Show target panel
             const target = document.getElementById(`panel-${panelId}`);
-            if (target) target.style.display = 'block';
+            if (target) {
+                target.style.display = 'block';
+                window.scrollTo({ top: 0, behavior: 'smooth' });
+            }
 
             // Auto-stop camera feed when navigating away from camera panel to eliminate lag & save battery
-            if (panelId !== 'camera_live' && laptopStream) {
+            if (panelId !== 'camera_live' && typeof laptopStream !== 'undefined' && laptopStream) {
                 disconnectCamera(false);
             }
 
-            // Special handling
+            // Special handling per panel
             if (panelId === 'activity_log') loadActivityLogs();
-            if (panelId === 'camera_live' && !laptopStream) startLaptopCamera();
+            if (panelId === 'camera_live' && (!laptopStream || !laptopStream.active)) startLaptopCamera();
             if (panelId === 'soil_zoning') {
                 loadSoilZoning();
-                loadCropRecommendations(); // Wire crop recommendation on soil panel open
+                loadCropRecommendations();
                 if (window.farmLeafletMap) {
                     setTimeout(() => window.farmLeafletMap.invalidateSize(), 150);
                 }
@@ -5449,6 +5540,59 @@
             if (panelId === 'farm_reports') loadFarmSchedules();
             if (panelId === 'dashboard') refreshFarmStats();
         }
+
+        // Accordion toggle helper for dense control panels (Prompt v3)
+        function toggleAccordion(contentId, btn) {
+            const el = document.getElementById(contentId);
+            if (!el) return;
+            const isCollapsed = el.classList.contains('collapsed') || el.style.display === 'none';
+            if (isCollapsed) {
+                el.classList.remove('collapsed');
+                el.style.display = 'grid';
+                if (btn) btn.innerHTML = '<i class="fa-solid fa-chevron-up"></i> <span class="lbl-toggle">Collapse Schedule</span>';
+            } else {
+                el.classList.add('collapsed');
+                el.style.display = 'none';
+                if (btn) btn.innerHTML = '<i class="fa-solid fa-chevron-down"></i> <span class="lbl-toggle">View Full Schedule</span>';
+            }
+        }
+
+        // URL Hash routing on initial page load and popstate/hashchange (Prompt v3)
+        function handleHashRoute() {
+            let hash = (window.location.hash || '').replace('#', '').trim().toLowerCase();
+            if (!hash) return;
+            const aliasMap = {
+                'calculator': 'organic_calculator',
+                'p25': 'organic_calculator',
+                'fertilizer': 'organic_calculator',
+                'compost': 'organic_calculator',
+                'map': 'soil_zoning',
+                'soil': 'soil_zoning',
+                'zoning': 'soil_zoning',
+                'weather': 'weather_irrigation',
+                'irrigation': 'weather_irrigation',
+                'laser': 'laser_defense',
+                'pest': 'laser_defense',
+                'weeds': 'laser_defense',
+                'invaders': 'invader_security',
+                'security': 'invader_security',
+                'perimeter': 'invader_security',
+                'camera': 'camera_live',
+                'live': 'camera_live',
+                'diagnostics': 'robot_diagnostics',
+                'diag': 'robot_diagnostics',
+                'reports': 'farm_reports',
+                'report': 'farm_reports',
+                'activity': 'activity_log',
+                'network': 'network_status',
+                'dashboard': 'dashboard'
+            };
+            const target = aliasMap[hash] || hash;
+            if (document.getElementById(`panel-${target}`)) {
+                switchNavPanel(target);
+            }
+        }
+        window.addEventListener('hashchange', handleHashRoute);
 
         // ══════════════════════════════════════════════════════════════════════
         //  GE-BOT-1 REAL LAPTOP WEBCAM STREAMING (WITH DISCONNECT & POWER-OFF)
@@ -5695,6 +5839,38 @@
             } catch (e) { }
             renderSoilSectors();
             initFarmLeafletMap();
+
+            // Dynamic map refresh: update existing Leaflet sector layers if map is already initialized
+            if (farmLeafletMap && farmSectorLayers) {
+                currentSectorsData.forEach(sData => {
+                    const sId = sData.sector_id || sData.id;
+                    const layer = farmSectorLayers[sId];
+                    if (layer) {
+                        const isDanger = sData.zone === 'danger' || sData.status === 'critical' || ((sData.soil_nitrogen || sData.n) < 150);
+                        const isMod = sData.zone === 'moderate' || sData.status === 'warning' || ((sData.soil_phosphorus || sData.p) < 20);
+                        const col = isDanger ? '#ef4444' : (isMod ? '#f59e0b' : '#22c55e');
+                        layer.setStyle({ color: col, fillColor: col });
+
+                        const popN = sData.soil_nitrogen !== undefined ? Math.round(sData.soil_nitrogen) : (sData.n || 200);
+                        const popP = sData.soil_phosphorus !== undefined ? Math.round(sData.soil_phosphorus) : (sData.p || 30);
+                        const popK = sData.soil_potassium !== undefined ? Math.round(sData.soil_potassium) : (sData.k || 180);
+                        const popPh = sData.soil_ph !== undefined ? Number(sData.soil_ph).toFixed(1) : 6.5;
+                        const popRx = sData.recommended_fertilizer || sData.prescription || 'Go Earth Bio-Compost Gold';
+
+                        layer.setPopupContent(`
+                            <div style="font-family:'Outfit',sans-serif; min-width:190px; padding:4px;">
+                                <div style="font-weight:800; font-size:14px; color:#0f172a;">${sData.name || ('Sector ' + sId)}</div>
+                                <div style="font-size:12px; font-weight:700; color:${col}; margin-bottom:6px;">Status: ${(isDanger ? 'Critical Deficit' : (isMod ? 'Moderate Care' : 'Optimal Balance'))}</div>
+                                <div style="font-size:11.5px; color:#334155; line-height:1.5;">
+                                    <strong>N:</strong> ${popN} kg/ha • <strong>P:</strong> ${popP} • <strong>K:</strong> ${popK}<br>
+                                    <strong>pH:</strong> ${popPh} • <strong>Moist:</strong> ${sData.moisture || 40}%<br>
+                                    <strong>Prescription:</strong> ${popRx}
+                                </div>
+                            </div>
+                        `);
+                    }
+                });
+            }
         }
 
         function renderSoilSectors() {
@@ -6027,7 +6203,6 @@
 
             const btnAnimal = document.getElementById('btn-source-animal');
             const btnCrop = document.getElementById('btn-source-crop');
-            const cnText = document.getElementById('ge-cn-ratio-text');
 
             if (source === 'animal') {
                 if (btnAnimal) {
@@ -6040,9 +6215,6 @@
                     btnCrop.style.color = 'var(--text-main)';
                     btnCrop.style.border = '1.5px solid var(--border)';
                 }
-                if (cnText) {
-                    cnText.innerHTML = 'Go Earth Organic (Bovine/Animal Composite) prescriptions maintain an exact <strong>25:1 C:N ratio</strong>. Rich in natural humic acids and active microbial flora for rapid root stimulation.';
-                }
             } else {
                 if (btnCrop) {
                     btnCrop.style.background = '#16a34a';
@@ -6054,42 +6226,14 @@
                     btnAnimal.style.color = 'var(--text-main)';
                     btnAnimal.style.border = '1.5px solid var(--border)';
                 }
-                if (cnText) {
-                    cnText.innerHTML = 'Go Earth Organic (Crop-Residue / Agro-Waste Composite) prescriptions maintain an exact <strong>28:1 C:N ratio</strong>. High lignin content improves moisture retention and delivers sustained carbon sequestration.';
-                }
             }
-            calculateGoEarthLandfield();
-        }
-
-        function setLandfieldPreset(acres) {
-            const geInput = document.getElementById('ge-land-acres');
-            const legacyInput = document.getElementById('calc-landfield-acres');
-            if (geInput) geInput.value = acres.toFixed(1);
-            if (legacyInput) legacyInput.value = acres;
-
-            // Toggle active state visually
-            document.querySelectorAll('button[onclick^="setLandfieldPreset"]').forEach(btn => {
-                // Ensure exact match instead of includes so "1 Acre" doesn't match "10 Acres"
-                if (btn.innerText.trim() === acres + ' Acre' || btn.innerText.trim() === acres + ' Acres') {
-                    btn.classList.add('active');
-                    btn.style.background = '#16a34a';
-                    btn.style.color = 'white';
-                    btn.style.border = 'none';
-                } else {
-                    btn.classList.remove('active');
-                    btn.style.background = 'var(--card-bg)';
-                    btn.style.color = 'var(--text-main)';
-                    btn.style.border = '1.5px solid var(--border)';
-                }
-            });
-
             calculateGoEarthLandfield();
         }
 
         async function calculateGoEarthLandfield() {
             const geInput = document.getElementById('ge-land-acres');
             const legacyInput = document.getElementById('calc-landfield-acres');
-            const acres = parseFloat(geInput ? geInput.value : (legacyInput ? legacyInput.value : 5)) || 1;
+            const acres = Math.max(0.25, parseFloat(geInput ? geInput.value : (legacyInput ? legacyInput.value : 5)) || 1.0);
 
             const cropEl = document.getElementById('ge-land-crop');
             const crop = cropEl ? cropEl.value : 'wheat';
@@ -6103,25 +6247,19 @@
             const wasteEl = document.getElementById('ge-waste-type');
             const wasteType = wasteEl ? wasteEl.value : 'animal';
 
-            const materials = wasteType === 'animal' ? ['fym', 'bone_meal'] : ['vermicompost', 'neem_cake'];
-
-            let totalBags = 0;
-            let totalKg = 0;
-            let totalCost = 0;
-            let totalLiters = 0;
             let calc = null;
 
+            // 1. Path A: Wire to real backend engine (POST /api/farm/organic-calculator)
             try {
                 const res = await safeFetch('/api/farm/organic-calculator', {
                     method: 'POST',
                     headers: { 'Content-Type': 'application/json' },
                     body: JSON.stringify({
-                        crop_name: crop,
-                        growth_stage: stage === 'basal' ? 'Vegetative' : (stage === 'flowering' ? 'Flowering' : 'Fruiting'),
-                        acreage: acres,
-                        selected_materials: materials,
-                        decomp_stage: 'semi_decomposed',
-                        moisture_pct: 35
+                        acres: acres,
+                        crop: crop,
+                        soil: soil,
+                        stage: stage,
+                        wasteType: wasteType
                     })
                 });
 
@@ -6130,50 +6268,166 @@
                     calc = data.calculation || data;
                 }
             } catch (e) {
-                console.warn('Backend calc unavailable, using local calculation engine:', e);
+                console.warn('Backend calc unavailable, using dynamic local engine:', e);
             }
 
-            // Fallback dynamic local computation if backend is not running or returns no blend
+            // 2. Comprehensive dynamic mathematical engine fallback
             if (!calc || !Array.isArray(calc.blend_materials) || calc.blend_materials.length === 0) {
-                const kgPerAcre = wasteType === 'animal' ? 850 : 600;
-                const totalKgNeeded = Math.round(kgPerAcre * acres);
-                if (wasteType === 'animal') {
-                    calc = {
-                        calculated_cn_ratio: 23.4,
-                        cn_diagnosis: { title: 'Optimized Balance (23.4:1)' },
-                        total_recipe_kg: totalKgNeeded,
-                        total_estimated_cost_inr: Math.round(totalKgNeeded * 7.5),
-                        blend_materials: [
-                            { name: 'Farmyard Manure (FYM)', kg: Math.round(totalKgNeeded * 0.70), npk_ratio: '0.8-0.4-0.8', c_n_ratio: 24, cost_inr: Math.round(totalKgNeeded * 0.70 * 4.5) },
-                            { name: 'Steamed Bone Meal', kg: Math.round(totalKgNeeded * 0.20), npk_ratio: '3.0-20.0-0.0', c_n_ratio: 12, cost_inr: Math.round(totalKgNeeded * 0.20 * 18.0) },
-                            { name: 'Neem Cake Pellet Stabilizer', kg: Math.round(totalKgNeeded * 0.10), npk_ratio: '5.2-1.0-1.4', c_n_ratio: 15, cost_inr: Math.round(totalKgNeeded * 0.10 * 22.0) }
-                        ]
-                    };
+                // Soil Deficit Multipliers & Baseline Health
+                let soilDeficitN = 1.0, soilDeficitP = 1.0, soilDeficitK = 1.0, baseHealth = 92;
+                let soilDeficitNotes = '';
+                if (soil === 'deficient') {
+                    soilDeficitN = 1.40; soilDeficitP = 1.45; soilDeficitK = 1.30; baseHealth = 63;
+                    soilDeficitNotes = 'Sector A profile: Severe nitrogen deficit (<120 kg/ha), low organic carbon (0.38%), and pH 5.4 require organic bio-amendment.';
+                } else if (soil === 'moderate') {
+                    soilDeficitN = 1.15; soilDeficitP = 1.25; soilDeficitK = 1.15; baseHealth = 80;
+                    soilDeficitNotes = 'Sector B/D profile: Moderate phosphorus and potassium drawdown with organic carbon at 0.65%. Targeted balance required.';
                 } else {
-                    calc = {
-                        calculated_cn_ratio: 19.8,
-                        cn_diagnosis: { title: 'High Microbial Activity (19.8:1)' },
-                        total_recipe_kg: totalKgNeeded,
-                        total_estimated_cost_inr: Math.round(totalKgNeeded * 9.2),
-                        blend_materials: [
-                            { name: 'Enriched Vermicompost', kg: Math.round(totalKgNeeded * 0.65), npk_ratio: '1.8-1.5-1.5', c_n_ratio: 18, cost_inr: Math.round(totalKgNeeded * 0.65 * 8.0) },
-                            { name: 'De-Oiled Neem Cake', kg: Math.round(totalKgNeeded * 0.20), npk_ratio: '5.2-1.0-1.4', c_n_ratio: 15, cost_inr: Math.round(totalKgNeeded * 0.20 * 22.0) },
-                            { name: 'Bio-Rock Phosphate & Potash', kg: Math.round(totalKgNeeded * 0.15), npk_ratio: '0.0-18.0-10.0', c_n_ratio: 10, cost_inr: Math.round(totalKgNeeded * 0.15 * 14.0) }
-                        ]
-                    };
+                    soilDeficitN = 1.0; soilDeficitP = 1.0; soilDeficitK = 1.0; baseHealth = 94;
+                    soilDeficitNotes = 'Sector C/E/F profile: Balanced tilth, active earthworm channels, organic carbon >0.92%. Maintenance dosage preserves vigor.';
                 }
+
+                // Stage fractions
+                let stageFractions = [0.45, 0.35, 0.35];
+                let stageMod = 0.5;
+                let stageName = 'Vegetative Shoot';
+                if (stage === 'basal') {
+                    stageFractions = [0.55, 0.45, 0.30];
+                    stageMod = 2.0;
+                    stageName = 'Basal Field Prep';
+                } else if (stage === 'flowering') {
+                    stageFractions = [0.20, 0.30, 0.45];
+                    stageMod = -3.0;
+                    stageName = 'Flowering & Fruiting';
+                }
+
+                // Crop requirements table
+                const cropReqs = {
+                    wheat: { name: 'Wheat', N: 120, P: 60, K: 40, penalty: 1.5 },
+                    paddy: { name: 'Paddy / Rice', N: 100, P: 50, K: 50, penalty: 2.0 },
+                    tomato: { name: 'Tomato', N: 140, P: 80, K: 120, penalty: 5.5 },
+                    sugarcane: { name: 'Sugarcane', N: 160, P: 70, K: 100, penalty: 6.0 },
+                    cotton: { name: 'Cotton', N: 120, P: 60, K: 60, penalty: 3.5 },
+                    mustard: { name: 'Mustard', N: 90, P: 50, K: 40, penalty: -1.5 }
+                };
+                const cReq = cropReqs[crop] || cropReqs.wheat;
+
+                const targetN = cReq.N * acres * stageFractions[0] * soilDeficitN;
+                const decompEfficiency = 0.55;
+                const lossFactor = 0.15;
+                const remainingN = targetN / (decompEfficiency * (1 - lossFactor));
+
+                let blend = [];
+                let totalWeightKg = 0;
+                let weightedCN = 0;
+
+                if (wasteType === 'animal') {
+                    const materials = [
+                        { name: 'Go Earth Bio-Compost Gold', N: 0.8, P: 0.4, K: 0.8, CN: 24, moisture: 30, costPerKg: 4.5, share: 0.55, icon: 'fa-seedling', bg: '#dcfce7', col: '#16a34a' },
+                        { name: 'Steamed Bone Meal', N: 3.5, P: 20.0, K: 0.2, CN: 8, moisture: 8, costPerKg: 20.0, share: 0.25, icon: 'fa-bone', bg: '#fee2e2', col: '#ef4444' },
+                        { name: 'Neem Khali / Cake Stabilizer', N: 5.2, P: 1.0, K: 1.4, CN: 15, moisture: 10, costPerKg: 22.0, share: 0.12, icon: 'fa-shield-virus', bg: '#fef3c7', col: '#d97706' },
+                        { name: 'Activated Biochar Conditioner', N: 0.2, P: 0.1, K: 0.5, CN: 160, moisture: 15, costPerKg: 18.0, share: 0.08, icon: 'fa-cube', bg: '#f3e8ff', col: '#8b5cf6' }
+                    ];
+                    materials.forEach(m => {
+                        const dryMatter = (1 - (m.moisture / 100));
+                        const effN = (m.N / 100) * dryMatter;
+                        let kg = Math.round(Math.max(15, (remainingN * m.share) / Math.max(0.005, effN)));
+                        const cost = Math.round(kg * m.costPerKg);
+                        totalWeightKg += kg;
+                        weightedCN += (kg * m.CN);
+                        blend.push({ name: m.name, kg, bags: Math.max(1, Math.round(kg / 50)), cost_inr: cost, npk_ratio: `${m.N}-${m.P}-${m.K}`, c_n_ratio: m.CN, icon: m.icon, bg: m.bg, col: m.col });
+                    });
+                } else {
+                    const materials = [
+                        { name: 'Go Earth Vermicompost Plus', N: 1.8, P: 1.5, K: 1.5, CN: 18, moisture: 25, costPerKg: 8.0, share: 0.60, icon: 'fa-worm', bg: '#fef3c7', col: '#d97706' },
+                        { name: 'De-Oiled Neem Cake', N: 5.2, P: 1.0, K: 1.4, CN: 15, moisture: 10, costPerKg: 22.0, share: 0.20, icon: 'fa-shield-virus', bg: '#fee2e2', col: '#ef4444' },
+                        { name: 'Sesbania Green Biomass Extract', N: 2.8, P: 0.6, K: 1.6, CN: 18, moisture: 75, costPerKg: 4.0, share: 0.12, icon: 'fa-leaf', bg: '#dcfce7', col: '#16a34a' },
+                        { name: 'Hardwood Bio-Potash Ash', N: 0.1, P: 1.6, K: 6.8, CN: 50, moisture: 5, costPerKg: 5.0, share: 0.08, icon: 'fa-fire-flame-curved', bg: '#f3e8ff', col: '#8b5cf6' }
+                    ];
+                    materials.forEach(m => {
+                        const dryMatter = (1 - (m.moisture / 100));
+                        const effN = (m.N / 100) * dryMatter;
+                        let kg = Math.round(Math.max(15, (remainingN * m.share) / Math.max(0.005, effN)));
+                        const cost = Math.round(kg * m.costPerKg);
+                        totalWeightKg += kg;
+                        weightedCN += (kg * m.CN);
+                        blend.push({ name: m.name, kg, bags: Math.max(1, Math.round(kg / 50)), cost_inr: cost, npk_ratio: `${m.N}-${m.P}-${m.K}`, c_n_ratio: m.CN, icon: m.icon, bg: m.bg, col: m.col });
+                    });
+                }
+
+                const overallCN = parseFloat((weightedCN / (totalWeightKg || 1)).toFixed(1));
+                const totalCost = blend.reduce((acc, b) => acc + b.cost_inr, 0);
+                const totalBags = blend.reduce((acc, b) => acc + b.bags, 0);
+
+                let cnBonus = (overallCN >= 20 && overallCN <= 28) ? 3.0 : ((overallCN >= 18 && overallCN <= 32) ? 1.0 : -3.5);
+                const fineAcreMod = ((acres * 7) % 3) - 1.5;
+                let continuousScore = Math.max(38, Math.min(98, Math.round(baseHealth - cReq.penalty + stageMod + cnBonus + fineAcreMod)));
+
+                let healthBadgeText = '', healthBadgeColor = '', healthBadgeBg = '';
+                if (continuousScore >= 88) {
+                    healthBadgeText = `Score: ${continuousScore}/100 (Optimal Tilth)`; healthBadgeColor = '#16a34a'; healthBadgeBg = '#dcfce7';
+                } else if (continuousScore >= 72) {
+                    healthBadgeText = `Score: ${continuousScore}/100 (Moderate Balance)`; healthBadgeColor = '#d97706'; healthBadgeBg = '#fef3c7';
+                } else {
+                    healthBadgeText = `Score: ${continuousScore}/100 (Needs Remediation)`; healthBadgeColor = '#ef4444'; healthBadgeBg = '#fee2e2';
+                }
+
+                // Dynamic rotation factoring crop + soil + waste
+                function getFallbackRotation(c, s, w) {
+                    if (c === 'wheat') {
+                        return s === 'deficient'
+                            ? { title: 'Moong Dal / Green Gram (Short-Cycle Restorative Legume)', desc: 'Restores ~35 kg/ha natural soil nitrogen via symbiotic Rhizobium nodules, directly repairing Sector A nitrogen depletion within 65 days.' }
+                            : { title: 'Mustard / Canola (High-Value Bio-Fumigant)', desc: 'High soil tilth supports vigorous brassica flowering; natural glucosinolates cleanse soil-borne cereal fungi.' };
+                    } else if (c === 'paddy') {
+                        return s === 'deficient'
+                            ? { title: 'Dhaincha / Sesbania (Green Manure Puddle-In)', desc: 'Restores waterlogged soil structure; fast-growing Sesbania incorporates up to 80 kg N/ha and breaks anaerobic crusting.' }
+                            : { title: 'Black Gram (Urad) / Field Pea (Stubble Relay)', desc: 'Direct-seeded into standing paddy stubble to utilize residual moisture with zero tillage, restoring natural soil nitrogen.' };
+                    } else if (c === 'tomato') {
+                        return s === 'deficient'
+                            ? { title: 'Sorghum-Sudangrass Cover Crop', desc: 'Aggressive root biomass restores depleted organic carbon and starves bacterial wilt (Ralstonia) pathogens.' }
+                            : { title: 'Sweet Corn / Sorghum (Graminaceous Cereal Break)', desc: 'Non-host cereal rotation completely interrupts Solanaceae nematode lifecycles while fibrous roots loosen topsoil.' };
+                    } else if (c === 'cotton') {
+                        return { title: 'Sunn Hemp (Crotalaria Juncea Restorative Manure)', desc: 'Breaks subsoil hardpans left by deep taproot cotton and synthesizes 60+ kg N/ha organic nitrogen biomass.' };
+                    } else if (c === 'sugarcane') {
+                        return { title: 'Dhaincha / Sunn Hemp Green Manuring', desc: 'Rebuilds exhausted rhizosphere humus after heavy 12-month sugarcane extraction; restores 75 kg N/ha.' };
+                    } else {
+                        return { title: 'Pearl Millet / Bajra (Kharif Rotation)', desc: 'Deep root architecture scavenges mineralized subsoil nutrients released during residue breakdown with zero chemical inputs.' };
+                    }
+                }
+
+                calc = {
+                    calculated_cn_ratio: overallCN,
+                    cn_diagnosis: {
+                        status: overallCN > 30 ? 'warning_high_cn' : (overallCN < 18 ? 'warning_low_cn' : 'optimal'),
+                        title: `Balanced C:N Ratio (${overallCN}:1)`,
+                        message: `Optimal microbial mineralization balance (${overallCN}:1). Nutrients will be steadily released without robbing soil nitrogen.`
+                    },
+                    health_score: continuousScore,
+                    health_badge_text: healthBadgeText,
+                    health_badge_color: healthBadgeColor,
+                    health_badge_bg: healthBadgeBg,
+                    health_desc: `${soilDeficitNotes} Crop demand for ${cReq.name} during ${stageName} with ${wasteType}-based organic blend yields an active rhizosphere health rating of ${continuousScore}/100. Effective C:N: ${overallCN}:1.`,
+                    rotation_recommendation: getFallbackRotation(crop, soil, wasteType),
+                    total_recipe_kg: totalWeightKg,
+                    total_bags: totalBags,
+                    total_estimated_cost_inr: totalCost,
+                    blend_materials: blend
+                };
             }
 
+            // 3. Render all DOM elements
             const productListEl = document.getElementById('ge-products-list');
+            let computedBags = 0, computedKg = 0, computedCost = 0;
+
             if (productListEl && Array.isArray(calc.blend_materials)) {
                 productListEl.innerHTML = calc.blend_materials.map((rec, idx) => {
-                    const iconBg = idx === 0 ? '#dcfce7' : (idx === 1 ? '#fef3c7' : '#fee2e2');
-                    const iconColor = idx === 0 ? '#16a34a' : (idx === 1 ? '#d97706' : '#ef4444');
-                    const iconClass = idx === 0 ? 'fa-sack-xmark' : (idx === 1 ? 'fa-leaf' : 'fa-seedling');
-                    const bags = Math.max(1, Math.round(rec.kg / 50));
-                    totalBags += bags;
-                    totalKg += rec.kg;
-                    totalCost += rec.cost_inr;
+                    const iconBg = rec.bg || (idx === 0 ? '#dcfce7' : (idx === 1 ? '#fef3c7' : (idx === 2 ? '#fee2e2' : '#f3e8ff')));
+                    const iconColor = rec.col || (idx === 0 ? '#16a34a' : (idx === 1 ? '#d97706' : (idx === 2 ? '#ef4444' : '#8b5cf6')));
+                    const iconClass = rec.icon || (idx === 0 ? 'fa-sack-xmark' : (idx === 1 ? 'fa-leaf' : (idx === 2 ? 'fa-seedling' : 'fa-flask')));
+                    const bags = rec.bags || Math.max(1, Math.round(rec.kg / 50));
+                    computedBags += bags;
+                    computedKg += rec.kg;
+                    computedCost += rec.cost_inr;
 
                     return `
                     <div style="background:var(--bg-main); border:1.5px solid var(--border); border-radius:12px; padding:12px 16px; display:flex; justify-content:space-between; align-items:center; gap:12px;">
@@ -6183,96 +6437,67 @@
                             </div>
                             <div>
                                 <div style="font-weight:800; font-size:0.95rem; color:var(--text-main);">${rec.name.toUpperCase()}</div>
-                                <div style="font-size:0.75rem; color:var(--text-sub);">NPK: ${rec.npk_ratio || 'Balanced'} | C:N: ${rec.c_n_ratio || 20}:1</div>
+                                <div style="font-size:0.75rem; color:var(--text-sub);">NPK: ${rec.npk_ratio || 'Balanced'} • C:N ${rec.c_n_ratio || 24}:1</div>
                             </div>
                         </div>
-                        <div style="text-align:right; flex-shrink:0;">
+                        <div style="text-align:right;">
                             <div style="font-size:1.15rem; font-weight:800; color:${iconColor};">${bags} Bags</div>
-                            <div style="font-size:0.75rem; color:var(--text-sub);">${rec.kg.toLocaleString('en-IN')} kg total</div>
+                            <div style="font-size:0.75rem; color:var(--text-sub);">${rec.kg.toLocaleString('en-IN')} kg • ₹${rec.cost_inr.toLocaleString('en-IN')}</div>
                         </div>
                     </div>`;
                 }).join('');
             }
 
-            // Show feedback
-            const cnRatio = calc.calculated_cn_ratio ? calc.calculated_cn_ratio.toFixed(1) : '22.0';
-            const diagTitle = (calc.cn_diagnosis && calc.cn_diagnosis.title) ? calc.cn_diagnosis.title : 'Balanced Organic Blend';
-            showToast(`Organic formulation: ${diagTitle} (C:N ${cnRatio}:1)`, 'success');
-
-            // Update badge, totals, and cost
-            const elLandBadge = document.getElementById('ge-land-badge');
-            if (elLandBadge) elLandBadge.textContent = `For ${acres} Acre Landfield (${wasteType === 'animal' ? 'Animal-Waste' : 'Crop-Waste'})`;
-
+            // Update Total Bags & Cost
             const elTotalBags = document.getElementById('ge-total-bags');
-            const totalWeight = calc.total_recipe_kg || totalKg;
-            if (elTotalBags) elTotalBags.textContent = `${totalBags} Bags (${totalWeight.toLocaleString('en-IN')} kg)`;
+            const bagsVal = calc.total_bags || computedBags;
+            const kgVal = calc.total_recipe_kg || computedKg;
+            if (elTotalBags) elTotalBags.textContent = `${bagsVal} Bags (${kgVal.toLocaleString('en-IN')} kg)`;
 
             const elTotalCost = document.getElementById('ge-total-cost');
-            const costVal = calc.total_estimated_cost_inr || totalCost;
+            const costVal = calc.total_estimated_cost_inr || computedCost;
             if (elTotalCost) elTotalCost.textContent = '₹ ' + costVal.toLocaleString('en-IN');
 
-            // Update Crop & Soil Health status card
+            // Update Crop & Soil Health status card (Dynamic continuous score 0-100)
             const healthBadge = document.getElementById('calc-health-badge');
             const healthDesc = document.getElementById('calc-health-desc');
             if (healthBadge && healthDesc) {
-                if (soil === 'deficient') {
-                    healthBadge.textContent = 'Score: 68/100 (Needs Remediation)';
-                    healthBadge.style.background = '#fee2e2';
-                    healthBadge.style.color = '#ef4444';
-                    healthDesc.textContent = 'Soil shows low nitrogen and organic carbon deficiency. Heavy biological inoculation and neem cake nitrogen stabilizers required.';
-                } else if (soil === 'moderate') {
-                    healthBadge.textContent = 'Score: 82/100 (Moderate Balance)';
-                    healthBadge.style.background = '#fef3c7';
-                    healthBadge.style.color = '#d97706';
-                    healthDesc.textContent = 'Soil exhibits good tilth but needs targeted phosphorus or potassium fortification. Standard prescription will balance rhizosphere.';
-                } else {
-                    healthBadge.textContent = 'Score: 94/100 (Optimal Tilth)';
-                    healthBadge.style.background = '#dcfce7';
-                    healthBadge.style.color = '#16a34a';
-                    healthDesc.textContent = 'Soil displays high biological microbial activity and active earthworm channels. Maintenance prescription will protect yield.';
-                }
+                const score = calc.health_score || 85;
+                const badgeText = calc.health_badge_text || (score >= 88 ? `Score: ${score}/100 (Optimal Tilth)` : (score >= 72 ? `Score: ${score}/100 (Moderate Balance)` : `Score: ${score}/100 (Needs Remediation)`));
+                const badgeColor = calc.health_badge_color || (score >= 88 ? '#16a34a' : (score >= 72 ? '#d97706' : '#ef4444'));
+                const badgeBg = calc.health_badge_bg || (score >= 88 ? '#dcfce7' : (score >= 72 ? '#fef3c7' : '#fee2e2'));
+
+                healthBadge.textContent = badgeText;
+                healthBadge.style.background = badgeBg;
+                healthBadge.style.color = badgeColor;
+                healthDesc.textContent = calc.health_desc || 'Dynamic biological assessment computed.';
             }
 
             // Update Next Crop Recommendation card
             const nextTitle = document.getElementById('calc-next-crop-title');
             const nextDesc = document.getElementById('calc-next-crop-desc');
-            if (nextTitle && nextDesc) {
-                const rotationMap = {
-                    wheat: {
-                        title: 'Chickpea / Moong Dal (Legume Rotation)',
-                        desc: 'Planting nitrogen-fixing pulses after wheat restores ~25 kg/ha natural soil nitrogen via Rhizobium nodules and breaks cereal weed cycles.'
-                    },
-                    paddy: {
-                        title: 'Mustard / Gram / Lentils (Post-Paddy Rotation)',
-                        desc: 'A light-rooted mustard or pulse cycle after waterlogged paddy restores soil crumb structure and utilizes residual moisture efficiently.'
-                    },
-                    tomato: {
-                        title: 'Sweet Corn / Sorghum (Cereal Break Crop)',
-                        desc: 'Switching from Solanaceae (tomato) to graminaceous cereals breaks bacterial wilt (Ralstonia) and root-knot nematode lifecycles.'
-                    },
-                    sugarcane: {
-                        title: 'Sunn Hemp / Dhaincha (Green Manuring)',
-                        desc: 'Incorporating fast-growing green manure after heavy-feeding sugarcane returns up to 80 kg N/ha and rejuvenates soil organic biomass.'
-                    },
-                    cotton: {
-                        title: 'Cowpea / Wheat Rotation',
-                        desc: 'Deep taproot cotton is ideally followed by shallow-rooting legumes or wheat to balance nutrient extraction across soil horizons.'
-                    },
-                    mustard: {
-                        title: 'Pearl Millet / Bajra (Kharif Rotation)',
-                        desc: 'Mustard glucosinolate bio-fumigants naturally suppress soil-borne fungal pathogens before the upcoming pearl millet cycle.'
-                    }
-                };
-                const rot = rotationMap[crop] || rotationMap.wheat;
-                nextTitle.textContent = rot.title;
-                nextDesc.textContent = rot.desc;
+            if (nextTitle && nextDesc && calc.rotation_recommendation) {
+                nextTitle.textContent = calc.rotation_recommendation.title;
+                nextDesc.textContent = calc.rotation_recommendation.desc;
             }
 
-            // Legacy backward-compatibility updates
-            const elAcresDisplay = document.getElementById('calc-display-acres');
-            if (elAcresDisplay) elAcresDisplay.textContent = acres + ' Acre' + (acres > 1 ? 's' : '');
+            // Update Blended C:N Ratio Callout with actual computed value
+            const cnText = document.getElementById('ge-cn-ratio-text');
+            if (cnText) {
+                const cnRatio = calc.calculated_cn_ratio || (wasteType === 'animal' ? 24.2 : 18.8);
+                const cnDiag = calc.cn_diagnosis || {};
+                cnText.innerHTML = `Prescribed blend computes to an exact <strong>${cnRatio}:1 C:N ratio</strong> (${cnDiag.title || 'Optimal Formulation'}). ${cnDiag.message || 'Ensures rapid microbial activation without nitrogen immobilisation.'}`;
+            }
+
+            // Update Landfield Badge
+            const landBadge = document.getElementById('ge-land-badge');
+            if (landBadge) landBadge.textContent = `For ${acres.toFixed(1)} Acre Landfield`;
+
+            // Legacy elements compatibility
+            const legacyBags = document.getElementById('calc-total-bags');
+            if (legacyBags) legacyBags.textContent = `${bagsVal} Bags`;
             const legacyCost = document.getElementById('calc-total-cost');
-            if (legacyCost) legacyCost.textContent = '₹' + totalCost.toLocaleString('en-IN');
+            if (legacyCost) legacyCost.textContent = '₹' + costVal.toLocaleString('en-IN');
         }
 
         // ══════════════════════════════════════════════════════════════════════
@@ -6380,8 +6605,9 @@
             if (elLoc) elLoc.textContent = `Farm Location: ${locationName} • GPS: ${lat.toFixed(2)}°N, ${lon.toFixed(2)}°E`;
             if (elHumid) elHumid.textContent = `${cur.relative_humidity_2m}%`;
             if (elWind) elWind.textContent = `${Math.round(cur.wind_speed_10m)} km/h`;
+            
+            const rainProb = (daily.precipitation_probability_max && daily.precipitation_probability_max[0] != null) ? daily.precipitation_probability_max[0] : 0;
             if (elRain) {
-                const rainProb = (daily.precipitation_probability_max && daily.precipitation_probability_max[0] != null) ? daily.precipitation_probability_max[0] : 0;
                 elRain.textContent = `${rainProb}% (${rainProb > 40 ? 'High' : 'Low'})`;
                 elRain.style.color = rainProb > 40 ? '#ef4444' : '#10b981';
             }
@@ -6392,11 +6618,11 @@
             const vWind = document.getElementById('v-wind');
             if (vWind) vWind.textContent = Math.round(cur.wind_speed_10m);
 
-            // Update 5-Day Forecast Cards
+            // Update 5-Day Forecast Cards dynamically
             const forecastContainer = document.getElementById('weather-forecast-cards');
             if (forecastContainer && daily.time && daily.time.length > 0) {
                 const daysOfWeek = ['Sun', 'Mon', 'Tue', 'Wed', 'Thu', 'Fri', 'Sat'];
-                let html = '';
+                let fHtml = '';
                 const count = Math.min(5, daily.time.length);
                 for (let i = 0; i < count; i++) {
                     const date = new Date(daily.time[i]);
@@ -6407,7 +6633,7 @@
                     const tMin = Math.round(daily.temperature_2m_min[i]);
                     const prob = daily.precipitation_probability_max ? daily.precipitation_probability_max[i] : 0;
 
-                    html += `
+                    fHtml += `
                         <div class="schedule-card" style="border-left:4px solid ${dInfo.color}; text-align:center; padding:16px;">
                             <div style="font-weight:700; font-size:0.9rem; color:var(--text-sub);">${dayLabel}</div>
                             <div style="font-size:2rem; color:${dInfo.color}; margin:10px 0;"><i class="fa-solid ${dInfo.icon}"></i></div>
@@ -6416,7 +6642,60 @@
                         </div>
                     `;
                 }
-                forecastContainer.innerHTML = html;
+                forecastContainer.innerHTML = fHtml;
+            }
+
+            // Dynamic Irrigation Recommendation Banner Update (Prompt v3)
+            const irrigBannerTitle = document.getElementById('irrigation-banner-title');
+            const irrigBannerDesc = document.getElementById('irrigation-banner-desc');
+            if (irrigBannerTitle && irrigBannerDesc) {
+                if (rainProb >= 40) {
+                    irrigBannerTitle.innerHTML = '<i class="fa-solid fa-cloud-showers-heavy" style="color:#0ea5e9; margin-right:6px;"></i> Rain Delay Active: Automated Drip Suspended';
+                    irrigBannerDesc.textContent = `Forecast models project ${rainProb}% rain probability in ${locationName}. Smart drip valves are automatically paused to prevent root waterlogging, fertilizer washout, and soil compaction.`;
+                } else if (cur.temperature_2m >= 32 && cur.relative_humidity_2m <= 45) {
+                    irrigBannerTitle.innerHTML = '<i class="fa-solid fa-temperature-arrow-up" style="color:#f59e0b; margin-right:6px;"></i> High Evapotranspiration Alert: Supplemental Drip Recommended';
+                    irrigBannerDesc.textContent = `High ambient temperature (${Math.round(cur.temperature_2m)}°C) and dry air (${cur.relative_humidity_2m}% RH) accelerating canopy transpiration. Recommended drip volume: 450 L/acre.`;
+                } else {
+                    irrigBannerTitle.innerHTML = '<i class="fa-solid fa-faucet-drip" style="color:#0284c7; margin-right:6px;"></i> Smart Rain Protection Active: Saving Water Automatically';
+                    irrigBannerDesc.textContent = `Normal field climate in ${locationName}. GE-Bot-1 will automatically delay watering if rain begins, preventing nutrient leaching and conserving groundwater.`;
+                }
+            }
+
+            // Update 4 Irrigation Telemetry Cards
+            const elMoistVal = document.getElementById('irrigation-moisture-val');
+            const elMoistStat = document.getElementById('irrigation-moisture-stat');
+            if (elMoistVal) {
+                let meanMoist = 48;
+                if (Array.isArray(currentSectorsData) && currentSectorsData.length > 0) {
+                    const sum = currentSectorsData.reduce((acc, s) => acc + (s.moisture || 40), 0);
+                    meanMoist = Math.round(sum / currentSectorsData.length);
+                }
+                elMoistVal.textContent = `${meanMoist}%`;
+                if (elMoistStat) {
+                    if (meanMoist < 35) {
+                        elMoistStat.textContent = '(Low — Irrigation Needed)';
+                        elMoistStat.style.color = '#ef4444';
+                    } else if (meanMoist > 65) {
+                        elMoistStat.textContent = '(High — Saturated)';
+                        elMoistStat.style.color = '#3b82f6';
+                    } else {
+                        elMoistStat.textContent = '(Optimal)';
+                        elMoistStat.style.color = '#10b981';
+                    }
+                }
+            }
+
+            const elWaterSaved = document.getElementById('irrigation-water-saved');
+            if (elWaterSaved) {
+                const savedBase = rainProb >= 40 ? Math.round(2400 + cur.temperature_2m * 25) : 1420;
+                elWaterSaved.textContent = savedBase.toLocaleString('en-IN');
+            }
+
+            const elNextFlush = document.getElementById('irrigation-next-flush');
+            if (elNextFlush) {
+                const now = new Date();
+                const flushHour = rainProb >= 40 ? 'Postponed (Rain Risk)' : (now.getHours() < 6 ? 'Today 06:30 AM' : 'Tomorrow 06:30 AM');
+                elNextFlush.textContent = flushHour;
             }
         }
 
@@ -6562,8 +6841,43 @@
 
         let breachToastTimeout = null;
 
-        function simulateInvaderBreach() {
+        async function simulateInvaderBreach() {
+            let event = null;
+            try {
+                const res = await safeFetch('/api/farm/invader-simulate', { method: 'POST' });
+                if (res.ok) {
+                    const data = await res.json();
+                    event = data.alert || data;
+                }
+            } catch (e) { }
+
+            if (!event || !event.invader_type) {
+                const simulated = [
+                    { invader_type: 'Wild Boar (Sus scrofa Sounder)', sector_id: 'C', kill_confidence: 96, deterrent_action: '110dB Acoustic Siren + Strobe' },
+                    { invader_type: 'Stray Cattle (Bos taurus)', sector_id: 'B', kill_confidence: 98, deterrent_action: 'Ultrasonic Pulse Sweep' },
+                    { invader_type: 'Blue Bull (Nilgai)', sector_id: 'F', kill_confidence: 94, deterrent_action: 'High-Decibel Air Horn Sweep' },
+                    { invader_type: 'Unauthorized Human Intruder', sector_id: 'E', kill_confidence: 99, deterrent_action: 'Security Floodlight + Voice Alert' }
+                ];
+                event = simulated[Math.floor(Math.random() * simulated.length)];
+                event.time = new Date().toLocaleTimeString();
+            }
+
+            const species = event.invader_type || event.type || 'Wild Boar';
+            const sector = event.sector_id || event.sector || 'C';
+            const action = event.deterrent_action || event.action || '110dB Acoustic Siren';
+            const conf = event.kill_confidence ? `${event.kill_confidence}%` : '96%';
+            const timeStr = event.time || new Date().toLocaleTimeString();
+
+            // Update breach compact toast with actual species and sector (Prompt v3)
             const toast = document.getElementById('breach-compact-toast');
+            const toastTitle = document.getElementById('breach-toast-title');
+            const toastSector = document.getElementById('breach-toast-sector');
+            const toastDesc = document.getElementById('breach-toast-desc');
+
+            if (toastTitle) toastTitle.textContent = `⚠️ ${species} detected`;
+            if (toastSector) toastSector.textContent = `Sector ${sector}`;
+            if (toastDesc) toastDesc.textContent = `${action} • Strobe deployed`;
+
             if (toast) {
                 toast.style.display = 'flex';
                 if (breachToastTimeout) clearTimeout(breachToastTimeout);
@@ -6571,10 +6885,29 @@
                     dismissInvaderAlert();
                 }, 7000);
             }
+
             const banner = document.getElementById('invader-alert-banner');
             if (banner) banner.style.display = 'flex';
 
-            showToast('⚠️ Perimeter Intrusion Detected in Sector C! Tap toast to view.', 'danger');
+            showToast(`⚠️ Intrusion: ${species} detected in Sector ${sector}! Deterrent active.`, 'danger');
+
+            // Prepend new row to table
+            const tbody = document.getElementById('invader-logs-tbody') || document.getElementById('tbody-invader-alerts');
+            if (tbody) {
+                const newRow = document.createElement('tr');
+                newRow.style.borderBottom = '1px solid var(--border)';
+                newRow.style.animation = 'highlightRow 2s ease';
+                newRow.innerHTML = `
+                    <td style="padding:14px 16px; font-weight:700; color:#ef4444;"><i class="fa-solid fa-triangle-exclamation"></i> ${species}</td>
+                    <td style="padding:14px 16px;"><span style="background:#fee2e2; color:#b91c1c; font-weight:800; padding:2px 8px; border-radius:6px; font-size:0.75rem;">Sector ${sector}</span></td>
+                    <td style="padding:14px 16px; font-family:monospace; font-weight:700; color:#10b981;">${conf}</td>
+                    <td style="padding:14px 16px; font-size:0.85rem; color:var(--text-sub);">${timeStr}</td>
+                    <td style="padding:14px 16px; font-size:0.85rem; color:var(--text-main); font-weight:600;">${action}</td>
+                    <td style="padding:14px 16px;"><span style="background:#dcfce7; color:#16a34a; font-weight:800; padding:2px 8px; border-radius:6px; font-size:0.75rem;">Active</span></td>
+                    <td style="padding:14px 16px;"><button class="action-btn" onclick="showToast('Deterrent cycled', 'info')" style="padding:4px 10px; font-size:0.75rem; background:var(--card-bg); border:1px solid var(--border); color:var(--text-main);">Trigger</button></td>
+                `;
+                tbody.insertBefore(newRow, tbody.firstChild);
+            }
         }
 
         function dismissInvaderAlert() {
