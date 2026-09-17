@@ -237,7 +237,7 @@ app.get('/manifest.json', (req, res) => res.sendFile(path.join(__dirname, '..', 
 function requireAuth(req, res, next) {
     if (req.session && req.session.userId) return next();
     if (req.method === 'GET' && req.path.startsWith('/api/farm/')) return next();
-    if (req.path === '/api/farm/organic-calculator' || req.path === '/api/farm/invader-simulate' || req.path === '/api/farm/invader-alerts' || req.path === '/api/farm/invaders') return next();
+    if (req.path === '/api/farm/organic-calculator' || req.path === '/api/farm/invader-simulate' || req.path === '/api/farm/invader-alerts' || req.path === '/api/farm/invaders' || req.path === '/api/farm/invader-deter' || req.path === '/api/farm/invader-detect') return next();
     if (req.path.startsWith('/api/')) return res.status(401).json({ error: 'Unauthorized. Please login.' });
     return res.redirect('/login.html');
 }
@@ -540,11 +540,53 @@ app.get('/api/farm/invader-alerts', requireAuth, (req, res) => {
 app.post('/api/farm/invader-deter', requireAuth, (req, res) => {
     try {
         const { id, action } = req.body;
-        database.triggerInvaderDeterrent(id);
-        database.addLog(req.session.userId, 'Invader Deterred', 'system', `Deterrent triggered: ${action || '110dB Siren & Strobe'}`, 'farmer');
+        if (id && id !== 'all') {
+            database.triggerInvaderDeterrent(id);
+        }
+        try {
+            database.addLog(req.session?.userId || 1, 'Invader Deterred', 'system', `Deterrent triggered: ${action || '110dB Siren & Strobe'}`, 'farmer');
+        } catch (lErr) { }
         io.emit('invaderResolved', { id, action });
         res.json({ success: true });
-    } catch (err) { res.status(500).json({ error: 'Failed to trigger deterrent' }); }
+    } catch (err) { res.status(500).json({ error: 'Failed to trigger deterrent: ' + err.message }); }
+});
+
+app.post('/api/farm/invader-detect', requireAuth, (req, res) => {
+    try {
+        const {
+            invader_type = 'Unauthorized Human Intruder',
+            confidence = 88,
+            sector_id = 'C',
+            action = '110dB Acoustic Siren + Strobe'
+        } = req.body;
+
+        const result = database.addInvaderAlert({
+            invader_type,
+            sector_id,
+            severity: invader_type.includes('Human') ? 'critical' : 'high',
+            deterrent_action: action
+        });
+
+        try {
+            database.addLog(req.session?.userId || 1, 'Perimeter Intrusion Detected', 'security', `AI Vision detected ${invader_type} in Sector ${sector_id} (${confidence}% conf). Action: ${action}`, 'farmer');
+        } catch (lErr) { }
+
+        io.emit('invaderAlert', {
+            id: result.id,
+            invader_type,
+            sector_id,
+            severity: invader_type.includes('Human') ? 'critical' : 'high',
+            deterrent_action: action,
+            confidence: confidence + '%',
+            time: new Date().toLocaleTimeString(),
+            is_active: 1
+        });
+
+        res.json({ success: true, id: result.id });
+    } catch (err) {
+        console.error('Invader detect error:', err);
+        res.status(500).json({ error: 'Failed to record invader detection: ' + err.message });
+    }
 });
 
 app.post('/api/farm/invader-simulate', requireAuth, (req, res) => {
