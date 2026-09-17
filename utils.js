@@ -169,7 +169,7 @@ window.alert = function(msg) { showToast(msg, 'warning'); };
                     #pwa-install-banner {
                         left: 12px !important;
                         right: 12px !important;
-                        bottom: 12px !important;
+                        bottom: 16px !important;
                         max-width: calc(100% - 24px) !important;
                         padding: 10px 14px !important;
                     }
@@ -218,6 +218,17 @@ window.alert = function(msg) { showToast(msg, 'warning'); };
         `;
 
         document.body.appendChild(banner);
+
+        // Auto-dismiss after 15 seconds
+        setTimeout(() => {
+            const b = document.getElementById('pwa-install-banner');
+            if (b) {
+                b.style.transition = 'opacity 0.6s ease, transform 0.6s cubic-bezier(0.16, 1, 0.3, 1)';
+                b.style.opacity = '0';
+                b.style.transform = 'translateY(24px)';
+                setTimeout(() => b.remove(), 650);
+            }
+        }, 15000);
     }
 
     // Auto-show install prompt after 3.5 seconds if supported and not dismissed

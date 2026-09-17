@@ -36,3 +36,7 @@ lerna-debug.log*
 ml/**/*.pkl
 ml/**/*.joblib
 ml/**/*.bin
+
+# Scratch and temporary scripts
+scratch/
+

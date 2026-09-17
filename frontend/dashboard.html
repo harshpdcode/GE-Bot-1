@@ -1468,12 +1468,21 @@
             justify-content: center;
             font-size: 1.7rem;
             box-shadow: 0 10px 30px rgba(99, 102, 241, 0.45);
-            cursor: pointer;
+            cursor: grab;
             z-index: 10001 !important;
-            transition: transform 0.25s cubic-bezier(0.4, 0, 0.2, 1), box-shadow 0.25s ease;
+            transition: transform 0.15s ease, box-shadow 0.2s ease;
             border: 3.5px solid rgba(255, 255, 255, 0.95);
             user-select: none;
+            -webkit-user-select: none;
+            touch-action: none;
             -webkit-tap-highlight-color: transparent;
+        }
+
+        .ai-fab.is-dragging {
+            cursor: grabbing !important;
+            transform: scale(1.12) !important;
+            box-shadow: 0 16px 36px rgba(139, 92, 246, 0.6) !important;
+            transition: none !important;
         }
 
         body.dark-mode .ai-fab {
@@ -1831,8 +1840,8 @@
             }
 
             .ai-fab {
-                bottom: 84px !important;
-                right: 16px !important;
+                bottom: 24px;
+                right: 16px;
                 width: 52px !important;
                 height: 52px !important;
                 font-size: 1.35rem !important;
@@ -2402,152 +2411,10 @@
             }
         }
     
-        /* Modern Glassmorphic Floating Bottom Dock & Box-to-Box Viewport Containment */
-        #mobile-bottom-nav,
-        .mobile-bottom-bar {
-            display: none;
-        }
+        /* Clear bottom padding so lowest cards and controls are never blocked */
+            .dashboard-scroll, .panel-section { padding-bottom: 40px !important; }
 
-        /* Box-to-box Layout Containment for all devices */
-        html, body {
-            max-width: 100vw;
-            overflow-x: hidden !important;
-            margin: 0;
-            padding: 0;
-        }
-
-        #main-content {
-            max-width: 100vw;
-            overflow-x: hidden !important;
-            box-sizing: border-box;
-        }
-
-        .panel-section {
-            box-sizing: border-box !important;
-            width: 100% !important;
-            max-width: 100% !important;
-        }
-
-        .collapsible-content {
-            transition: all 0.3s ease;
-        }
-
-        @media (max-width: 768px) {
-            /* Floating Glassmorphic Mobile Navigation Dock */
-            #mobile-bottom-nav {
-                display: flex !important;
-                position: fixed !important;
-                bottom: 12px !important;
-                left: 50% !important;
-                transform: translateX(-50%) !important;
-                width: calc(100% - 24px) !important;
-                max-width: 440px !important;
-                height: 60px !important;
-                background: rgba(255, 255, 255, 0.94) !important;
-                backdrop-filter: blur(24px) !important;
-                -webkit-backdrop-filter: blur(24px) !important;
-                border: 1.5px solid var(--border) !important;
-                border-radius: 30px !important;
-                box-shadow: 0 14px 35px rgba(0, 0, 0, 0.16), 0 2px 8px rgba(0, 0, 0, 0.05) !important;
-                z-index: 9999 !important;
-                padding: 4px 6px !important;
-                box-sizing: border-box !important;
-                justify-content: space-around !important;
-                align-items: center !important;
-                overflow: hidden !important;
-                touch-action: manipulation !important;
-                -webkit-tap-highlight-color: transparent !important;
-            }
-
-            body.dark-mode #mobile-bottom-nav {
-                background: rgba(15, 23, 42, 0.92) !important;
-                border-color: rgba(255, 255, 255, 0.12) !important;
-                box-shadow: 0 14px 35px rgba(0, 0, 0, 0.45), 0 2px 8px rgba(0, 0, 0, 0.25) !important;
-            }
-
-            .dock-item {
-                flex: 1 1 0 !important;
-                min-width: 0 !important;
-                height: 50px !important;
-                display: flex !important;
-                flex-direction: column !important;
-                align-items: center !important;
-                justify-content: center !important;
-                gap: 2px !important;
-                padding: 4px 2px !important;
-                background: transparent !important;
-                border: none !important;
-                cursor: pointer !important;
-                border-radius: 20px !important;
-                text-decoration: none !important;
-                transition: all 0.22s cubic-bezier(0.4, 0, 0.2, 1) !important;
-                user-select: none !important;
-                -webkit-tap-highlight-color: transparent !important;
-            }
-
-            .dock-item:active {
-                transform: scale(0.92) !important;
-            }
-
-            .dock-icon-wrapper {
-                display: flex !important;
-                align-items: center !important;
-                justify-content: center !important;
-                width: 34px !important;
-                height: 26px !important;
-                border-radius: 12px !important;
-                transition: all 0.22s ease !important;
-            }
-
-            .dock-item i {
-                font-size: 1.15rem !important;
-                color: var(--text-sub) !important;
-                transition: transform 0.22s ease, color 0.22s ease !important;
-            }
-
-            .dock-label {
-                font-size: 0.64rem !important;
-                font-weight: 700 !important;
-                color: var(--text-sub) !important;
-                white-space: nowrap !important;
-                overflow: hidden !important;
-                text-overflow: ellipsis !important;
-                max-width: 100% !important;
-                line-height: 1 !important;
-                transition: color 0.22s ease, font-weight 0.22s ease !important;
-            }
-
-            .dock-item.active .dock-icon-wrapper {
-                background: rgba(34, 197, 94, 0.16) !important;
-            }
-
-            .dock-item.active i {
-                color: #16a34a !important;
-                transform: translateY(-1px) scale(1.1) !important;
-            }
-
-            .dock-item.active .dock-label {
-                color: #16a34a !important;
-                font-weight: 800 !important;
-            }
-
-            body.dark-mode .dock-item.active .dock-icon-wrapper {
-                background: rgba(34, 197, 94, 0.25) !important;
-            }
-
-            body.dark-mode .dock-item.active i,
-            body.dark-mode .dock-item.active .dock-label {
-                color: #4ade80 !important;
-            }
-
-            /* Clear bottom padding so all lowest cards and controls are 100% visible */
-            .dashboard-scroll, .panel-section {
-                padding-bottom: 125px !important;
-            }
-
-            body {
-                padding-bottom: 125px !important;
-            }
+            body { padding-bottom: 40px !important; }
 
             #sidebar nav {
                 padding-bottom: 90px !important;
@@ -4693,39 +4560,7 @@
                 <!-- Dynamically populated from backend -->
             </div>
         </div>
-        <!-- MODERN FLOATING MOBILE BOTTOM NAVIGATION DOCK -->
-        <nav id="mobile-bottom-nav">
-            <button type="button" class="dock-item active" data-panel="dashboard" onclick="switchNavPanel('dashboard', this)">
-                <div class="dock-icon-wrapper">
-                    <i class="fa-solid fa-chart-pie"></i>
-                </div>
-                <span class="dock-label">Overview</span>
-            </button>
-            <button type="button" class="dock-item" data-panel="soil_zoning" onclick="switchNavPanel('soil_zoning', this)">
-                <div class="dock-icon-wrapper">
-                    <i class="fa-solid fa-seedling"></i>
-                </div>
-                <span class="dock-label">Soil NPK</span>
-            </button>
-            <button type="button" class="dock-item" data-panel="laser_defense" onclick="switchNavPanel('laser_defense', this)">
-                <div class="dock-icon-wrapper">
-                    <i class="fa-solid fa-crosshairs"></i>
-                </div>
-                <span class="dock-label">Laser AI</span>
-            </button>
-            <button type="button" class="dock-item" data-panel="invader_security" onclick="switchNavPanel('invader_security', this)">
-                <div class="dock-icon-wrapper">
-                    <i class="fa-solid fa-shield-halved"></i>
-                </div>
-                <span class="dock-label">Invaders</span>
-            </button>
-            <button type="button" class="dock-item" data-panel="more" onclick="toggleMobileMoreSheet(true)">
-                <div class="dock-icon-wrapper">
-                    <i class="fa-solid fa-bars-staggered"></i>
-                </div>
-                <span class="dock-label">More</span>
-            </button>
-        </nav>
+        <!-- MODERN SLIDEABLE MOBILE BOTTOM NAVIGATION DOCK (ALL SIDE-MENU OPTIONS) -->
 
         <!-- MOBILE MORE QUICK ACTIONS BOTTOM SHEET -->
         <div id="mobile-more-backdrop" onclick="toggleMobileMoreSheet(false)"
@@ -5385,10 +5220,7 @@
             switchNavPanel(panelId);
         }
 
-        function updateMobileNavActive(btn) {
-            document.querySelectorAll('#mobile-bottom-nav .dock-item, .mb-nav-item').forEach(b => b.classList.remove('active'));
-            if (btn) btn.classList.add('active');
-        }
+        function updateMobileNavActive(btn) {}
 
         function updateNetworkStatusDisplay(connected, targetLabel) {
             const esp32El = document.getElementById('net-esp32-status');
@@ -5726,17 +5558,9 @@
                 }
             });
 
-            // Update mobile bottom dock items visually
             if (typeof toggleMobileMoreSheet === 'function') {
                 toggleMobileMoreSheet(false);
             }
-            document.querySelectorAll('#mobile-bottom-nav .dock-item, #mobile-bottom-nav .bottom-nav-item, .mb-nav-item').forEach(b => {
-                if (b.getAttribute('data-panel') === panelId) {
-                    b.classList.add('active');
-                } else {
-                    b.classList.remove('active');
-                }
-            });
 
             // Sync URL hash so direct links and refresh stay on active panel
             if (window.location.hash !== '#' + panelId) {
@@ -8466,6 +8290,141 @@
             // Sensor cards: battery, mode etc. are simulated when ESP32 not connected
             // Badges removed on robotConnectionStatus event (see Socket.io listener below)
         }
+    
+        // =======================================================
+        // DRAGGABLE AI CHATBOT FAB (MOVABLE TO ANY SIDE / BOUNDED VIEWPORT)
+        // =======================================================
+        (function initDraggableAiFab() {
+            const fab = document.querySelector('.ai-fab');
+            if (!fab) return;
+
+            let isDragging = false;
+            let startX = 0, startY = 0;
+            let initialLeft = 0, initialTop = 0;
+            let hasMoved = false;
+
+            function clampPosition(left, top) {
+                const fabWidth = fab.offsetWidth || 52;
+                const fabHeight = fab.offsetHeight || 52;
+                const minW = 8;
+                const maxW = Math.max(minW, window.innerWidth - fabWidth - 8);
+                const minH = 65; // Below header
+                const maxH = Math.max(minH, window.innerHeight - fabHeight - 12); // Clean viewport bottom
+
+                return {
+                    left: Math.min(Math.max(left, minW), maxW),
+                    top: Math.min(Math.max(top, minH), maxH)
+                };
+            }
+
+            function onPointerDown(clientX, clientY) {
+                isDragging = true;
+                hasMoved = false;
+                startX = clientX;
+                startY = clientY;
+
+                const rect = fab.getBoundingClientRect();
+                initialLeft = rect.left;
+                initialTop = rect.top;
+
+                fab.classList.add('is-dragging');
+                fab.style.setProperty('transition', 'none', 'important');
+                if (typeof navigator.vibrate === 'function') {
+                    try { navigator.vibrate(10); } catch(e) {}
+                }
+            }
+
+            function onPointerMove(clientX, clientY, e) {
+                if (!isDragging) return;
+
+                const dx = clientX - startX;
+                const dy = clientY - startY;
+
+                if (Math.abs(dx) > 5 || Math.abs(dy) > 5) {
+                    hasMoved = true;
+                    if (e && e.cancelable) e.preventDefault();
+                }
+
+                if (hasMoved) {
+                    const pos = clampPosition(initialLeft + dx, initialTop + dy);
+                    fab.style.setProperty('left', pos.left + 'px', 'important');
+                    fab.style.setProperty('top', pos.top + 'px', 'important');
+                    fab.style.setProperty('right', 'auto', 'important');
+                    fab.style.setProperty('bottom', 'auto', 'important');
+                }
+            }
+
+            function onPointerUp() {
+                if (!isDragging) return;
+                isDragging = false;
+                fab.classList.remove('is-dragging');
+                fab.style.removeProperty('transition');
+
+                if (hasMoved) {
+                    const rect = fab.getBoundingClientRect();
+                    const pos = clampPosition(rect.left, rect.top);
+                    fab.style.setProperty('left', pos.left + 'px', 'important');
+                    fab.style.setProperty('top', pos.top + 'px', 'important');
+                    fab.style.setProperty('right', 'auto', 'important');
+                    fab.style.setProperty('bottom', 'auto', 'important');
+                }
+            }
+
+            // Touch events for mobile
+            fab.addEventListener('touchstart', (e) => {
+                if (e.touches.length === 1) {
+                    onPointerDown(e.touches[0].clientX, e.touches[0].clientY);
+                }
+            }, { passive: true });
+
+            window.addEventListener('touchmove', (e) => {
+                if (isDragging && e.touches.length === 1) {
+                    onPointerMove(e.touches[0].clientX, e.touches[0].clientY, e);
+                }
+            }, { passive: false });
+
+            window.addEventListener('touchend', () => {
+                onPointerUp();
+            }, { passive: true });
+
+            // Mouse events for desktop testing
+            fab.addEventListener('mousedown', (e) => {
+                onPointerDown(e.clientX, e.clientY);
+            });
+
+            window.addEventListener('mousemove', (e) => {
+                if (isDragging) {
+                    onPointerMove(e.clientX, e.clientY, e);
+                }
+            });
+
+            window.addEventListener('mouseup', () => {
+                onPointerUp();
+            });
+
+            // Prevent click modal popup if user dragged
+            fab.addEventListener('click', (e) => {
+                if (hasMoved) {
+                    e.stopImmediatePropagation();
+                    e.preventDefault();
+                    hasMoved = false;
+                }
+            }, true);
+
+            // Re-clamp on window resize
+            window.addEventListener('resize', () => {
+                if (fab.style.left) {
+                    const rect = fab.getBoundingClientRect();
+                    const pos = clampPosition(rect.left, rect.top);
+                    fab.style.setProperty('left', pos.left + 'px', 'important');
+                    fab.style.setProperty('top', pos.top + 'px', 'important');
+                }
+            });
+        })();
+
+        
+        // =======================================================
+
     </script>
 </body>
 
