@@ -30,6 +30,8 @@
     <!-- TensorFlow.js & COCO-SSD Pretrained Object Detection for Real-time Invader Detection -->
     <script src="https://cdn.jsdelivr.net/npm/@tensorflow/tfjs@4.17.0/dist/tf.min.js"></script>
     <script src="https://cdn.jsdelivr.net/npm/@tensorflow-models/coco-ssd@2.2.3/dist/coco-ssd.min.js"></script>
+    <!-- Chart.js for Historical Soil & Field Analytics -->
+    <script src="https://cdn.jsdelivr.net/npm/chart.js@4.4.0/dist/chart.umd.min.js"></script>
     <style>
         :root {
             --bg-main: #f8fafc;
@@ -2496,6 +2498,10 @@
                     class="fa-solid fa-shield-halved" style="color:#f59e0b;"></i> Perimeter Security</button>
             <button class="nav-btn notranslate" onclick="switchNavPanel('farm_reports', this)"><i
                     class="fa-solid fa-chart-line" style="color:#6366f1;"></i> Farm Patrol Report</button>
+            <button class="nav-btn notranslate" onclick="switchNavPanel('farmer_advisory', this)" style="position:relative;"><i
+                    class="fa-solid fa-bell" style="color:#f59e0b;"></i> Farmer Advisory <span id="advisory-badge" style="display:none; margin-left:auto; background:#ef4444; color:white; font-size:0.7rem; font-weight:800; border-radius:10px; padding:2px 7px;"></span></button>
+            <button class="nav-btn notranslate" onclick="switchNavPanel('farm_analytics', this)"><i
+                    class="fa-solid fa-chart-simple" style="color:#06b6d4;"></i> Farm Analytics</button>
             <!-- Hidden by user request (preserved for future use) -->
             <button class="nav-btn notranslate" onclick="switchNavPanel('control_modules', this)" data-i18n="control"
                 style="display:none !important;"><i class="fa-solid fa-sliders"></i> Control Modules</button>
@@ -3381,13 +3387,11 @@
                     <p style="color:var(--text-sub); font-size:0.9rem;">High-precision optical targeting with
                         zero-chemical weed and pest ablation.</p>
                 </div>
-                <div style="display:flex; gap:10px; align-items:center;">
-                    <div
-                        style="display:flex; align-items:center; gap:8px; background:rgba(34, 197, 94, 0.1); border:1px solid #86efac; padding:8px 16px; border-radius:12px;">
-                        <span class="pulse-dot" style="background:#22c55e;"></span>
-                        <span style="font-weight:700; font-size:0.85rem; color:#16a34a;"><i
-                                class="fa-solid fa-shield-halved"></i> 100% Zero-Chemical Weed & Pest Eradication</span>
-                    </div>
+                <div style="display:flex; gap:10px; align-items:center; flex-wrap:wrap;">
+                    <button class="action-btn" id="btn-live-pest-detect" onclick="if(window.PestDetector) PestDetector.toggle()"
+                        style="background:#16a34a; color:white; border:none; font-weight:700; padding:8px 16px; border-radius:12px;">
+                        <i class="fa-solid fa-play"></i> Start Live Pest Vision
+                    </button>
                     <button class="action-btn" onclick="loadLaserHistory()"
                         style="background:var(--card-bg); border:1px solid var(--border); color:var(--text-main);">
                         <i class="fa-solid fa-rotate-right"></i> Refresh Logs
@@ -3464,6 +3468,24 @@
                             style="font-size:1.1rem; color:var(--text-sub);">kg Toxins</span></div>
                     <div style="font-size:0.85rem; color:#10b981; font-weight:600; margin-top:4px;">100% Soil Organic
                         Ecology & Earthworms Saved</div>
+                </div>
+            </div>
+
+            <!-- Live Pest Detection Sentinel Banner (Section 4 Edge AI) -->
+            <div style="background:var(--card-bg); border:1.5px solid var(--border); border-radius:14px; padding:14px 20px; margin-bottom:20px; display:flex; justify-content:space-between; align-items:center; flex-wrap:wrap; gap:12px;">
+                <div style="display:flex; align-items:center; gap:12px;">
+                    <div style="width:36px; height:36px; border-radius:10px; background:#eff6ff; color:#0284c7; display:flex; align-items:center; justify-content:center; font-size:1.1rem; flex-shrink:0;">
+                        <i class="fa-solid fa-video"></i>
+                    </div>
+                    <div>
+                        <div style="font-weight:800; font-size:0.9rem; color:var(--text-main);">Edge AI Pest Camera Sentinel (COCO-SSD)</div>
+                        <div id="pest-detection-status" style="font-size:0.8rem; color:var(--text-sub); margin-top:2px;">
+                            Camera detection standby — click 'Start Live Pest Vision' to track pests in real time.
+                        </div>
+                    </div>
+                </div>
+                <div style="font-size:0.78rem; color:var(--text-sub); background:rgba(0,0,0,0.03); padding:4px 10px; border-radius:8px;">
+                    Surge Alert: <strong>&ge;3 detections / 15 min</strong> triggers early advisory
                 </div>
             </div>
 
@@ -3878,43 +3900,54 @@
                 <div>
                     <h2 class="sec-title" style="margin-bottom:4px;"><i class="fa-solid fa-seedling"
                             style="color:#16a34a; margin-right:8px;"></i> Crop Health Diagnostics & Next Crop
-                        Rotation
-                        AI</h2>
-                    <p style="color:var(--text-sub); font-size:0.9rem;">Multispectral NDVI indices combined with
-                        intelligent rotation agronomy for soil regeneration.</p>
+                        Rotation AI</h2>
+                    <p style="color:var(--text-sub); font-size:0.9rem;">RGB canopy vigor index proxy & Edge AI leaf disease classifier combined with rotation agronomy.</p>
                 </div>
-                <button class="action-btn" onclick="loadCropRecommendations()"
-                    style="background:#16a34a; color:white; border:none;">
-                    <i class="fa-solid fa-arrows-rotate"></i> Re-Calculate Optimal Rotation
-                </button>
+                <div style="display:flex; gap:10px; flex-wrap:wrap;">
+                    <button class="action-btn" id="btn-scan-canopy" onclick="if(window.CropVigorAnalyzer) CropVigorAnalyzer.scan()"
+                        style="background:#16a34a; color:white; border:none;">
+                        <i class="fa-solid fa-microscope"></i> Scan Canopy Vigor
+                    </button>
+                    <button class="action-btn" id="btn-scan-disease" onclick="if(window.PlantDiseaseDetector) PlantDiseaseDetector.detect()"
+                        style="background:#0284c7; color:white; border:none;">
+                        <i class="fa-solid fa-virus"></i> Scan Leaf Disease
+                    </button>
+                    <button class="action-btn" onclick="loadCropRecommendations()"
+                        style="background:var(--card-bg); color:var(--text-main); border:1px solid var(--border);">
+                        <i class="fa-solid fa-arrows-rotate"></i> Re-Calculate
+                    </button>
+                </div>
             </div>
 
             <!-- Health Diagnostics Cards (2x2 Grid) -->
             <div class="cards-2x2-grid">
                 <div class="agro-stat-card stat-green">
                     <div style="font-size:0.8rem; font-weight:700; color:var(--text-sub); text-transform:uppercase;">
-                        Multispectral NDVI</div>
-                    <div style="font-size:2rem; font-weight:800; color:#16a34a; margin:8px 0;">0.78</div>
-                    <div style="font-size:0.85rem; color:#10b981; font-weight:600;"><i
+                        RGB Canopy Vigor Index <span style="font-size:0.68rem; font-weight:400; text-transform:none; color:var(--text-sub);">(RGB Proxy)</span></div>
+                    <div style="font-size:2rem; font-weight:800; color:#16a34a; margin:8px 0;" id="vigor-index-val">0.78</div>
+                    <div style="font-size:0.85rem; color:#10b981; font-weight:600;" id="vigor-index-label"><i
                             class="fa-solid fa-circle-check"></i> Dense & Vigorous Canopy</div>
+                    <div style="font-size:0.72rem; color:var(--text-sub); margin-top:4px;" id="vigor-index-sub">Live RGB camera proxy (not multispectral)</div>
                 </div>
                 <div class="agro-stat-card stat-purple">
                     <div style="font-size:0.8rem; font-weight:700; color:var(--text-sub); text-transform:uppercase;">
-                        Chlorophyll Index</div>
-                    <div style="font-size:2rem; font-weight:800; color:#8b5cf6; margin:8px 0;">46.2 SPAD</div>
-                    <div style="font-size:0.85rem; color:var(--text-sub);">Healthy Nitrogen Assimilation</div>
+                        Chlorophyll Estimate</div>
+                    <div style="font-size:2rem; font-weight:800; color:#8b5cf6; margin:8px 0;" id="chlorophyll-spad-val">46.2 SPAD</div>
+                    <div style="font-size:0.85rem; color:var(--text-sub);">Derived from Canopy Greenness Ratio</div>
                 </div>
                 <div class="agro-stat-card stat-amber">
                     <div style="font-size:0.8rem; font-weight:700; color:var(--text-sub); text-transform:uppercase;">
                         Crop Water Stress (CWSI)</div>
-                    <div style="font-size:2rem; font-weight:800; color:#f59e0b; margin:8px 0;">0.24</div>
-                    <div style="font-size:0.85rem; color:#10b981; font-weight:600;">Well-Hydrated (Low Stress)</div>
+                    <div style="font-size:2rem; font-weight:800; color:#f59e0b; margin:8px 0;" id="cwsi-val">0.24</div>
+                    <div style="font-size:0.85rem; color:#10b981; font-weight:600;">Optimal Transpiration Dynamic</div>
                 </div>
                 <div class="agro-stat-card stat-green">
                     <div style="font-size:0.8rem; font-weight:700; color:var(--text-sub); text-transform:uppercase;">
-                        Root Biomass Health</div>
-                    <div style="font-size:2rem; font-weight:800; color:#10b981; margin:8px 0;">94%</div>
-                    <div style="font-size:0.85rem; color:var(--text-sub);">Zero Root-Knot Nematodes</div>
+                        Edge AI Pathogen Sentinel</div>
+                    <div id="disease-detection-result" style="margin-top:6px;">
+                        <div style="font-size:1.05rem; font-weight:800; color:#16a34a;"><i class="fa-solid fa-shield-halved"></i> Healthy Foliage</div>
+                        <div style="font-size:0.78rem; color:var(--text-sub); margin-top:4px;">No foliar lesions detected in frame</div>
+                    </div>
                 </div>
             </div>
 
@@ -4068,6 +4101,22 @@
                     <div style="font-weight:800; font-size:1.2rem; color:var(--text-main);">27° / 17°</div>
                     <div style="font-size:0.8rem; color:#10b981; font-weight:700; margin-top:4px;">Clear Sky (5% Rain)
                     </div>
+                </div>
+            </div>
+
+            <!-- Environmental Risk Monitoring Alerts (Section 2) -->
+            <div style="display:flex; justify-content:space-between; align-items:center; margin-bottom:12px;">
+                <h3 class="sec-title" style="font-size:1.05rem; margin-bottom:0;"><i class="fa-solid fa-triangle-exclamation"
+                        style="color:#ef4444;"></i> Environmental Risk Sentinel & Agro-Meteorological Alerts</h3>
+                <button class="action-btn" onclick="if(window.EnvRiskMonitor) EnvRiskMonitor.poll()"
+                    style="padding:5px 12px; font-size:0.8rem; background:var(--card-bg); border:1px solid var(--border); color:var(--text-sub);">
+                    <i class="fa-solid fa-arrows-rotate"></i> Check Risks
+                </button>
+            </div>
+            <div id="env-risk-cards" style="margin-bottom:24px;">
+                <div style="background:#f0fdf4; border-left:4px solid #22c55e; border-radius:12px; padding:14px 18px; display:flex; align-items:center; gap:12px;">
+                    <span style="font-size:1.4rem;">🛡️</span>
+                    <div><div style="font-weight:700; color:#16a34a;">No Environmental Risks Detected</div><div style="font-size:0.8rem; color:var(--text-sub); margin-top:2px;">All weather conditions (heat, drought, flood, fungal spore index) are within safe parameters.</div></div>
                 </div>
             </div>
 
@@ -4558,6 +4607,120 @@
                     class="fa-solid fa-calendar-check"></i> Critical Operational Dates & Next Cycles</h3>
             <div class="schedule-grid" id="rep-schedules-grid">
                 <!-- Dynamically populated from backend -->
+            </div>
+        </div>
+
+        <!-- 7. FARMER ADVISORY PANEL (Consolidated Guidance Feed) -->
+        <div class="dashboard-scroll panel-section" id="panel-farmer_advisory" style="display:none;">
+            <div style="display:flex; justify-content:space-between; align-items:center; flex-wrap:wrap; gap:16px; margin-bottom:24px;">
+                <div>
+                    <h2 class="sec-title" style="margin-bottom:4px;"><i class="fa-solid fa-bell"
+                            style="color:#f59e0b; margin-right:8px;"></i> Farmer Advisory Sentinel</h2>
+                    <p style="color:var(--text-sub); font-size:0.9rem;">Consolidated, plain-language actionable recommendations from real-time environmental, disease, irrigation, and pest intelligence.</p>
+                </div>
+                <div style="display:flex; gap:10px;">
+                    <button class="action-btn" onclick="if(window.FarmAdvisoryFeed) FarmAdvisoryFeed.poll()"
+                        style="background:var(--primary); color:white; border:none; padding:10px 18px; border-radius:10px; font-weight:700;">
+                        <i class="fa-solid fa-arrows-rotate"></i> Refresh Advisory Feed
+                    </button>
+                </div>
+            </div>
+
+            <!-- Quick Action Summary Banner -->
+            <div style="background:rgba(245, 158, 11, 0.08); border:1.5px solid #f59e0b; border-radius:16px; padding:18px 24px; margin-bottom:24px; display:flex; align-items:center; justify-content:space-between; gap:16px; flex-wrap:wrap;">
+                <div style="display:flex; align-items:center; gap:16px;">
+                    <div style="width:48px; height:48px; border-radius:12px; background:#f59e0b; color:white; display:flex; align-items:center; justify-content:center; font-size:1.5rem; flex-shrink:0;">
+                        <i class="fa-solid fa-lightbulb"></i>
+                    </div>
+                    <div>
+                        <div style="font-weight:800; font-size:1.05rem; color:var(--text-main); margin-bottom:2px;">
+                            Autonomous Decision-Support System
+                        </div>
+                        <div style="font-size:0.85rem; color:var(--text-sub);">
+                            Plain-language guidance prioritized by severity (Critical 🚨, Warning ⚠️, Info ℹ️). Advisories update automatically as field sensors detect shifts.
+                        </div>
+                    </div>
+                </div>
+            </div>
+
+            <!-- Advisory Cards Feed Container -->
+            <div id="advisory-feed-list" style="display:flex; flex-direction:column; gap:12px;">
+                <!-- Populated dynamically by FarmAdvisoryFeed.poll() -->
+                <div style="text-align:center; padding:40px 20px; color:var(--text-sub);">
+                    <div style="font-size:2rem; margin-bottom:8px;"><i class="fa-solid fa-circle-notch fa-spin"></i></div>
+                    <div>Loading active farm advisories...</div>
+                </div>
+            </div>
+        </div>
+
+        <!-- 8. FARM ANALYTICS DASHBOARD (Historical Trends, Yield Risk, Field-level Performance) -->
+        <div class="dashboard-scroll panel-section" id="panel-farm_analytics" style="display:none;">
+            <div style="display:flex; justify-content:space-between; align-items:center; flex-wrap:wrap; gap:16px; margin-bottom:24px;">
+                <div>
+                    <h2 class="sec-title" style="margin-bottom:4px;"><i class="fa-solid fa-chart-simple"
+                            style="color:#06b6d4; margin-right:8px;"></i> Farm Analytics & Historical Trends</h2>
+                    <p style="color:var(--text-sub); font-size:0.9rem;">Persisted field sensor history, multi-factor crop yield risk assessments, and sector-by-sector performance comparison.</p>
+                </div>
+                <div style="display:flex; gap:10px; align-items:center;">
+                    <select id="analytics-sector-select" onchange="if(window.FarmAnalyticsCharts) FarmAnalyticsCharts.renderSoilTrendChart(this.value)"
+                        style="padding:10px 14px; border-radius:10px; border:1.5px solid var(--border); background:var(--card-bg); color:var(--text-main); font-weight:700; font-size:0.9rem;">
+                        <option value="">All Sectors (Mean)</option>
+                        <option value="A">Sector A — North Orchard</option>
+                        <option value="B">Sector B — East Grains</option>
+                        <option value="C">Sector C — Central Wheat</option>
+                        <option value="D">Sector D — South Pulses</option>
+                        <option value="E">Sector E — West Mustard</option>
+                        <option value="F">Sector F — Ridge Cover</option>
+                    </select>
+                    <button class="action-btn" onclick="if(window.FarmAnalyticsCharts){ const s=document.getElementById('analytics-sector-select').value; FarmAnalyticsCharts.renderSoilTrendChart(s); FarmAnalyticsCharts.renderYieldRiskCards(); FarmAnalyticsCharts.renderSectorComparison(); }"
+                        style="background:#06b6d4; color:white; border:none; padding:10px 16px; border-radius:10px; font-weight:700;">
+                        <i class="fa-solid fa-rotate"></i> Refresh Analytics
+                    </button>
+                </div>
+            </div>
+
+            <!-- Historical Moisture & Ambient Temperature Trend (Chart.js) -->
+            <div class="ctrl-card" style="margin-bottom:24px; padding:20px;">
+                <div style="display:flex; justify-content:space-between; align-items:center; margin-bottom:16px; flex-wrap:wrap; gap:10px;">
+                    <div>
+                        <h3 class="sec-title" style="font-size:1.05rem; margin-bottom:2px;"><i class="fa-solid fa-chart-line" style="color:#0ea5e9;"></i> 14-Day Soil Moisture & Temperature Trajectory</h3>
+                        <p style="font-size:0.8rem; color:var(--text-sub); margin:0;">Real sensor history queried from persisted SQLite database logs.</p>
+                    </div>
+                    <div id="analytics-npk-display" style="display:flex; gap:8px; flex-wrap:wrap;"></div>
+                </div>
+                <div id="soil-trend-loading" style="display:none; text-align:center; padding:20px; color:var(--text-sub); font-size:0.9rem;">
+                    <i class="fa-solid fa-circle-notch fa-spin"></i> Loading sensor history...
+                </div>
+                <div style="position:relative; height:280px; width:100%;">
+                    <canvas id="soil-trend-chart"></canvas>
+                </div>
+            </div>
+
+            <!-- 2-Column Analytics Layout: Yield Risk & Sector Comparison -->
+            <div style="display:grid; grid-template-columns: repeat(auto-fit, minmax(min(100%, 380px), 1fr)); gap:20px;">
+                <!-- Yield Risk Assessment -->
+                <div class="ctrl-card" style="margin-bottom:0; padding:20px;">
+                    <div style="display:flex; justify-content:space-between; align-items:center; margin-bottom:14px;">
+                        <h3 class="sec-title" style="font-size:1.05rem; margin-bottom:0;"><i class="fa-solid fa-scale-balanced" style="color:#f59e0b;"></i> Crop Yield Risk Forecasting</h3>
+                        <span style="font-size:0.75rem; color:var(--text-sub); font-weight:700;">Multi-Factor Algorithm</span>
+                    </div>
+                    <p style="font-size:0.82rem; color:var(--text-sub); margin-bottom:14px;">Dynamic yield vulnerability computed from NPK deficits, soil pH, moisture reserves, and forecast weather stress.</p>
+                    <div id="yield-risk-container">
+                        <!-- Injected by FarmAnalyticsCharts.renderYieldRiskCards() -->
+                    </div>
+                </div>
+
+                <!-- Field Performance Sector Comparison -->
+                <div class="ctrl-card" style="margin-bottom:0; padding:20px;">
+                    <div style="display:flex; justify-content:space-between; align-items:center; margin-bottom:14px;">
+                        <h3 class="sec-title" style="font-size:1.05rem; margin-bottom:0;"><i class="fa-solid fa-ranking-star" style="color:#10b981;"></i> Sector Field Health Comparison</h3>
+                        <span style="font-size:0.75rem; color:var(--text-sub); font-weight:700;">Ranked Performance</span>
+                    </div>
+                    <p style="font-size:0.82rem; color:var(--text-sub); margin-bottom:14px;">Relative ranking across Sectors A–F based on weighted soil fertility, moisture adequacy, and organic tilth.</p>
+                    <div style="position:relative; height:340px; width:100%;">
+                        <canvas id="sector-comparison-chart"></canvas>
+                    </div>
+                </div>
             </div>
         </div>
         <!-- MODERN SLIDEABLE MOBILE BOTTOM NAVIGATION DOCK (ALL SIDE-MENU OPTIONS) -->
@@ -5599,6 +5762,13 @@
             if (panelId === 'invader_security') loadInvaderAlerts();
             if (panelId === 'farm_reports') loadFarmSchedules();
             if (panelId === 'dashboard') refreshFarmStats();
+            if (panelId === 'farmer_advisory' && window.FarmAdvisoryFeed) window.FarmAdvisoryFeed.poll();
+            if (panelId === 'farm_analytics' && window.FarmAnalyticsCharts) {
+                const s = document.getElementById('analytics-sector-select')?.value || '';
+                window.FarmAnalyticsCharts.renderSoilTrendChart(s);
+                window.FarmAnalyticsCharts.renderYieldRiskCards();
+                window.FarmAnalyticsCharts.renderSectorComparison();
+            }
         }
 
         // Accordion toggle helper for dense control panels (Prompt v3)
@@ -8426,6 +8596,8 @@
         // =======================================================
 
     </script>
+    <!-- Smart Farming Intelligence Module (Advisory, Env Risk, Crop Health, Pest Vision, Analytics) -->
+    <script src="./assets/farm-intelligence.js"></script>
 </body>
 
 </html>

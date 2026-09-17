@@ -237,7 +237,7 @@ app.get('/manifest.json', (req, res) => res.sendFile(path.join(__dirname, '..', 
 function requireAuth(req, res, next) {
     if (req.session && req.session.userId) return next();
     if (req.method === 'GET' && req.path.startsWith('/api/farm/')) return next();
-    if (req.path === '/api/farm/organic-calculator' || req.path === '/api/farm/invader-simulate' || req.path === '/api/farm/invader-alerts' || req.path === '/api/farm/invaders' || req.path === '/api/farm/invader-deter' || req.path === '/api/farm/invader-detect') return next();
+    if (req.path === '/api/farm/organic-calculator' || req.path === '/api/farm/invader-simulate' || req.path === '/api/farm/invader-alerts' || req.path === '/api/farm/invaders' || req.path === '/api/farm/invader-deter' || req.path === '/api/farm/invader-detect' || req.path === '/api/farm/weather-cache' || req.path === '/api/farm/crop-health-scan' || req.path === '/api/farm/pest-detection' || req.path === '/api/farm/advisories') return next();
     if (req.path.startsWith('/api/')) return res.status(401).json({ error: 'Unauthorized. Please login.' });
     return res.redirect('/login.html');
 }
@@ -1166,23 +1166,63 @@ const WEATHER_CACHE_MS = 5 * 60 * 1000;
 app.get('/api/farm/weather-irrigation', requireAuth, (req, res) => {
     try {
         const sectors = database.getFarmSectors();
-        const avgMoist = Math.round(sectors.reduce((a, s) => a + s.moisture, 0) / (sectors.length || 1));
 
-        // If client passes ?realWeather=1 and a cached real-weather body exists, use it.
-        // Otherwise, fall back to the static reference forecast below.
+        // --- Real moisture estimate via simple ET decay model ---
+        // Instead of raw average (which never changes without a scan),
+        // we apply an evapotranspiration-style decay from last_irrigated
+        // and add a boost from recent real precipitation.
         const now = Date.now();
-        let realCurrent = null;
-        let rainProb12h = 30; // default: low
+        const cachedPrecip = (weatherCache.data && weatherCache.data.precipSum24h) || 0;
+        const cachedHumidity = (weatherCache.data && weatherCache.data.current && weatherCache.data.current.humidity_pct) || 60;
+        const cachedTemp = (weatherCache.data && weatherCache.data.current && weatherCache.data.current.temperature_c) || 27;
+
+        const k = 0.018; // hourly ET decay rate (realistic for loamy soil)
+        const moistureEstimates = sectors.map(s => {
+            const lastIrr = s.last_irrigated ? new Date(s.last_irrigated) : new Date(now - 48 * 3600 * 1000);
+            const hoursElapsed = Math.max(0, (now - lastIrr.getTime()) / 3600000);
+            const decayed = s.moisture * Math.exp(-k * Math.min(hoursElapsed, 96));
+            // Humidity above 70% slows ET loss; precipitation adds moisture
+            const humidityDampen = cachedHumidity > 70 ? 0.6 : 1.0;
+            const rainBoost = Math.min(20, cachedPrecip * 2.0); // 10mm rain ≈ +20% moisture
+            return Math.max(10, Math.min(95, Math.round(decayed * humidityDampen + rainBoost)));
+        });
+        const avgMoist = Math.round(moistureEstimates.reduce((a, v) => a + v, 0) / (moistureEstimates.length || 1));
+
+        let rainProb12h = 30;
         if (weatherCache.data && (now - weatherCache.ts) < WEATHER_CACHE_MS) {
-            realCurrent = weatherCache.data.current;
             rainProb12h = weatherCache.data.rainProb12h || 30;
         }
-
         const rainDelayActive = rainProb12h >= 60;
+
+        // Real fungal risk from actual temp + humidity thresholds
+        let fungalRisk = 'Low';
+        let fungalDetail = 'Current temperature and humidity unfavourable for fungal spore activity.';
+        if (cachedHumidity > 85 && cachedTemp >= 22 && cachedTemp <= 32) {
+            fungalRisk = 'High';
+            fungalDetail = `High humidity (${cachedHumidity}%) at ${cachedTemp}°C — prime conditions for fungal spore germination. Avoid overhead/sprinkler irrigation.`;
+        } else if (cachedHumidity > 70 && cachedTemp >= 20 && cachedTemp <= 35) {
+            fungalRisk = 'Moderate';
+            fungalDetail = `Humidity ${cachedHumidity}% at ${cachedTemp}°C — warm, humid weather increases fungal risk. Monitor for early blight symptoms.`;
+        }
+
+        // Replace hardcoded NDVI with latest real scan if available
+        let vigorIndex = null;
+        let vigorLabel = 'No scan recorded';
+        try {
+            const latestScan = database.getLatestCropHealthScan();
+            if (latestScan) {
+                vigorIndex = parseFloat(latestScan.vigor_index.toFixed(3));
+                vigorLabel = latestScan.disease_label !== 'unknown' ? latestScan.disease_label : 'Healthy (last scan)';
+            }
+        } catch (_) {}
+
+        const realCurrent = (weatherCache.data && (now - weatherCache.ts) < WEATHER_CACHE_MS)
+            ? weatherCache.data.current : null;
+
         const weather = {
             current: realCurrent || {
-                temperature_c: 27.4,
-                humidity_pct: 64,
+                temperature_c: cachedTemp,
+                humidity_pct: cachedHumidity,
                 wind_speed_kmh: 11.2,
                 rainfall_prob_12h: rainProb12h,
                 evapotranspiration_et0: 4.2,
@@ -1194,6 +1234,7 @@ app.get('/api/farm/weather-irrigation', requireAuth, (req, res) => {
             irrigation_status: {
                 valve_active: irrigationValveActive,
                 field_avg_moisture: avgMoist,
+                moisture_source: 'ET-decay model (Open-Meteo precip + last irrigated timestamp)',
                 critical_threshold: 35,
                 optimal_target: 65,
                 rain_delay_active: rainDelayActive,
@@ -1204,11 +1245,11 @@ app.get('/api/farm/weather-irrigation', requireAuth, (req, res) => {
                 data_source: weatherCache.data ? 'Open-Meteo (real)' : 'Static reference'
             },
             crop_health_condition: {
-                overall_ndvi_index: 0.78,
+                rgb_vigor_index: vigorIndex,
+                vigor_label: vigorLabel,
+                vigor_note: 'RGB-derived canopy vigor proxy (not true multispectral NDVI)',
                 chlorosis_risk: 'Low (Sector C has slight nitrogen chlorosis)',
-                fungal_blight_risk: rainProb12h > 50
-                    ? 'Moderate — High humidity + warmth triggers fungal spore germination. Avoid evening sprinkler irrigation.'
-                    : 'Low — Current conditions unfavorable for fungal growth.'
+                fungal_blight_risk: `${fungalRisk} — ${fungalDetail}`
             }
         };
 
@@ -1219,12 +1260,394 @@ app.get('/api/farm/weather-irrigation', requireAuth, (req, res) => {
 // Endpoint to push real Open-Meteo data from the frontend into the server cache
 app.post('/api/farm/weather-cache', requireAuth, (req, res) => {
     try {
-        const { current, rainProb12h } = req.body;
+        const { current, rainProb12h, precipSum24h, tempMax5day } = req.body;
         if (current) {
-            weatherCache = { data: { current, rainProb12h: rainProb12h || 0 }, ts: Date.now() };
+            weatherCache = {
+                data: { current, rainProb12h: rainProb12h || 0, precipSum24h: precipSum24h || 0, tempMax5day: tempMax5day || current.temperature_c || 27 },
+                ts: Date.now()
+            };
         }
         res.json({ success: true, cached: !!current });
     } catch (err) { res.status(500).json({ error: 'Failed to cache weather' }); }
+});
+
+// =============================================
+// ENVIRONMENTAL RISK MONITORING API
+// =============================================
+app.get('/api/farm/env-risks', requireAuth, (req, res) => {
+    try {
+        const now = Date.now();
+        if (!weatherCache.data || (now - weatherCache.ts) >= WEATHER_CACHE_MS * 2) {
+            return res.json({ stale: true, risks: [], message: 'Open the Weather panel first to load live forecast data.' });
+        }
+
+        const wd = weatherCache.data;
+        const temp = (wd.current && wd.current.temperature_c) || 27;
+        const humidity = (wd.current && wd.current.humidity_pct) || 60;
+        const rainProb = wd.rainProb12h || 0;
+        const precipSum = wd.precipSum24h || 0;
+        const tempMax = wd.tempMax5day || temp;
+        const sectors = database.getFarmSectors();
+        const avgMoisture = Math.round(sectors.reduce((a, s) => a + s.moisture, 0) / (sectors.length || 1));
+
+        const risks = [];
+
+        // Heat-Stress Warning (>38°C in forecast)
+        const heatThreshold = 38;
+        const effectiveMax = Math.max(temp, tempMax);
+        if (effectiveMax > heatThreshold) {
+            const level = effectiveMax > 42 ? 'critical' : 'high';
+            risks.push({
+                risk_type: 'heat_stress',
+                level,
+                icon: '🌡️',
+                title: 'Heat-Stress Warning',
+                detail: `Temperature reaching ${effectiveMax}°C exceeds safe crop threshold of ${heatThreshold}°C. Risk of flower drop, fruit abortion, and accelerated water loss.`,
+                action: 'Increase irrigation frequency. Apply reflective mulch. Avoid field operations during peak heat (11am–3pm).'
+            });
+            try { database.addAdvisory({ category: 'env', severity: level, title: `Heat-Stress Warning: ${effectiveMax}°C forecast`, action: 'Increase irrigation frequency. Apply reflective mulch.', source: 'env-monitor' }); } catch(_) {}
+        }
+
+        // Drought Risk (moisture < 30% AND rain < 20% probability)
+        if (avgMoisture < 30 && rainProb < 20) {
+            const level = avgMoisture < 20 ? 'critical' : 'high';
+            risks.push({
+                risk_type: 'drought',
+                level,
+                icon: '🏜️',
+                title: 'Drought Risk',
+                detail: `Average field moisture at ${avgMoisture}% (below 30% threshold) with only ${rainProb}% rain probability. Crop water stress imminent.`,
+                action: 'Activate drip irrigation immediately. Prioritize Sectors with critical status crops.'
+            });
+            try { database.addAdvisory({ category: 'env', severity: level, title: `Drought Risk: Field moisture at ${avgMoisture}%`, action: 'Activate drip irrigation immediately.', source: 'env-monitor' }); } catch(_) {}
+        }
+
+        // Flood / Excess-Rainfall Risk (>30mm precipitation)
+        if (precipSum > 30 || (rainProb > 80 && precipSum > 15)) {
+            const level = precipSum > 60 ? 'critical' : 'high';
+            risks.push({
+                risk_type: 'flood',
+                level,
+                icon: '🌊',
+                title: 'Flood / Waterlogging Risk',
+                detail: `${precipSum > 0 ? precipSum + 'mm' : 'Heavy'} precipitation forecast with ${rainProb}% probability. Risk of root waterlogging, nutrient leaching, and field access loss.`,
+                action: 'Open drainage channels. Postpone fertilizer application. Check drip system overflow valves.'
+            });
+            try { database.addAdvisory({ category: 'env', severity: level, title: `Flood Risk: ${precipSum}mm precipitation forecast`, action: 'Open drainage channels. Postpone fertilizer application.', source: 'env-monitor' }); } catch(_) {}
+        }
+
+        // Fungal Outbreak Risk (temp 22-32°C + humidity >72%)
+        if (humidity > 72 && temp >= 22 && temp <= 32) {
+            const level = humidity > 85 ? 'high' : 'moderate';
+            risks.push({
+                risk_type: 'fungal_outbreak',
+                level,
+                icon: '🍄',
+                title: 'Disease Outbreak Conditions',
+                detail: `Humidity at ${humidity}% with temperature ${temp}°C — warm, humid conditions are prime for fungal spore germination (Alternaria, Cercospora, late blight).`,
+                action: 'Avoid evening sprinkler irrigation. Inspect leaf undersides for early lesions. Consider preventive neem oil spray.'
+            });
+            try { database.addAdvisory({ category: 'env', severity: level, title: `Fungal Disease Risk: ${humidity}% humidity at ${temp}°C`, action: 'Avoid overhead irrigation. Inspect crops for early lesions.', source: 'env-monitor' }); } catch(_) {}
+        }
+
+        res.json({ stale: false, risks, evaluated_at: new Date().toISOString() });
+    } catch (err) { res.status(500).json({ error: 'Failed to evaluate environmental risks: ' + err.message }); }
+});
+
+// =============================================
+// FARMER ADVISORY FEED API
+// =============================================
+app.get('/api/farm/advisories', requireAuth, (req, res) => {
+    try {
+        const all = req.query.all === '1';
+        res.json(all ? database.getAllAdvisories(50) : database.getAdvisories(30));
+    } catch (err) { res.status(500).json({ error: 'Failed to get advisories' }); }
+});
+
+app.post('/api/farm/advisories', requireAuth, (req, res) => {
+    try {
+        const { category, severity, title, action, sector_id } = req.body;
+        if (!title) return res.status(400).json({ error: 'title is required' });
+        const result = database.addAdvisory({ category, severity, title, action, sector_id, source: 'user' });
+        io.emit('newAdvisory', { id: result.id, category, severity, title, action, sector_id, timestamp: new Date().toISOString() });
+        res.json({ success: true, id: result.id });
+    } catch (err) { res.status(500).json({ error: 'Failed to create advisory' }); }
+});
+
+app.delete('/api/farm/advisories/:id', requireAuth, (req, res) => {
+    try {
+        database.dismissAdvisory(parseInt(req.params.id));
+        res.json({ success: true });
+    } catch (err) { res.status(500).json({ error: 'Failed to dismiss advisory' }); }
+});
+
+// =============================================
+// CROP HEALTH MONITORING API
+// =============================================
+app.post('/api/farm/crop-health-scan', requireAuth, (req, res) => {
+    try {
+        const { sector_id, vigor_index, green_ratio, red_ratio, blue_ratio, disease_label, disease_confidence, scan_source } = req.body;
+
+        const result = database.addCropHealthScan({
+            sector_id: sector_id || 'All',
+            vigor_index: parseFloat(vigor_index || 0),
+            green_ratio: parseFloat(green_ratio || 0),
+            red_ratio: parseFloat(red_ratio || 0),
+            blue_ratio: parseFloat(blue_ratio || 0),
+            disease_label: disease_label || 'healthy',
+            disease_confidence: parseFloat(disease_confidence || 0),
+            scan_source: scan_source || 'camera'
+        });
+
+        database.addLog(req.session?.userId || 1, 'Crop Health Scan', 'event',
+            `Vigor: ${parseFloat(vigor_index || 0).toFixed(3)} | Disease: ${disease_label || 'healthy'} (${Math.round((disease_confidence || 0) * 100)}%)`,
+            'farmer');
+
+        // Auto-advisory if disease detected with confidence >60%
+        if (disease_label && disease_label.toLowerCase() !== 'healthy' && parseFloat(disease_confidence) > 0.60) {
+            const severity = disease_confidence > 0.85 ? 'critical' : 'warning';
+            database.addAdvisory({
+                category: 'disease',
+                severity,
+                title: `Possible Disease Detected: ${disease_label}`,
+                action: `Confidence: ${Math.round(disease_confidence * 100)}%. Inspect Sector ${sector_id || 'Unknown'} physically. Consider isolating affected plants and applying appropriate organic treatment.`,
+                sector_id: sector_id || 'All',
+                source: 'crop-health-scanner'
+            });
+            io.emit('diseaseAlert', { disease_label, confidence: disease_confidence, sector_id });
+        }
+
+        io.emit('cropHealthScan', { vigor_index, disease_label, disease_confidence, sector_id });
+        res.json({ success: true, id: result.id });
+    } catch (err) { res.status(500).json({ error: 'Failed to save crop health scan: ' + err.message }); }
+});
+
+app.get('/api/farm/crop-health-history', requireAuth, (req, res) => {
+    try {
+        const sector = req.query.sector || null;
+        const days = parseInt(req.query.days) || 7;
+        res.json(database.getCropHealthHistory(sector, days));
+    } catch (err) { res.status(500).json({ error: 'Failed to get crop health history' }); }
+});
+
+// =============================================
+// PEST DETECTION API (replaces Math.random() generation)
+// =============================================
+const pestDetectionWindow = [];
+const PEST_WINDOW_MS = 15 * 60 * 1000; // 15 minutes
+const PEST_EARLY_WARNING_THRESHOLD = 3;
+
+app.post('/api/farm/pest-detection', requireAuth, (req, res) => {
+    try {
+        const { sector_id, pest_label, confidence, bbox_x, bbox_y, detection_source } = req.body;
+        if (!pest_label) return res.status(400).json({ error: 'pest_label required' });
+
+        // Log to laser_targets table
+        const record = {
+            target_type: 'pest',
+            species_name: pest_label,
+            sector_id: sector_id || 'A',
+            coord_x: parseFloat(bbox_x || (Math.random() * 20).toFixed(1)),
+            coord_y: parseFloat(bbox_y || (Math.random() * 20).toFixed(1)),
+            coord_z: 0.5,
+            laser_wattage: 10.0,
+            pulse_ms: 280,
+            energy_joules: 2.8,
+            status: 'detected',
+            kill_confidence: parseFloat(confidence || 0.75) * 100
+        };
+
+        const result = database.logLaserTarget(record);
+        database.addLog(req.session?.userId || 1, 'Pest Detection', 'event',
+            `Camera detected: ${pest_label} in Sector ${sector_id} (${Math.round((confidence || 0.75) * 100)}% confidence)`, 'farmer');
+
+        // Rolling early-warning window
+        const nowMs = Date.now();
+        pestDetectionWindow.push({ ts: nowMs, sector_id, pest_label });
+        while (pestDetectionWindow.length > 0 && nowMs - pestDetectionWindow[0].ts > PEST_WINDOW_MS) {
+            pestDetectionWindow.shift();
+        }
+
+        let earlyWarning = false;
+        if (pestDetectionWindow.length >= PEST_EARLY_WARNING_THRESHOLD) {
+            earlyWarning = true;
+            io.emit('pestEarlyWarning', {
+                count: pestDetectionWindow.length,
+                sector_id,
+                pest_label,
+                message: `Early Warning: ${pestDetectionWindow.length} pest detections in 15 minutes in Sector ${sector_id}`
+            });
+            try {
+                database.addAdvisory({
+                    category: 'pest',
+                    severity: 'warning',
+                    title: `Pest Activity Surge: ${pestDetectionWindow.length} detections in 15min`,
+                    action: `${pest_label} increasing in Sector ${sector_id}. Deploy laser neutralization or manual inspection before infestation spreads.`,
+                    sector_id: sector_id || 'A',
+                    source: 'pest-detector'
+                });
+            } catch (_) {}
+        }
+
+        io.emit('pestDetected', { id: result.id, pest_label, sector_id, confidence, early_warning: earlyWarning });
+        res.json({ success: true, id: result.id, early_warning: earlyWarning, window_count: pestDetectionWindow.length });
+    } catch (err) { res.status(500).json({ error: 'Failed to log pest detection: ' + err.message }); }
+});
+
+app.get('/api/farm/pest-frequency', requireAuth, (req, res) => {
+    try {
+        const targets = database.getLaserTargets(200);
+        const now = Date.now();
+        const h1 = new Date(now - 3600000).toISOString();
+        const h24 = new Date(now - 86400000).toISOString();
+        const pests1h = targets.filter(t => t.target_type === 'pest' && t.created_at >= h1).length;
+        const pests24h = targets.filter(t => t.target_type === 'pest' && t.created_at >= h24).length;
+        const bySector = {};
+        targets.filter(t => t.target_type === 'pest').forEach(t => {
+            bySector[t.sector_id] = (bySector[t.sector_id] || 0) + 1;
+        });
+        res.json({ pests_last_1h: pests1h, pests_last_24h: pests24h, by_sector: bySector });
+    } catch (err) { res.status(500).json({ error: 'Failed to get pest frequency' }); }
+});
+
+// =============================================
+// FARM ANALYTICS API
+// =============================================
+app.get('/api/farm/analytics/soil-trends', requireAuth, (req, res) => {
+    try {
+        const sector = req.query.sector || null;
+        const days = parseInt(req.query.days) || 14;
+        const since = new Date(Date.now() - days * 24 * 3600 * 1000).toISOString();
+
+        const sensorRows = database.getSensorHistory(days * 48);
+        const recentSensor = sensorRows.filter(r => r.timestamp >= since);
+
+        const dayMap = {};
+        recentSensor.forEach(r => {
+            const day = r.timestamp.slice(0, 10);
+            if (!dayMap[day]) dayMap[day] = { moisture: [], temperature: [], count: 0 };
+            dayMap[day].moisture.push(r.moisture || 0);
+            dayMap[day].temperature.push(r.temperature || 0);
+            dayMap[day].count++;
+        });
+
+        const sectors = database.getFarmSectors();
+        const targetSector = sector ? sectors.find(s => s.sector_id === sector) : null;
+        const cropScans = database.getCropHealthHistory(sector, days);
+
+        const labels = Object.keys(dayMap).sort();
+        const moistureSeries = labels.map(d => {
+            const vals = dayMap[d].moisture;
+            return vals.length ? Math.round(vals.reduce((a, v) => a + v, 0) / vals.length) : null;
+        });
+        const tempSeries = labels.map(d => {
+            const vals = dayMap[d].temperature;
+            return vals.length ? parseFloat((vals.reduce((a, v) => a + v, 0) / vals.length).toFixed(1)) : null;
+        });
+
+        const npk = targetSector
+            ? { n: targetSector.soil_nitrogen, p: targetSector.soil_phosphorus, k: targetSector.soil_potassium, ph: targetSector.soil_ph }
+            : { n: Math.round(sectors.reduce((a, s) => a + s.soil_nitrogen, 0) / (sectors.length || 1)),
+               p: Math.round(sectors.reduce((a, s) => a + s.soil_phosphorus, 0) / (sectors.length || 1)),
+               k: Math.round(sectors.reduce((a, s) => a + s.soil_potassium, 0) / (sectors.length || 1)),
+               ph: parseFloat((sectors.reduce((a, s) => a + s.soil_ph, 0) / (sectors.length || 1)).toFixed(1)) };
+
+        res.json({
+            sector: sector || 'All',
+            days,
+            labels,
+            moisture_series: moistureSeries,
+            temperature_series: tempSeries,
+            current_npk: npk,
+            vigor_scans: cropScans.map(s => ({ ts: s.timestamp.slice(0, 10), vigor: s.vigor_index, disease: s.disease_label }))
+        });
+    } catch (err) { res.status(500).json({ error: 'Failed to get soil trends: ' + err.message }); }
+});
+
+app.get('/api/farm/analytics/yield-risk', requireAuth, (req, res) => {
+    try {
+        const sectors = database.getFarmSectors();
+        const MIN_NPK = { N: 100, P: 15, K: 130 };
+        const now = Date.now();
+        const weatherStale = !weatherCache.data || (now - weatherCache.ts) > WEATHER_CACHE_MS * 2;
+        const tempMax = (!weatherStale && weatherCache.data.tempMax5day) || 30;
+        const precipSum = (!weatherStale && weatherCache.data.precipSum24h) || 0;
+
+        const results = sectors.map(s => {
+            let riskScore = 0;
+            const factors = [];
+
+            // Soil nutrient deficit scoring
+            if (s.soil_nitrogen < MIN_NPK.N) { riskScore += 35; factors.push(`Low Nitrogen (${Math.round(s.soil_nitrogen)} kg/ha < ${MIN_NPK.N})`); }
+            else if (s.soil_nitrogen < MIN_NPK.N * 1.3) { riskScore += 15; factors.push(`Moderate Nitrogen (${Math.round(s.soil_nitrogen)} kg/ha)`); }
+
+            if (s.soil_phosphorus < MIN_NPK.P) { riskScore += 20; factors.push(`Low Phosphorus (${Math.round(s.soil_phosphorus)} kg/ha)`); }
+            if (s.soil_potassium < MIN_NPK.K) { riskScore += 15; factors.push(`Low Potassium (${Math.round(s.soil_potassium)} kg/ha)`); }
+
+            // pH risk
+            if (s.soil_ph < 5.5 || s.soil_ph > 8.0) { riskScore += 20; factors.push(`Extreme pH (${s.soil_ph})`); }
+            else if (s.soil_ph < 6.0 || s.soil_ph > 7.5) { riskScore += 10; factors.push(`Suboptimal pH (${s.soil_ph})`); }
+
+            // Moisture risk
+            if (s.moisture < 20) { riskScore += 20; factors.push(`Very Low Moisture (${Math.round(s.moisture)}%)`); }
+            else if (s.moisture < 35) { riskScore += 10; factors.push(`Low Moisture (${Math.round(s.moisture)}%)`); }
+
+            // Environmental overlay
+            if (tempMax > 38) { riskScore += 15; factors.push('Heat-stress forecast'); }
+            if (precipSum > 40) { riskScore += 10; factors.push('Waterlogging risk'); }
+
+            // Sector health status
+            if (s.status === 'critical') { riskScore += 10; }
+
+            let riskLevel = 'Low';
+            if (riskScore >= 55) riskLevel = 'Critical';
+            else if (riskScore >= 35) riskLevel = 'High';
+            else if (riskScore >= 20) riskLevel = 'Moderate';
+
+            return {
+                sector_id: s.sector_id,
+                sector_name: s.name,
+                crop: s.crop,
+                crop_stage: s.crop_stage,
+                risk_level: riskLevel,
+                risk_score: riskScore,
+                contributing_factors: factors,
+                days_to_harvest: s.days_to_harvest
+            };
+        });
+
+        res.json({ sectors: results, evaluated_at: new Date().toISOString(), weather_stale: weatherStale });
+    } catch (err) { res.status(500).json({ error: 'Failed to compute yield risk: ' + err.message }); }
+});
+
+app.get('/api/farm/analytics/sector-comparison', requireAuth, (req, res) => {
+    try {
+        const sectors = database.getFarmSectors();
+        const comparison = sectors.map(s => {
+            const nScore   = Math.min(100, Math.round((s.soil_nitrogen / 200) * 100));
+            const pScore   = Math.min(100, Math.round((s.soil_phosphorus / 35) * 100));
+            const kScore   = Math.min(100, Math.round((s.soil_potassium / 200) * 100));
+            const mScore   = s.moisture > 35 && s.moisture < 75 ? 100 : Math.max(0, 100 - Math.abs(s.moisture - 55) * 2);
+            const phScore  = (s.soil_ph >= 6.0 && s.soil_ph <= 7.5) ? 100 : Math.max(0, 100 - Math.abs(s.soil_ph - 6.75) * 25);
+            const omScore  = Math.min(100, Math.round((s.organic_matter / 3.0) * 100));
+            const composite = Math.round((nScore + pScore + kScore + mScore + phScore + omScore) / 6);
+
+            return {
+                sector_id: s.sector_id,
+                sector_name: s.name,
+                crop: s.crop,
+                composite_score: composite,
+                n_score: nScore,
+                p_score: pScore,
+                k_score: kScore,
+                moisture_score: mScore,
+                ph_score: phScore,
+                om_score: omScore,
+                status: s.status
+            };
+        });
+        res.json({ sectors: comparison.sort((a, b) => b.composite_score - a.composite_score) });
+    } catch (err) { res.status(500).json({ error: 'Failed to get sector comparison: ' + err.message }); }
 });
 
 // =============================================

@@ -288,6 +288,49 @@ function initDatabase() {
         )
     `);
 
+    // Farm Advisory Feed Table
+    db.exec(`
+        CREATE TABLE IF NOT EXISTS farm_advisories (
+            id INTEGER PRIMARY KEY AUTOINCREMENT,
+            category TEXT NOT NULL DEFAULT 'general',
+            severity TEXT NOT NULL DEFAULT 'info',
+            title TEXT NOT NULL,
+            action TEXT DEFAULT '',
+            sector_id TEXT DEFAULT 'All',
+            source TEXT DEFAULT 'system',
+            dismissed INTEGER DEFAULT 0,
+            timestamp DATETIME DEFAULT CURRENT_TIMESTAMP
+        )
+    `);
+
+    // Crop Health Scan History Table
+    db.exec(`
+        CREATE TABLE IF NOT EXISTS crop_health_scans (
+            id INTEGER PRIMARY KEY AUTOINCREMENT,
+            sector_id TEXT DEFAULT 'A',
+            vigor_index REAL DEFAULT 0,
+            green_ratio REAL DEFAULT 0,
+            red_ratio REAL DEFAULT 0,
+            blue_ratio REAL DEFAULT 0,
+            disease_label TEXT DEFAULT 'unknown',
+            disease_confidence REAL DEFAULT 0,
+            scan_source TEXT DEFAULT 'camera',
+            timestamp DATETIME DEFAULT CURRENT_TIMESTAMP
+        )
+    `);
+
+    // Environmental Risk Events Table
+    db.exec(`
+        CREATE TABLE IF NOT EXISTS env_risk_events (
+            id INTEGER PRIMARY KEY AUTOINCREMENT,
+            risk_type TEXT NOT NULL,
+            level TEXT DEFAULT 'low',
+            detail TEXT DEFAULT '',
+            triggered_at DATETIME DEFAULT CURRENT_TIMESTAMP,
+            resolved_at DATETIME
+        )
+    `);
+
     // Seed defaults
     seedDefaults();
     console.log('✅ Database initialized successfully');
@@ -767,6 +810,98 @@ function addWaypoint(data) {
 }
 
 // =============================================
+// FARM ADVISORIES
+// =============================================
+function addAdvisory(data) {
+    try {
+        const res = db.prepare(`
+            INSERT INTO farm_advisories (category, severity, title, action, sector_id, source)
+            VALUES (?, ?, ?, ?, ?, ?)
+        `).run(
+            data.category || 'general',
+            data.severity || 'info',
+            data.title,
+            data.action || '',
+            data.sector_id || 'All',
+            data.source || 'system'
+        );
+        return { success: true, id: res.lastInsertRowid };
+    } catch (err) { return { success: false, error: err.message }; }
+}
+
+function getAdvisories(limit = 30) {
+    return db.prepare('SELECT * FROM farm_advisories WHERE dismissed=0 ORDER BY timestamp DESC LIMIT ?').all(limit);
+}
+
+function getAllAdvisories(limit = 50) {
+    return db.prepare('SELECT * FROM farm_advisories ORDER BY timestamp DESC LIMIT ?').all(limit);
+}
+
+function dismissAdvisory(id) {
+    try { db.prepare('UPDATE farm_advisories SET dismissed=1 WHERE id=?').run(id); return { success: true }; }
+    catch (err) { return { success: false, error: err.message }; }
+}
+
+// =============================================
+// CROP HEALTH SCANS
+// =============================================
+function addCropHealthScan(data) {
+    try {
+        const res = db.prepare(`
+            INSERT INTO crop_health_scans (sector_id, vigor_index, green_ratio, red_ratio, blue_ratio, disease_label, disease_confidence, scan_source)
+            VALUES (?, ?, ?, ?, ?, ?, ?, ?)
+        `).run(
+            data.sector_id || 'A',
+            parseFloat(data.vigor_index || 0),
+            parseFloat(data.green_ratio || 0),
+            parseFloat(data.red_ratio || 0),
+            parseFloat(data.blue_ratio || 0),
+            data.disease_label || 'unknown',
+            parseFloat(data.disease_confidence || 0),
+            data.scan_source || 'camera'
+        );
+        return { success: true, id: res.lastInsertRowid };
+    } catch (err) { return { success: false, error: err.message }; }
+}
+
+function getLatestCropHealthScan(sectorId) {
+    if (sectorId) {
+        return db.prepare('SELECT * FROM crop_health_scans WHERE sector_id=? ORDER BY timestamp DESC LIMIT 1').get(sectorId);
+    }
+    return db.prepare('SELECT * FROM crop_health_scans ORDER BY timestamp DESC LIMIT 1').get();
+}
+
+function getCropHealthHistory(sectorId, days = 7) {
+    const since = new Date(Date.now() - days * 24 * 3600 * 1000).toISOString();
+    if (sectorId) {
+        return db.prepare('SELECT * FROM crop_health_scans WHERE sector_id=? AND timestamp>=? ORDER BY timestamp ASC').all(sectorId, since);
+    }
+    return db.prepare('SELECT * FROM crop_health_scans WHERE timestamp>=? ORDER BY timestamp ASC').all(since);
+}
+
+// =============================================
+// ENVIRONMENTAL RISK EVENTS
+// =============================================
+function addEnvRiskEvent(data) {
+    try {
+        const res = db.prepare(`
+            INSERT INTO env_risk_events (risk_type, level, detail)
+            VALUES (?, ?, ?)
+        `).run(data.risk_type, data.level || 'low', data.detail || '');
+        return { success: true, id: res.lastInsertRowid };
+    } catch (err) { return { success: false, error: err.message }; }
+}
+
+function getActiveEnvRisks() {
+    return db.prepare("SELECT * FROM env_risk_events WHERE resolved_at IS NULL ORDER BY triggered_at DESC LIMIT 10").all();
+}
+
+function resolveEnvRisk(riskType) {
+    db.prepare("UPDATE env_risk_events SET resolved_at=CURRENT_TIMESTAMP WHERE risk_type=? AND resolved_at IS NULL").run(riskType);
+    return { success: true };
+}
+
+// =============================================
 // EXPORT
 // =============================================
 module.exports = {
@@ -785,6 +920,9 @@ module.exports = {
     saveFertilizerRecipe, getFertilizerRecipes,
     getAllDeliveries, getDeliveryById, getDeliveriesByStatus, createDelivery, updateDeliveryStatus, deleteDelivery,
     getCampusLocations, getCampusTours, createCampusTour, updateTourStatus,
-    getWaypoints, addWaypoint
+    getWaypoints, addWaypoint,
+    addAdvisory, getAdvisories, getAllAdvisories, dismissAdvisory,
+    addCropHealthScan, getLatestCropHealthScan, getCropHealthHistory,
+    addEnvRiskEvent, getActiveEnvRisks, resolveEnvRisk
 };
 
