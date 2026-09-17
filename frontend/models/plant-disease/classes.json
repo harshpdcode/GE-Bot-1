@@ -1,0 +1,344 @@
+[
+  {
+    "id": 0,
+    "key": "Apple___Apple_scab",
+    "crop": "Apple",
+    "disease": "Apple Scab",
+    "pathogen": "Venturia inaequalis (Fungal)",
+    "is_healthy": false,
+    "treatment": "Apply preventative copper hydroxide or sulfur spray at green tip stage. Rake and compost fallen leaves to eliminate overwintering ascospores."
+  },
+  {
+    "id": 1,
+    "key": "Apple___Black_rot",
+    "crop": "Apple",
+    "disease": "Black Rot / Frog-Eye Leaf Spot",
+    "pathogen": "Botryosphaeria obtusa (Fungal)",
+    "is_healthy": false,
+    "treatment": "Prune out dead shoots, mummified fruit, and cankered branches. Apply bio-fungicide (Trichoderma or Captan) during petal fall."
+  },
+  {
+    "id": 2,
+    "key": "Apple___Cedar_apple_rust",
+    "crop": "Apple",
+    "disease": "Cedar Apple Rust",
+    "pathogen": "Gymnosporangium juniperi-virginianae (Fungal)",
+    "is_healthy": false,
+    "treatment": "Remove galls on nearby eastern red cedars. Apply immunizing bio-fungicide (Bacillus subtilis) at pink bud stage."
+  },
+  {
+    "id": 3,
+    "key": "Apple___healthy",
+    "crop": "Apple",
+    "disease": "Clean Healthy Foliage",
+    "pathogen": "None (Healthy)",
+    "is_healthy": true,
+    "treatment": "Canopy is vigorous. Maintain routine compost tea foliar spray and balanced drip irrigation."
+  },
+  {
+    "id": 4,
+    "key": "Blueberry___healthy",
+    "crop": "Blueberry",
+    "disease": "Clean Healthy Foliage",
+    "pathogen": "None (Healthy)",
+    "is_healthy": true,
+    "treatment": "Maintain acidic soil pH (4.5 - 5.2) and pine bark mulch for optimal mycorrhizal root health."
+  },
+  {
+    "id": 5,
+    "key": "Cherry___Powdery_mildew",
+    "crop": "Cherry",
+    "disease": "Powdery Mildew",
+    "pathogen": "Podosphaera clandestina (Fungal)",
+    "is_healthy": false,
+    "treatment": "Prune dense canopy shoots to improve airflow. Apply potassium bicarbonate or 0.5% neem oil solution at first sign of white mycelium."
+  },
+  {
+    "id": 6,
+    "key": "Cherry___healthy",
+    "crop": "Cherry",
+    "disease": "Clean Healthy Foliage",
+    "pathogen": "None (Healthy)",
+    "is_healthy": true,
+    "treatment": "Healthy foliage. Monitor for fruit fly and ensure balanced boron and potassium supplementation."
+  },
+  {
+    "id": 7,
+    "key": "Corn___Cercospora_leaf_spot",
+    "crop": "Corn / Maize",
+    "disease": "Gray Leaf Spot (GLS)",
+    "pathogen": "Cercospora zeae-maydis (Fungal)",
+    "is_healthy": false,
+    "treatment": "Implement 2-year crop rotation with legumes (Soybean/Gram). Apply bio-fungicide if rectangular lesions extend above the ear leaf."
+  },
+  {
+    "id": 8,
+    "key": "Corn___Common_rust",
+    "crop": "Corn / Maize",
+    "disease": "Common Rust",
+    "pathogen": "Puccinia sorghi (Fungal)",
+    "is_healthy": false,
+    "treatment": "Plant rust-resistant hybrids. Avoid excess nitrogen which promotes tender leaf tissue. Apply wettable sulfur if pustules appear before tassel emergence."
+  },
+  {
+    "id": 9,
+    "key": "Corn___Northern_Leaf_Blight",
+    "crop": "Corn / Maize",
+    "disease": "Northern Corn Leaf Blight (NCLB)",
+    "pathogen": "Exserohilum turcicum (Fungal)",
+    "is_healthy": false,
+    "treatment": "Incorporate crop residue post-harvest. Spray copper bio-fungicide during early silking if cigar-shaped lesions exceed 5% canopy cover."
+  },
+  {
+    "id": 10,
+    "key": "Corn___healthy",
+    "crop": "Corn / Maize",
+    "disease": "Clean Healthy Canopy",
+    "pathogen": "None (Healthy)",
+    "is_healthy": true,
+    "treatment": "Vigorous photosynthetic activity. Ensure adequate side-dress nitrogen during V6 vegetative phase."
+  },
+  {
+    "id": 11,
+    "key": "Grape___Black_rot",
+    "crop": "Grape",
+    "disease": "Black Rot",
+    "pathogen": "Guignardia bidwellii (Fungal)",
+    "is_healthy": false,
+    "treatment": "Destroy mummified grape clusters on vine or ground. Spray Bordeaux mixture (copper sulfate + lime) prior to bloom."
+  },
+  {
+    "id": 12,
+    "key": "Grape___Esca_(Black_Measles)",
+    "crop": "Grape",
+    "disease": "Esca (Black Measles / Vine Decline)",
+    "pathogen": "Phaeomoniella chlamydospora complex (Fungal)",
+    "is_healthy": false,
+    "treatment": "Seal all pruning wounds with latex wound sealant. Remove and burn severely compromised cordons to protect vineyard."
+  },
+  {
+    "id": 13,
+    "key": "Grape___Leaf_blight",
+    "crop": "Grape",
+    "disease": "Isariopsis Leaf Blight",
+    "pathogen": "Pseudocercospora vitis (Fungal)",
+    "is_healthy": false,
+    "treatment": "Thin grapevine canopy to reduce microclimate humidity. Apply preventive copper oxychloride foliar spray."
+  },
+  {
+    "id": 14,
+    "key": "Grape___healthy",
+    "crop": "Grape",
+    "disease": "Clean Healthy Foliage",
+    "pathogen": "None (Healthy)",
+    "is_healthy": true,
+    "treatment": "Optimal canopy health. Maintain trellis positioning for maximum cluster sun exposure."
+  },
+  {
+    "id": 15,
+    "key": "Orange___Citrus_greening",
+    "crop": "Citrus / Orange",
+    "disease": "Citrus Greening (Huanglongbing - HLB)",
+    "pathogen": "Candidatus Liberibacter asiaticus (Bacterial vector: Asian Citrus Psyllid)",
+    "is_healthy": false,
+    "treatment": "Deploy yellow sticky cards to monitor Asian Citrus Psyllid vectors. Apply foliar nutritional sprays (Zinc, Manganese, Iron) to sustain tree vigor."
+  },
+  {
+    "id": 16,
+    "key": "Peach___Bacterial_spot",
+    "crop": "Peach",
+    "disease": "Bacterial Spot / Shot Hole",
+    "pathogen": "Xanthomonas arboricola (Bacterial)",
+    "is_healthy": false,
+    "treatment": "Apply fixed copper sprays at dormant bud swell and shuck split. Avoid overhead sprinkler irrigation."
+  },
+  {
+    "id": 17,
+    "key": "Peach___healthy",
+    "crop": "Peach",
+    "disease": "Clean Healthy Foliage",
+    "pathogen": "None (Healthy)",
+    "is_healthy": true,
+    "treatment": "Foliage in peak health. Maintain balanced phosphorus and zinc micro-nutrients."
+  },
+  {
+    "id": 18,
+    "key": "Pepper_bell___Bacterial_spot",
+    "crop": "Bell Pepper",
+    "disease": "Bacterial Leaf Spot",
+    "pathogen": "Xanthomonas campestris (Bacterial)",
+    "is_healthy": false,
+    "treatment": "Soak seed in hot water (50°C for 25 min) before planting. Spray copper hydroxide combined with Bacillus subtilis to inhibit lesion expansion."
+  },
+  {
+    "id": 19,
+    "key": "Pepper_bell___healthy",
+    "crop": "Bell Pepper",
+    "disease": "Clean Healthy Canopy",
+    "pathogen": "None (Healthy)",
+    "is_healthy": true,
+    "treatment": "Canopy pristine. Ensure consistent soil moisture (50-60%) to prevent blossom end rot."
+  },
+  {
+    "id": 20,
+    "key": "Potato___Early_blight",
+    "crop": "Potato",
+    "disease": "Early Blight (Target Spot)",
+    "pathogen": "Alternaria solani (Fungal)",
+    "is_healthy": false,
+    "treatment": "Prune lower infected senescing leaves. Spray copper oxychloride or bio-fungicide (Trichoderma viride 5g/L) at 10-day intervals."
+  },
+  {
+    "id": 21,
+    "key": "Potato___Late_blight",
+    "crop": "Potato",
+    "disease": "Late Blight",
+    "pathogen": "Phytophthora infestans (Oomycete)",
+    "is_healthy": false,
+    "treatment": "Urgent: Eliminate infected tubers immediately. Apply copper soap or cymoxanil-based fungicide. Cease sprinkler irrigation to keep foliage dry."
+  },
+  {
+    "id": 22,
+    "key": "Potato___healthy",
+    "crop": "Potato",
+    "disease": "Clean Healthy Foliage",
+    "pathogen": "None (Healthy)",
+    "is_healthy": true,
+    "treatment": "Vigorous potato vine growth. Hilling soil around stems to encourage tuber expansion and prevent greening."
+  },
+  {
+    "id": 23,
+    "key": "Raspberry___healthy",
+    "crop": "Raspberry",
+    "disease": "Clean Healthy Foliage",
+    "pathogen": "None (Healthy)",
+    "is_healthy": true,
+    "treatment": "Canopy clean. Maintain trellis training and prune spent floricanes after fruiting."
+  },
+  {
+    "id": 24,
+    "key": "Soybean___healthy",
+    "crop": "Soybean",
+    "disease": "Clean Healthy Foliage",
+    "pathogen": "None (Healthy)",
+    "is_healthy": true,
+    "treatment": "Optimal symbiotic Rhizobium nodulation. Monitor pod formation and maintain weed-free perimeter."
+  },
+  {
+    "id": 25,
+    "key": "Squash___Powdery_mildew",
+    "crop": "Squash / Cucurbits",
+    "disease": "Powdery Mildew",
+    "pathogen": "Podosphaera xanthii (Fungal)",
+    "is_healthy": false,
+    "treatment": "Spray 1% baking soda or potassium bicarbonate + liquid soap solution. Increase vine spacing for air circulation."
+  },
+  {
+    "id": 26,
+    "key": "Strawberry___Leaf_scorch",
+    "crop": "Strawberry",
+    "disease": "Leaf Scorch",
+    "pathogen": "Diplocarpon earlianum (Fungal)",
+    "is_healthy": false,
+    "treatment": "Remove and burn scorched runner leaves. Ensure drip tape irrigation keeps crowns dry; spray copper soap if lesions spread."
+  },
+  {
+    "id": 27,
+    "key": "Strawberry___healthy",
+    "crop": "Strawberry",
+    "disease": "Clean Healthy Foliage",
+    "pathogen": "None (Healthy)",
+    "is_healthy": true,
+    "treatment": "Pristine runner growth. Maintain clean straw mulch under developing fruit clusters."
+  },
+  {
+    "id": 28,
+    "key": "Tomato___Bacterial_spot",
+    "crop": "Tomato",
+    "disease": "Bacterial Leaf Spot",
+    "pathogen": "Xanthomonas campestris (Bacterial)",
+    "is_healthy": false,
+    "treatment": "Spray copper bactericide + neem oil extract. Disinfect pruning shears between plants and avoid handling foliage when wet."
+  },
+  {
+    "id": 29,
+    "key": "Tomato___Early_blight",
+    "crop": "Tomato",
+    "disease": "Early Blight (Concentric Ring Spot)",
+    "pathogen": "Alternaria solani (Fungal)",
+    "is_healthy": false,
+    "treatment": "Stake tomatoes to lift lower foliage 30cm off soil. Apply organic copper fungicide or Trichoderma harzianum bio-spray weekly."
+  },
+  {
+    "id": 30,
+    "key": "Tomato___Late_blight",
+    "crop": "Tomato",
+    "disease": "Late Blight (Foliar Necrosis)",
+    "pathogen": "Phytophthora infestans (Oomycete)",
+    "is_healthy": false,
+    "treatment": "High severity: Bag and remove infected vines to prevent field epidemic. Apply preventative copper spray on surrounding asymptomatic sectors."
+  },
+  {
+    "id": 31,
+    "key": "Tomato___Leaf_Mold",
+    "crop": "Tomato",
+    "disease": "Leaf Mold",
+    "pathogen": "Passalora fulva (Fungal)",
+    "is_healthy": false,
+    "treatment": "Improve greenhouse/field ventilation. Keep relative humidity below 80%. Apply sulfur dust on underside of foliage."
+  },
+  {
+    "id": 32,
+    "key": "Tomato___Septoria_leaf_spot",
+    "crop": "Tomato",
+    "disease": "Septoria Leaf Spot",
+    "pathogen": "Septoria lycopersici (Fungal)",
+    "is_healthy": false,
+    "treatment": "Mulch soil around base to stop water splash from soil spores. Prune infected lower leaf whorls and apply copper bio-fungicide."
+  },
+  {
+    "id": 33,
+    "key": "Tomato___Spider_mites",
+    "crop": "Tomato",
+    "disease": "Two-Spotted Spider Mite Infestation",
+    "pathogen": "Tetranychus urticae (Arachnid Pest)",
+    "is_healthy": false,
+    "treatment": "Release predatory phytoseiid mites (Phytoseiulus persimilis). Spray insecticidal potassium soap or neem oil ensuring full lower-leaf coverage."
+  },
+  {
+    "id": 34,
+    "key": "Tomato___Target_Spot",
+    "crop": "Tomato",
+    "disease": "Target Spot",
+    "pathogen": "Corynespora cassiicola (Fungal)",
+    "is_healthy": false,
+    "treatment": "Remove crop debris. Apply bio-fungicide and maintain potassium levels to reinforce cell wall resistance."
+  },
+  {
+    "id": 35,
+    "key": "Tomato___Tomato_Yellow_Leaf_Curl_Virus",
+    "crop": "Tomato",
+    "disease": "Tomato Yellow Leaf Curl Virus (TYLCV)",
+    "pathogen": "Begomovirus (Vector: Bemisia tabaci Whitefly)",
+    "is_healthy": false,
+    "treatment": "Deploy yellow sticky traps to capture whitefly vectors. Apply neem/pongamia oil spray. Rogue out severely stunted infected seedlings."
+  },
+  {
+    "id": 36,
+    "key": "Tomato___Tomato_mosaic_virus",
+    "crop": "Tomato",
+    "disease": "Tomato Mosaic Virus (ToMV)",
+    "pathogen": "Tobamovirus (Mechanically transmitted)",
+    "is_healthy": false,
+    "treatment": "Wash hands in 10% non-fat milk solution before handling plants. Remove infected plants; do not compost. Sterilize plant ties and stakes."
+  },
+  {
+    "id": 37,
+    "key": "Tomato___healthy",
+    "crop": "Tomato",
+    "disease": "Clean Healthy Canopy",
+    "pathogen": "None (Healthy)",
+    "is_healthy": true,
+    "treatment": "Optimal canopy photosynthesis. Support vines on trellises and maintain balanced organic potassium:nitrogen feeding."
+  }
+]

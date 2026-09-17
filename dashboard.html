@@ -3570,16 +3570,15 @@
                 style="display:flex; justify-content:space-between; align-items:flex-start; flex-wrap:wrap; gap:16px; margin-bottom:20px;">
                 <div>
                     <h2 class="sec-title" style="margin-bottom:4px;"><i class="fa-solid fa-crosshairs"
-                            style="color:#ef4444; margin-right:8px;"></i> Autonomous Laser Weed & Pest Neutralization
+                            style="color:#ef4444; margin-right:8px;"></i> Autonomous Laser Defense & Animal Incursion Surveillance
                     </h2>
-                    <p style="color:var(--text-sub); font-size:0.9rem;">High-precision optical targeting with
-                        zero-chemical weed and pest ablation.</p>
+                    <p style="color:var(--text-sub); font-size:0.9rem;">High-precision optical targeting & real-time vertebrate animal/intruder surveillance with zero-chemical ablation.</p>
                 </div>
                 <div style="display:flex; gap:10px; align-items:center; flex-wrap:wrap;">
                     <button class="action-btn" id="btn-live-pest-detect"
                         onclick="if(window.PestDetector) PestDetector.toggle()"
                         style="background:#16a34a; color:white; border:none; font-weight:700; padding:8px 16px; border-radius:12px;">
-                        <i class="fa-solid fa-play"></i> Start Live Pest Vision
+                        <i class="fa-solid fa-play"></i> Start Live Incursion Vision
                     </button>
                     <button class="action-btn" onclick="loadLaserHistory()"
                         style="background:var(--card-bg); border:1px solid var(--border); color:var(--text-main);">
@@ -3660,7 +3659,7 @@
                 </div>
             </div>
 
-            <!-- Live Pest Detection Sentinel Banner (Section 4 Edge AI) -->
+            <!-- Live Incursion Detection Sentinel Banner (COCO-SSD Edge AI) -->
             <div
                 style="background:var(--card-bg); border:1.5px solid var(--border); border-radius:14px; padding:14px 20px; margin-bottom:20px; display:flex; justify-content:space-between; align-items:center; flex-wrap:wrap; gap:12px;">
                 <div style="display:flex; align-items:center; gap:12px;">
@@ -3669,17 +3668,20 @@
                         <i class="fa-solid fa-video"></i>
                     </div>
                     <div>
-                        <div style="font-weight:800; font-size:0.9rem; color:var(--text-main);">Edge AI Pest Camera
-                            Sentinel (COCO-SSD)</div>
+                        <div style="font-weight:800; font-size:0.9rem; color:var(--text-main);">Edge AI Incursion Sentinel (COCO-SSD)</div>
                         <div id="pest-detection-status"
                             style="font-size:0.8rem; color:var(--text-sub); margin-top:2px;">
-                            Camera detection standby — click 'Start Live Pest Vision' to track pests in real time.
+                            Camera surveillance standby — click 'Start Live Incursion Vision' to track vertebrate wildlife and intruders in real time.
                         </div>
                     </div>
                 </div>
-                <div
-                    style="font-size:0.78rem; color:var(--text-sub); background:rgba(0,0,0,0.03); padding:4px 10px; border-radius:8px;">
-                    Surge Alert: <strong>&ge;3 detections / 15 min</strong> triggers early advisory
+                <div style="display:flex; align-items:center; gap:8px;">
+                    <span style="font-size:0.75rem; color:#0284c7; background:rgba(2,132,199,0.08); border:1px solid rgba(2,132,199,0.25); padding:4px 10px; border-radius:8px; font-weight:600;">
+                        <i class="fa-solid fa-circle-info"></i> COCO-SSD detects birds, livestock & intruders (micro-pests require Tier-2 models)
+                    </span>
+                    <span style="font-size:0.75rem; color:var(--text-sub); background:rgba(0,0,0,0.03); padding:4px 10px; border-radius:8px;">
+                        Surge Alert: <strong>&ge;3 incursions / 15 min</strong>
+                    </span>
                 </div>
             </div>
 
@@ -6757,11 +6759,16 @@
                 const isWeed = t.type === 'weed';
                 const typeBadge = isWeed
                     ? '<span style="background:#fee2e2; color:#ef4444; font-weight:800; padding:3px 10px; border-radius:12px; font-size:0.75rem;"><i class="fa-solid fa-seedling"></i> WEED</span>'
-                    : '<span style="background:#fef3c7; color:#d97706; font-weight:800; padding:3px 10px; border-radius:12px; font-size:0.75rem;"><i class="fa-solid fa-bug"></i> PEST</span>';
+                    : '<span style="background:#fef3c7; color:#d97706; font-weight:800; padding:3px 10px; border-radius:12px; font-size:0.75rem;"><i class="fa-solid fa-crosshairs"></i> INCURSION</span>';
+
+                const isSim = t.detection_source === 'manual-test-simulation';
+                const sourceBadge = isSim
+                    ? '<span style="background:rgba(100,116,139,0.12); color:var(--text-sub); font-weight:700; padding:2px 6px; border-radius:4px; font-size:0.7rem; margin-left:6px;"><i class="fa-solid fa-flask"></i> SIMULATION</span>'
+                    : '<span style="background:rgba(16,185,129,0.12); color:#10b981; font-weight:700; padding:2px 6px; border-radius:4px; font-size:0.7rem; margin-left:6px;"><i class="fa-solid fa-eye"></i> OPTICAL AI</span>';
 
                 return `
                 <tr style="border-bottom:1px solid var(--border);">
-                    <td style="padding:14px 16px;">${typeBadge}</td>
+                    <td style="padding:14px 16px;">${typeBadge}${sourceBadge}</td>
                     <td style="padding:14px 16px; font-weight:700; color:var(--text-main);">${t.name}</td>
                     <td style="padding:14px 16px;"><span style="background:var(--card-bg); border:1px solid var(--border); padding:2px 8px; border-radius:6px; font-weight:700; font-size:0.8rem;">Sector ${t.sector}</span></td>
                     <td style="padding:14px 16px; font-size:0.85rem; color:var(--text-sub);">${t.timestamp}</td>

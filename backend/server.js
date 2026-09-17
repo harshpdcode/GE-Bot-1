@@ -227,6 +227,8 @@ app.use(session({
 }));
 
 app.use(express.static(path.join(__dirname, '..', 'frontend')));
+app.use('/assets', express.static(path.join(__dirname, '..', 'assets')));
+app.use('/models', express.static(path.join(__dirname, '..', 'frontend', 'models')));
 
 // UX: Manifest serving
 app.get('/manifest.json', (req, res) => res.sendFile(path.join(__dirname, '..', 'frontend', 'manifest.json')));
@@ -414,10 +416,24 @@ app.get('/api/farm/sectors', requireAuth, (req, res) => {
 
 app.post('/api/farm/sectors/:id/scan', requireAuth, (req, res) => {
     try {
-        const updated = database.scanFarmSector(req.params.id);
+        // Collect real weather context from server cache or request body
+        const weather = req.body.weather || (weatherCache.data && weatherCache.data.current ? {
+            temperature: weatherCache.data.current.temperature_c,
+            humidity: weatherCache.data.current.humidity_pct,
+            rainProb: weatherCache.data.rainProb12h || 0,
+            precipitation: weatherCache.data.current.rainfall_mm || 0,
+            irrigationActive: irrigationValveActive
+        } : {
+            temperature: 28,
+            humidity: 65,
+            rainProb: 35,
+            irrigationActive: irrigationValveActive
+        });
+
+        const updated = database.scanFarmSector(req.params.id, weather);
         if (!updated) return res.status(404).json({ error: 'Sector not found' });
         
-        database.addLog(req.session.userId, 'Soil Probe Scan', 'event', `Scanned ${updated.name}: N=${updated.soil_nitrogen}, P=${updated.soil_phosphorus}, K=${updated.soil_potassium}, pH=${updated.soil_ph}`, 'farmer');
+        database.addLog(req.session.userId, 'Soil Probe Scan', 'event', `Scanned ${updated.name}: N=${updated.soil_nitrogen}, P=${updated.soil_phosphorus}, K=${updated.soil_potassium}, pH=${updated.soil_ph}, Moisture=${updated.moisture}%`, 'farmer');
         io.emit('sectorScanned', updated);
         io.emit('farmAlert', { type: updated.status, message: `Sector ${updated.sector_id}: ${updated.recommended_fertilizer}` });
         res.json({ success: true, sector: updated });
@@ -467,35 +483,40 @@ app.get('/api/farm/reports', requireAuth, (req, res) => {
 });
 
 app.get('/api/farm/stats', requireAuth, (req, res) => {
-    try { res.json(database.getFarmStats()); }
-    catch (err) { res.status(500).json({ error: 'Failed to get stats' }); }
+    try {
+        res.json(database.getFarmStats());
+    } catch (err) { res.status(500).json({ error: 'Failed to get stats' }); }
 });
 
 // =============================================
 // ROBOTIC LASER WEED & PEST DEFENSE API
 // =============================================
 app.get('/api/farm/laser-targets', requireAuth, (req, res) => {
-    try { res.json(database.getLaserTargets(parseInt(req.query.limit) || 20)); }
-    catch (err) { res.status(500).json({ error: 'Failed to get laser history' }); }
+    try {
+        const sourceFilter = req.query.source || null;
+        res.json(database.getLaserTargets(parseInt(req.query.limit) || 20, sourceFilter));
+    } catch (err) { res.status(500).json({ error: 'Failed to get laser history' }); }
 });
 
 app.post('/api/farm/laser-fire', requireAuth, (req, res) => {
     try {
-        const { target_type, species_name, sector_id, wattage, pulse_ms, coord_x, coord_y, coord_z } = req.body;
+        const { target_type, species_name, sector_id, wattage, pulse_ms, coord_x, coord_y, coord_z, is_simulation } = req.body;
         const energyJoules = parseFloat((((wattage || 12) * (pulse_ms || 350)) / 1000).toFixed(2));
+        const isSim = is_simulation !== false && (coord_x == null || coord_y == null);
         
         const record = {
             target_type: target_type || 'weed',
-            species_name: species_name || 'Unclassified Weed/Pest',
+            species_name: species_name || (isSim ? 'Manual Calibration Test' : 'Optical Target'),
             sector_id: sector_id || 'A',
-            coord_x: coord_x || parseFloat((Math.random() * 20).toFixed(1)),
-            coord_y: coord_y || parseFloat((Math.random() * 20).toFixed(1)),
-            coord_z: coord_z || parseFloat((0.2 + Math.random() * 0.5).toFixed(2)),
+            coord_x: coord_x != null ? parseFloat(coord_x) : 10.0,
+            coord_y: coord_y != null ? parseFloat(coord_y) : 10.0,
+            coord_z: coord_z != null ? parseFloat(coord_z) : 0.35,
             laser_wattage: wattage || 12.0,
             pulse_ms: pulse_ms || 350,
             energy_joules: energyJoules,
             status: 'neutralized',
-            kill_confidence: parseFloat((97.0 + Math.random() * 2.8).toFixed(1))
+            kill_confidence: 98.0,
+            detection_source: isSim ? 'manual-test-simulation' : 'real'
         };
 
         const result = database.logLaserTarget(record);
@@ -504,7 +525,7 @@ app.post('/api/farm/laser-fire', requireAuth, (req, res) => {
         const currentStats = database.getFarmStats();
         database.updateFarmStats({ [col]: (currentStats[col] || 0) + 1 });
 
-        database.addLog(req.session.userId, 'Laser Zap', 'event', `Laser beam neutralized ${record.species_name} in Sector ${record.sector_id} (${energyJoules} J)`, 'farmer');
+        database.addLog(req.session.userId, 'Laser Zap', 'event', `Laser beam neutralized ${record.species_name} in Sector ${record.sector_id} (${energyJoules} J) [${record.detection_source}]`, 'farmer');
         io.emit('laserFired', { ...record, id: result.id });
         io.emit('statsUpdated', database.getFarmStats());
 

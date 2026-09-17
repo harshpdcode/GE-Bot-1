@@ -15,6 +15,7 @@ if (!fs.existsSync(dbDir)) fs.mkdirSync(dbDir, { recursive: true });
 const db = new Database(DB_PATH);
 db.pragma('journal_mode = WAL');
 db.pragma('foreign_keys = ON');
+try { db.exec("ALTER TABLE laser_targets ADD COLUMN detection_source TEXT DEFAULT 'real'"); } catch (_) {}
 
 // =============================================
 // INIT DATABASE
@@ -238,9 +239,11 @@ function initDatabase() {
             energy_joules REAL DEFAULT 4.2,
             status TEXT DEFAULT 'neutralized',
             kill_confidence REAL DEFAULT 98.5,
+            detection_source TEXT DEFAULT 'real',
             created_at DATETIME DEFAULT CURRENT_TIMESTAMP
         )
     `);
+    try { db.exec("ALTER TABLE laser_targets ADD COLUMN detection_source TEXT DEFAULT 'real'"); } catch (_) {}
 
     // Unauthorized Invader / Perimeter Security Table
     db.exec(`
@@ -590,15 +593,84 @@ function updateFarmSector(sectorId, data) {
     return db.prepare(`UPDATE farm_sectors SET ${fields.join(', ')} WHERE sector_id=?`).run(...vals);
 }
 
-function scanFarmSector(sectorId) {
+function scanFarmSector(sectorId, weatherContext = {}) {
     const sector = getFarmSectorById(sectorId);
     if (!sector) return null;
-    const n = Math.max(60, Math.min(240, Math.round(sector.soil_nitrogen + (Math.random() - 0.45) * 14)));
-    const p = Math.max(10, Math.min(50, Math.round(sector.soil_phosphorus + (Math.random() - 0.5) * 4)));
-    const k = Math.max(80, Math.min(260, Math.round(sector.soil_potassium + (Math.random() - 0.5) * 12)));
-    const ph = parseFloat((Math.max(5.5, Math.min(8.5, sector.soil_ph + (Math.random() - 0.5) * 0.15))).toFixed(1));
-    const moisture = Math.max(15, Math.min(90, Math.round(sector.moisture + (Math.random() - 0.5) * 6)));
-    const om = parseFloat((Math.max(0.6, Math.min(3.5, sector.organic_matter + (Math.random() - 0.5) * 0.1))).toFixed(1));
+
+    // Extract real weather parameters from context or Open-Meteo payload
+    const temp = weatherContext.temperature != null ? Number(weatherContext.temperature) : 26;
+    const humidity = weatherContext.humidity != null ? Number(weatherContext.humidity) : 60;
+    const rainProb = weatherContext.rainProb != null ? Number(weatherContext.rainProb) : (weatherContext.rainfall_prob_12h || 0);
+    const precipitation = weatherContext.precipitation != null ? Number(weatherContext.precipitation) : 0;
+    const isIrrigating = Boolean(weatherContext.irrigationActive);
+
+    // 1. Agronomic Moisture Dynamics (Physics & Evapotranspiration)
+    // Field baseline capacity: 55-65%. Wilting point: < 25%. Saturation: > 80%.
+    let moisture = Number(sector.moisture || 50);
+    if (isIrrigating) {
+        // Direct root-zone drip irrigation
+        moisture = Math.min(85, moisture + 18);
+    } else if (rainProb >= 70 || precipitation > 1.0) {
+        // High precipitation event: moisture recharge
+        const rainRecharge = precipitation > 0 ? Math.min(25, 8 + precipitation * 3) : (rainProb >= 85 ? 18 : 12);
+        moisture = Math.min(88, moisture + rainRecharge);
+    } else if (rainProb >= 40) {
+        // Mild rain or overcast drizzle
+        moisture = Math.min(80, moisture + 5);
+    } else if (temp > 30 && humidity < 50) {
+        // High evapotranspiration rate (hot and dry)
+        const etLoss = Math.min(8, 2.5 + ((temp - 30) * 0.35) + ((50 - humidity) * 0.08));
+        moisture = Math.max(18, moisture - etLoss);
+    } else if (temp > 25 && humidity < 65) {
+        // Moderate diurnal drying
+        moisture = Math.max(22, moisture - 2.0);
+    } else {
+        // Humid / mild equilibrium: gentle relaxation toward ambient soil capacity (around 52%)
+        moisture = moisture + (moisture > 52 ? -0.8 : +0.8);
+    }
+    moisture = Math.round(Math.max(15, Math.min(90, moisture)));
+
+    // 2. Nitrogen (N) Dynamics: Leaching vs Mineralization vs Crop Uptake
+    let n = Number(sector.soil_nitrogen || 140);
+    if (moisture > 75) {
+        // Nitrate leaching in saturated / waterlogged root zone
+        n = Math.max(60, n - 3);
+    } else if (temp >= 22 && temp <= 32 && moisture >= 45 && moisture <= 65) {
+        // Optimal aerobic microbial activity: organic matter mineralization into available NO3-
+        n = Math.min(240, n + 2);
+    } else {
+        // Normal vegetative crop uptake
+        n = Math.max(60, n - 1);
+    }
+
+    // 3. Phosphorus (P) & Potassium (K): Stable Macronutrient Dynamics
+    let p = Number(sector.soil_phosphorus || 24);
+    let k = Number(sector.soil_potassium || 160);
+    if (sector.crop_stage === 'Flowering' || sector.crop_stage === 'Pod Formation' || sector.crop_stage === 'Silking') {
+        p = Math.max(10, p - 0.4);
+        k = Math.max(70, k - 1.2);
+    } else {
+        p = Math.max(10, p - 0.1);
+        k = Math.max(70, k - 0.4);
+    }
+    p = Math.round(p);
+    k = Math.round(k);
+
+    // 4. Soil pH: Slow chemical buffering
+    let ph = Number(sector.soil_ph || 6.8);
+    if (moisture > 75) {
+        ph = Math.max(5.8, ph - 0.02);
+    } else if (temp > 35 && moisture < 30) {
+        ph = Math.min(8.4, ph + 0.02);
+    }
+    ph = parseFloat(ph.toFixed(2));
+
+    // 5. Soil Organic Matter (OM)
+    let om = Number(sector.organic_matter || 1.8);
+    if (temp >= 26 && moisture >= 45 && moisture <= 65) {
+        om = Math.max(0.8, om - 0.01);
+    }
+    om = parseFloat(om.toFixed(2));
 
     let status = 'healthy';
     let fertStatus = 'optimal';
@@ -646,38 +718,48 @@ function updateFarmStats(data) {
     return db.prepare(`UPDATE farm_stats SET ${fields.join(', ')} WHERE id=1`).run(...vals);
 }
 
+/**
+ * @deprecated Legacy synthetic laser zap generator. Use real PestDetector vision events instead.
+ * Tagged with detection_source: 'manual-test-simulation' so it is never confused with authoritative optical detections.
+ */
 function recordLaserZap(targetType, species, sectorId, energyJoules = 4.2) {
     const col = targetType === 'weed' ? 'weeds_killed' : 'pests_killed';
     db.prepare(`UPDATE farm_stats SET ${col} = ${col} + 1, updated_at=CURRENT_TIMESTAMP WHERE id=1`).run();
     return logLaserTarget({
         target_type: targetType,
-        species_name: species,
+        species_name: species || (targetType === 'weed' ? 'Simulated Weed Target' : 'Simulated Pest Target'),
         sector_id: sectorId || 'A',
-        coord_x: parseFloat((Math.random() * 25).toFixed(1)),
-        coord_y: parseFloat((Math.random() * 25).toFixed(1)),
-        coord_z: parseFloat((0.2 + Math.random() * 0.8).toFixed(2)),
+        coord_x: 10.0,
+        coord_y: 10.0,
+        coord_z: 0.35,
         laser_wattage: targetType === 'weed' ? 15.0 : 10.0,
         pulse_ms: targetType === 'weed' ? 420 : 250,
         energy_joules: energyJoules,
         status: 'neutralized',
-        kill_confidence: parseFloat((96.5 + Math.random() * 3.4).toFixed(1))
+        kill_confidence: 98.0,
+        detection_source: 'manual-test-simulation'
     });
 }
 
 // Laser Targets History
-function getLaserTargets(limit = 20) {
+function getLaserTargets(limit = 20, sourceFilter = null) {
+    if (sourceFilter) {
+        return db.prepare('SELECT * FROM laser_targets WHERE detection_source=? ORDER BY created_at DESC LIMIT ?').all(sourceFilter, limit);
+    }
     return db.prepare('SELECT * FROM laser_targets ORDER BY created_at DESC LIMIT ?').all(limit);
 }
 
 function logLaserTarget(data) {
+    const source = data.detection_source || (data.coord_x === 0 && data.coord_y === 0 ? 'manual-test-simulation' : 'real');
     const res = db.prepare(`
-        INSERT INTO laser_targets (target_type, species_name, sector_id, coord_x, coord_y, coord_z, laser_wattage, pulse_ms, energy_joules, status, kill_confidence)
-        VALUES (?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?)
+        INSERT INTO laser_targets (target_type, species_name, sector_id, coord_x, coord_y, coord_z, laser_wattage, pulse_ms, energy_joules, status, kill_confidence, detection_source)
+        VALUES (?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?)
     `).run(
         data.target_type, data.species_name, data.sector_id || 'A',
         data.coord_x || 0, data.coord_y || 0, data.coord_z || 0,
         data.laser_wattage || 12, data.pulse_ms || 350, data.energy_joules || 4.2,
-        data.status || 'neutralized', data.kill_confidence || 98.0
+        data.status || 'neutralized', data.kill_confidence || 98.0,
+        source
     );
     return { success: true, id: res.lastInsertRowid };
 }
