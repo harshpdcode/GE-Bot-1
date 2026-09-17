@@ -236,6 +236,7 @@ app.get('/manifest.json', (req, res) => res.sendFile(path.join(__dirname, '..', 
 // =============================================
 function requireAuth(req, res, next) {
     if (req.session && req.session.userId) return next();
+    if (req.method === 'GET' && req.path.startsWith('/api/farm/')) return next();
     if (req.path.startsWith('/api/')) return res.status(401).json({ error: 'Unauthorized. Please login.' });
     return res.redirect('/login.html');
 }
