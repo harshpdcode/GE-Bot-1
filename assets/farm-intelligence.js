@@ -860,10 +860,10 @@ const FarmAnalyticsCharts = {
             if (npkEl && data.current_npk) {
                 const { n, p, k, ph } = data.current_npk;
                 npkEl.innerHTML = `
-                    <span style="background:#dcfce7; color:#16a34a; padding:5px 14px; border-radius:20px; font-weight:800; font-size:0.85rem;">N: ${Math.round(n)} kg/ha</span>
-                    <span style="background:#fef3c7; color:#d97706; padding:5px 14px; border-radius:20px; font-weight:800; font-size:0.85rem;">P: ${Math.round(p)} kg/ha</span>
-                    <span style="background:#ede9fe; color:#7c3aed; padding:5px 14px; border-radius:20px; font-weight:800; font-size:0.85rem;">K: ${Math.round(k)} kg/ha</span>
-                    <span style="background:#e0f2fe; color:#0284c7; padding:5px 14px; border-radius:20px; font-weight:800; font-size:0.85rem;">pH: ${ph}</span>`;
+                    <span class="npk-badge npk-n"><i class="fa-solid fa-atom"></i> N: ${Math.round(n)} kg/ha</span>
+                    <span class="npk-badge npk-p"><i class="fa-solid fa-flask"></i> P: ${Math.round(p)} kg/ha</span>
+                    <span class="npk-badge npk-k"><i class="fa-solid fa-vial"></i> K: ${Math.round(k)} kg/ha</span>
+                    <span class="npk-badge npk-ph"><i class="fa-solid fa-droplet"></i> pH: ${ph}</span>`;
             }
         } catch (e) {
             console.warn('[Analytics] Soil trend chart error:', e);
@@ -875,40 +875,52 @@ const FarmAnalyticsCharts = {
     async renderYieldRiskCards() {
         const container = document.getElementById('yield-risk-container');
         if (!container) return;
-        container.innerHTML = '<div style="color:var(--text-sub); font-size:0.85rem;">Evaluating multi-factor crop yield risks...</div>';
+        container.innerHTML = '<div style="color:var(--text-sub); font-size:0.85rem; padding:12px 0;"><i class="fa-solid fa-circle-notch fa-spin"></i> Evaluating multi-factor crop yield risks...</div>';
 
         try {
             const resp = await fetch('/api/farm/analytics/yield-risk');
             if (!resp.ok) throw new Error('API error');
             const data = await resp.json();
 
-            const riskColors = {
-                Low:      { bg: '#f0fdf4', border: '#22c55e', badge: '#16a34a', badgeBg: '#dcfce7' },
-                Moderate: { bg: '#fffbeb', border: '#f59e0b', badge: '#d97706', badgeBg: '#fef3c7' },
-                High:     { bg: '#fff7ed', border: '#f97316', badge: '#ea580c', badgeBg: '#ffedd5' },
-                Critical: { bg: '#fef2f2', border: '#ef4444', badge: '#dc2626', badgeBg: '#fee2e2' }
-            };
+            if (!data.sectors || data.sectors.length === 0) {
+                container.innerHTML = '<div style="color:var(--text-sub); font-size:0.85rem; padding:12px 0;">No sector yield risk data available.</div>';
+                return;
+            }
 
             container.innerHTML = data.sectors.map(s => {
-                const c = riskColors[s.risk_level] || riskColors.Moderate;
+                const riskLevel = s.risk_level || 'Moderate';
+                const levelLower = riskLevel.toLowerCase();
+
+                const badgeIcon = riskLevel === 'Low' ? '<i class="fa-solid fa-circle-check"></i>' :
+                                  riskLevel === 'Moderate' ? '<i class="fa-solid fa-circle-info"></i>' :
+                                  riskLevel === 'High' ? '<i class="fa-solid fa-triangle-exclamation"></i>' :
+                                  '<i class="fa-solid fa-triangle-exclamation"></i>';
+
                 const factors = s.contributing_factors && s.contributing_factors.length > 0
-                    ? s.contributing_factors.map(f => `<span style="background:rgba(0,0,0,0.05); padding:3px 8px; border-radius:8px; font-size:0.75rem; color:var(--text-sub);">${f}</span>`).join(' ')
-                    : '<span style="color:#10b981; font-size:0.82rem;">✅ Balanced NPK & Environmental Tolerances</span>';
+                    ? s.contributing_factors.map(f => `<span class="risk-factor-tag deficiency"><i class="fa-solid fa-circle-exclamation" style="font-size:0.7rem; opacity:0.85;"></i> ${f}</span>`).join(' ')
+                    : '<span class="risk-factor-balanced"><i class="fa-solid fa-circle-check"></i> Balanced NPK & Environmental Tolerances</span>';
 
                 return `
-                    <div style="background:${c.bg}; border:1.5px solid ${c.border}; border-radius:14px; padding:16px 18px; margin-bottom:12px;">
+                    <div class="yield-risk-item risk-${levelLower}">
                         <div style="display:flex; justify-content:space-between; align-items:flex-start; margin-bottom:8px; flex-wrap:wrap; gap:8px;">
                             <div>
-                                <div style="font-weight:800; font-size:0.95rem; color:var(--text-main);">Sector ${s.sector_id} — ${s.crop || 'Field Crop'}</div>
-                                <div style="font-size:0.78rem; color:var(--text-sub); margin-top:2px;">Stage: <strong>${s.crop_stage || 'Vegetative'}</strong> • ${s.days_to_harvest ? s.days_to_harvest + ' days to harvest' : ''}</div>
+                                <div class="yield-risk-title">
+                                    <i class="fa-solid fa-seedling" style="margin-right:6px; opacity:0.85;"></i>Sector ${s.sector_id} — ${s.crop || 'Field Crop'}
+                                </div>
+                                <div class="yield-risk-meta">
+                                    <span>Stage: <strong style="color:var(--text-main);">${s.crop_stage || 'Vegetative'}</strong></span>
+                                    ${s.days_to_harvest ? `<span>• <i class="fa-regular fa-clock" style="font-size:0.75rem;"></i> ${s.days_to_harvest} days to harvest</span>` : ''}
+                                </div>
                             </div>
-                            <span style="background:${c.badgeBg}; color:${c.badge}; font-weight:800; font-size:0.8rem; padding:4px 12px; border-radius:20px; white-space:nowrap;">${s.risk_level} Risk (${s.risk_score} pts)</span>
+                            <span class="yield-risk-badge badge-${levelLower}">
+                                ${badgeIcon} ${riskLevel} Risk (${s.risk_score} pts)
+                            </span>
                         </div>
-                        <div style="display:flex; flex-wrap:wrap; gap:6px; margin-top:8px;">${factors}</div>
+                        <div style="display:flex; flex-wrap:wrap; gap:6px; margin-top:10px;">${factors}</div>
                     </div>`;
             }).join('');
         } catch (e) {
-            container.innerHTML = '<div style="color:#ef4444; font-size:0.85rem;">Failed to load yield risk metrics.</div>';
+            container.innerHTML = '<div style="color:#ef4444; font-size:0.85rem; padding:12px 0;"><i class="fa-solid fa-triangle-exclamation"></i> Failed to load yield risk metrics.</div>';
         }
     },
 
