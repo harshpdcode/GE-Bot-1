@@ -1456,26 +1456,37 @@
         /* AI Assistant FAB */
         .ai-fab {
             position: fixed;
-            bottom: 30px;
-            right: 30px;
-            width: 64px;
-            height: 64px;
+            bottom: 28px;
+            right: 28px;
+            width: 62px;
+            height: 62px;
             border-radius: 50%;
             background: linear-gradient(135deg, #8b5cf6, #6366f1);
             color: white;
             display: flex;
             align-items: center;
             justify-content: center;
-            font-size: 1.8rem;
-            box-shadow: 0 10px 25px rgba(99, 102, 241, 0.4);
+            font-size: 1.7rem;
+            box-shadow: 0 10px 30px rgba(99, 102, 241, 0.45);
             cursor: pointer;
-            z-index: 50;
-            transition: 0.3s;
-            border: 4px solid white;
+            z-index: 10001 !important;
+            transition: transform 0.25s cubic-bezier(0.4, 0, 0.2, 1), box-shadow 0.25s ease;
+            border: 3.5px solid rgba(255, 255, 255, 0.95);
+            user-select: none;
+            -webkit-tap-highlight-color: transparent;
+        }
+
+        body.dark-mode .ai-fab {
+            border: 3.5px solid #1e293b;
+            box-shadow: 0 10px 30px rgba(99, 102, 241, 0.55), 0 2px 8px rgba(0, 0, 0, 0.4);
         }
 
         .ai-fab:hover {
-            transform: scale(1.05);
+            transform: scale(1.08);
+        }
+
+        .ai-fab:active {
+            transform: scale(0.92);
         }
 
         .ai-fab::after {
@@ -1485,6 +1496,7 @@
             border: 2px solid #8b5cf6;
             border-radius: 50%;
             animation: ping 2s cubic-bezier(0, 0, 0.2, 1) infinite;
+            pointer-events: none;
         }
 
         @keyframes ping {
@@ -1500,12 +1512,21 @@
         #ai-modal {
             position: fixed;
             inset: 0;
-            background: rgba(15, 23, 42, 0.6);
-            backdrop-filter: blur(8px);
-            z-index: 100;
+            background: rgba(15, 23, 42, 0.7);
+            backdrop-filter: blur(12px);
+            -webkit-backdrop-filter: blur(12px);
+            z-index: 10050 !important;
             display: none;
             align-items: center;
             justify-content: center;
+            padding: 16px;
+            box-sizing: border-box;
+        }
+
+        .ai-box {
+            max-width: 100% !important;
+            width: min(460px, calc(100vw - 32px)) !important;
+            box-sizing: border-box !important;
         }
 
         .ai-box {
@@ -1810,11 +1831,16 @@
             }
 
             .ai-fab {
-                bottom: 20px;
-                right: 20px;
-                width: 56px;
-                height: 56px;
-                font-size: 1.4rem;
+                bottom: 84px !important;
+                right: 16px !important;
+                width: 52px !important;
+                height: 52px !important;
+                font-size: 1.35rem !important;
+                z-index: 10001 !important;
+                border: 3px solid rgba(255, 255, 255, 0.95) !important;
+            }
+            body.dark-mode .ai-fab {
+                border: 3px solid #1e293b !important;
             }
 
             #mode-popup {
@@ -2376,60 +2402,10 @@
             }
         }
     
-        /* Mobile Bottom Navigation Bar & Box-to-Box Viewport Containment */
+        /* Modern Glassmorphic Floating Bottom Dock & Box-to-Box Viewport Containment */
+        #mobile-bottom-nav,
         .mobile-bottom-bar {
             display: none;
-            position: fixed;
-            bottom: 0;
-            left: 0;
-            right: 0;
-            height: 64px;
-            background: rgba(255, 255, 255, 0.96);
-            backdrop-filter: blur(12px);
-            border-top: 1.5px solid var(--border);
-            z-index: 999;
-            box-shadow: 0 -4px 20px rgba(0, 0, 0, 0.06);
-            padding: 4px 12px;
-            justify-content: space-around;
-            align-items: center;
-        }
-
-        body.dark-mode .mobile-bottom-bar {
-            background: rgba(15, 23, 42, 0.96);
-            border-top-color: #334155;
-            box-shadow: 0 -4px 20px rgba(0, 0, 0, 0.3);
-        }
-
-        .mb-nav-item {
-            display: flex;
-            flex-direction: column;
-            align-items: center;
-            justify-content: center;
-            background: none;
-            border: none;
-            color: var(--text-sub);
-            font-size: 0.7rem;
-            font-weight: 700;
-            gap: 3px;
-            cursor: pointer;
-            padding: 6px 10px;
-            border-radius: 10px;
-            transition: all 0.2s ease;
-            min-width: 58px;
-        }
-
-        .mb-nav-item i {
-            font-size: 1.15rem;
-            transition: transform 0.2s ease;
-        }
-
-        .mb-nav-item.active {
-            color: var(--primary);
-            background: rgba(59, 130, 246, 0.08);
-        }
-
-        .mb-nav-item.active i {
-            transform: scale(1.15);
         }
 
         /* Box-to-box Layout Containment for all devices */
@@ -2452,82 +2428,136 @@
             max-width: 100% !important;
         }
 
-        @media (max-width: 768px) {
-            .mobile-bottom-bar {
-                display: flex !important;
-            }
-            .dashboard-scroll {
-                padding-bottom: 90px !important;
-            }
-            #sidebar nav {
-                padding-bottom: 90px !important;
-            }
-        }
-    
-    
-        /* Mobile Sticky Bottom Navigation Bar & Collapsible Subsections (Prompt v3) */
-        #mobile-bottom-nav {
-            display: none;
-        }
         .collapsible-content {
             transition: all 0.3s ease;
         }
+
         @media (max-width: 768px) {
+            /* Floating Glassmorphic Mobile Navigation Dock */
             #mobile-bottom-nav {
                 display: flex !important;
-                position: fixed;
-                bottom: 0;
-                left: 0;
-                right: 0;
-                height: 64px;
-                background: var(--card-bg);
-                border-top: 1px solid var(--border);
-                z-index: 999;
-                justify-content: space-around;
-                align-items: center;
-                box-shadow: 0 -4px 18px rgba(0, 0, 0, 0.15);
-                backdrop-filter: blur(12px);
-                -webkit-backdrop-filter: blur(12px);
-                padding: 4px 6px;
+                position: fixed !important;
+                bottom: 12px !important;
+                left: 50% !important;
+                transform: translateX(-50%) !important;
+                width: calc(100% - 24px) !important;
+                max-width: 440px !important;
+                height: 60px !important;
+                background: rgba(255, 255, 255, 0.94) !important;
+                backdrop-filter: blur(24px) !important;
+                -webkit-backdrop-filter: blur(24px) !important;
+                border: 1.5px solid var(--border) !important;
+                border-radius: 30px !important;
+                box-shadow: 0 14px 35px rgba(0, 0, 0, 0.16), 0 2px 8px rgba(0, 0, 0, 0.05) !important;
+                z-index: 9999 !important;
+                padding: 4px 6px !important;
+                box-sizing: border-box !important;
+                justify-content: space-around !important;
+                align-items: center !important;
+                overflow: hidden !important;
+                touch-action: manipulation !important;
+                -webkit-tap-highlight-color: transparent !important;
             }
-            .bottom-nav-item {
-                display: flex;
-                flex-direction: column;
-                align-items: center;
-                justify-content: center;
-                gap: 3px;
-                font-size: 0.68rem;
-                font-weight: 700;
-                color: var(--text-sub);
-                background: transparent;
-                border: none;
-                cursor: pointer;
-                flex: 1;
-                padding: 6px 2px;
-                border-radius: 10px;
-                transition: all 0.2s ease;
-                text-decoration: none;
+
+            body.dark-mode #mobile-bottom-nav {
+                background: rgba(15, 23, 42, 0.92) !important;
+                border-color: rgba(255, 255, 255, 0.12) !important;
+                box-shadow: 0 14px 35px rgba(0, 0, 0, 0.45), 0 2px 8px rgba(0, 0, 0, 0.25) !important;
             }
-            .bottom-nav-item i {
-                font-size: 1.2rem;
-                transition: transform 0.2s ease;
+
+            .dock-item {
+                flex: 1 1 0 !important;
+                min-width: 0 !important;
+                height: 50px !important;
+                display: flex !important;
+                flex-direction: column !important;
+                align-items: center !important;
+                justify-content: center !important;
+                gap: 2px !important;
+                padding: 4px 2px !important;
+                background: transparent !important;
+                border: none !important;
+                cursor: pointer !important;
+                border-radius: 20px !important;
+                text-decoration: none !important;
+                transition: all 0.22s cubic-bezier(0.4, 0, 0.2, 1) !important;
+                user-select: none !important;
+                -webkit-tap-highlight-color: transparent !important;
             }
-            .bottom-nav-item.active {
-                color: #16a34a;
-                font-weight: 800;
-                background: rgba(34, 197, 94, 0.12);
+
+            .dock-item:active {
+                transform: scale(0.92) !important;
             }
-            .bottom-nav-item.active i {
-                transform: scale(1.12);
+
+            .dock-icon-wrapper {
+                display: flex !important;
+                align-items: center !important;
+                justify-content: center !important;
+                width: 34px !important;
+                height: 26px !important;
+                border-radius: 12px !important;
+                transition: all 0.22s ease !important;
             }
-            .panel-section {
-                padding-bottom: 85px !important;
+
+            .dock-item i {
+                font-size: 1.15rem !important;
+                color: var(--text-sub) !important;
+                transition: transform 0.22s ease, color 0.22s ease !important;
             }
+
+            .dock-label {
+                font-size: 0.64rem !important;
+                font-weight: 700 !important;
+                color: var(--text-sub) !important;
+                white-space: nowrap !important;
+                overflow: hidden !important;
+                text-overflow: ellipsis !important;
+                max-width: 100% !important;
+                line-height: 1 !important;
+                transition: color 0.22s ease, font-weight 0.22s ease !important;
+            }
+
+            .dock-item.active .dock-icon-wrapper {
+                background: rgba(34, 197, 94, 0.16) !important;
+            }
+
+            .dock-item.active i {
+                color: #16a34a !important;
+                transform: translateY(-1px) scale(1.1) !important;
+            }
+
+            .dock-item.active .dock-label {
+                color: #16a34a !important;
+                font-weight: 800 !important;
+            }
+
+            body.dark-mode .dock-item.active .dock-icon-wrapper {
+                background: rgba(34, 197, 94, 0.25) !important;
+            }
+
+            body.dark-mode .dock-item.active i,
+            body.dark-mode .dock-item.active .dock-label {
+                color: #4ade80 !important;
+            }
+
+            /* Clear bottom padding so all lowest cards and controls are 100% visible */
+            .dashboard-scroll, .panel-section {
+                padding-bottom: 125px !important;
+            }
+
+            body {
+                padding-bottom: 125px !important;
+            }
+
+            #sidebar nav {
+                padding-bottom: 90px !important;
+            }
+
             .collapsible-content.collapsed {
                 display: none !important;
             }
         }
-
+    
     </style>
 </head>
 
@@ -4663,29 +4693,90 @@
                 <!-- Dynamically populated from backend -->
             </div>
         </div>
-        <!-- MOBILE BOTTOM NAVIGATION BAR -->
-        <nav id="mobile-bottom-nav" class="mobile-bottom-bar">
-            <button class="mb-nav-item active" onclick="switchNavPanel('dashboard', this); updateMobileNavActive(this);">
-                <i class="fa-solid fa-chart-pie"></i>
-                <span>Dashboard</span>
+        <!-- MODERN FLOATING MOBILE BOTTOM NAVIGATION DOCK -->
+        <nav id="mobile-bottom-nav">
+            <button type="button" class="dock-item active" data-panel="dashboard" onclick="switchNavPanel('dashboard', this)">
+                <div class="dock-icon-wrapper">
+                    <i class="fa-solid fa-chart-pie"></i>
+                </div>
+                <span class="dock-label">Overview</span>
             </button>
-            <button class="mb-nav-item" onclick="switchNavPanel('soil_zoning', this); updateMobileNavActive(this);">
-                <i class="fa-solid fa-layer-group"></i>
-                <span>Soil</span>
+            <button type="button" class="dock-item" data-panel="soil_zoning" onclick="switchNavPanel('soil_zoning', this)">
+                <div class="dock-icon-wrapper">
+                    <i class="fa-solid fa-seedling"></i>
+                </div>
+                <span class="dock-label">Soil NPK</span>
             </button>
-            <button class="mb-nav-item" onclick="switchNavPanel('laser_defense', this); updateMobileNavActive(this);">
-                <i class="fa-solid fa-crosshairs"></i>
-                <span>Laser</span>
+            <button type="button" class="dock-item" data-panel="laser_defense" onclick="switchNavPanel('laser_defense', this)">
+                <div class="dock-icon-wrapper">
+                    <i class="fa-solid fa-crosshairs"></i>
+                </div>
+                <span class="dock-label">Laser AI</span>
             </button>
-            <button class="mb-nav-item" onclick="switchNavPanel('weather_irrigation', this); updateMobileNavActive(this);">
-                <i class="fa-solid fa-cloud-sun"></i>
-                <span>Weather</span>
+            <button type="button" class="dock-item" data-panel="invader_security" onclick="switchNavPanel('invader_security', this)">
+                <div class="dock-icon-wrapper">
+                    <i class="fa-solid fa-shield-halved"></i>
+                </div>
+                <span class="dock-label">Invaders</span>
             </button>
-            <button class="mb-nav-item" onclick="openSettingsModal()">
-                <i class="fa-solid fa-gear"></i>
-                <span>Settings</span>
+            <button type="button" class="dock-item" data-panel="more" onclick="toggleMobileMoreSheet(true)">
+                <div class="dock-icon-wrapper">
+                    <i class="fa-solid fa-bars-staggered"></i>
+                </div>
+                <span class="dock-label">More</span>
             </button>
         </nav>
+
+        <!-- MOBILE MORE QUICK ACTIONS BOTTOM SHEET -->
+        <div id="mobile-more-backdrop" onclick="toggleMobileMoreSheet(false)"
+            style="position:fixed; inset:0; background:rgba(15, 23, 42, 0.7); backdrop-filter:blur(8px); -webkit-backdrop-filter:blur(8px); z-index:10002; display:none; opacity:0; transition:opacity 0.25s ease;">
+        </div>
+        <div id="mobile-more-sheet"
+            style="position:fixed; bottom:0; left:0; right:0; max-width:520px; margin:0 auto; background:var(--card-bg); border-top:1.5px solid var(--border); border-radius:28px 28px 0 0; z-index:10003; display:none; transform:translateY(100%); transition:transform 0.3s cubic-bezier(0.16, 1, 0.3, 1); box-shadow:0 -12px 40px rgba(0,0,0,0.35); padding:18px 18px 36px; box-sizing:border-box;">
+            <div style="width:42px; height:4px; border-radius:4px; background:var(--border); margin:0 auto 16px;"></div>
+            <div style="display:flex; justify-content:space-between; align-items:center; margin-bottom:16px;">
+                <div style="font-weight:800; font-size:1.05rem; color:var(--text-main); display:flex; align-items:center; gap:8px;">
+                    <i class="fa-solid fa-grid-2" style="color:var(--primary);"></i> Farm Management Hub
+                </div>
+                <button type="button" onclick="toggleMobileMoreSheet(false)" style="background:transparent; border:none; color:var(--text-sub); font-size:1.2rem; cursor:pointer; padding:4px 8px; border-radius:8px;">
+                    <i class="fa-solid fa-xmark"></i>
+                </button>
+            </div>
+            <div style="display:grid; grid-template-columns:1fr 1fr; gap:10px;">
+                <button type="button" onclick="selectMoreModule('weather_irrigation')" class="action-btn"
+                    style="justify-content:flex-start; padding:12px 14px; background:var(--bg-main); border:1px solid var(--border); color:var(--text-main); border-radius:14px; font-weight:700; font-size:0.84rem; gap:10px; cursor:pointer; width:100%; box-sizing:border-box;">
+                    <i class="fa-solid fa-cloud-sun" style="color:#0284c7; font-size:1.15rem;"></i> Weather & Water
+                </button>
+                <button type="button" onclick="selectMoreModule('organic_calculator')" class="action-btn"
+                    style="justify-content:flex-start; padding:12px 14px; background:var(--bg-main); border:1px solid var(--border); color:var(--text-main); border-radius:14px; font-weight:700; font-size:0.84rem; gap:10px; cursor:pointer; width:100%; box-sizing:border-box;">
+                    <i class="fa-solid fa-calculator" style="color:#16a34a; font-size:1.15rem;"></i> Fertilizer Calc
+                </button>
+                <button type="button" onclick="selectMoreModule('crop_rotation')" class="action-btn"
+                    style="justify-content:flex-start; padding:12px 14px; background:var(--bg-main); border:1px solid var(--border); color:var(--text-main); border-radius:14px; font-weight:700; font-size:0.84rem; gap:10px; cursor:pointer; width:100%; box-sizing:border-box;">
+                    <i class="fa-solid fa-arrows-rotate" style="color:#d97706; font-size:1.15rem;"></i> Crop Rotation
+                </button>
+                <button type="button" onclick="selectMoreModule('farm_reports')" class="action-btn"
+                    style="justify-content:flex-start; padding:12px 14px; background:var(--bg-main); border:1px solid var(--border); color:var(--text-main); border-radius:14px; font-weight:700; font-size:0.84rem; gap:10px; cursor:pointer; width:100%; box-sizing:border-box;">
+                    <i class="fa-solid fa-clipboard-list" style="color:#8b5cf6; font-size:1.15rem;"></i> Farm Reports
+                </button>
+                <button type="button" onclick="selectMoreModule('control_modules')" class="action-btn"
+                    style="justify-content:flex-start; padding:12px 14px; background:var(--bg-main); border:1px solid var(--border); color:var(--text-main); border-radius:14px; font-weight:700; font-size:0.84rem; gap:10px; cursor:pointer; width:100%; box-sizing:border-box;">
+                    <i class="fa-solid fa-sliders" style="color:#ec4899; font-size:1.15rem;"></i> Control Modules
+                </button>
+                <button type="button" onclick="selectMoreModule('activity_log')" class="action-btn"
+                    style="justify-content:flex-start; padding:12px 14px; background:var(--bg-main); border:1px solid var(--border); color:var(--text-main); border-radius:14px; font-weight:700; font-size:0.84rem; gap:10px; cursor:pointer; width:100%; box-sizing:border-box;">
+                    <i class="fa-solid fa-clock-rotate-left" style="color:#64748b; font-size:1.15rem;"></i> Activity Logs
+                </button>
+                <button type="button" onclick="toggleMobileMoreSheet(false); openSettingsModal();" class="action-btn"
+                    style="justify-content:flex-start; padding:12px 14px; background:var(--bg-main); border:1px solid var(--border); color:var(--text-main); border-radius:14px; font-weight:700; font-size:0.84rem; gap:10px; cursor:pointer; width:100%; box-sizing:border-box;">
+                    <i class="fa-solid fa-gear" style="color:var(--primary); font-size:1.15rem;"></i> Settings
+                </button>
+                <button type="button" onclick="toggleMobileMoreSheet(false); document.getElementById('lang-modal').style.display='flex';" class="action-btn"
+                    style="justify-content:flex-start; padding:12px 14px; background:var(--bg-main); border:1px solid var(--border); color:var(--text-main); border-radius:14px; font-weight:700; font-size:0.84rem; gap:10px; cursor:pointer; width:100%; box-sizing:border-box;">
+                    <i class="fa-solid fa-language" style="color:#10b981; font-size:1.15rem;"></i> Language
+                </button>
+            </div>
+        </div>
     </main>
 
     <!-- AI Voice Assistant FAB -->
@@ -5265,8 +5356,37 @@
             }
         }
 
+        function toggleMobileMoreSheet(show) {
+            const backdrop = document.getElementById('mobile-more-backdrop');
+            const sheet = document.getElementById('mobile-more-sheet');
+            if (!sheet || !backdrop) return;
+
+            const isOpening = show !== undefined ? show : (sheet.style.display === 'none' || !sheet.style.display);
+
+            if (isOpening) {
+                backdrop.style.display = 'block';
+                sheet.style.display = 'block';
+                requestAnimationFrame(() => {
+                    backdrop.style.opacity = '1';
+                    sheet.style.transform = 'translateY(0)';
+                });
+            } else {
+                backdrop.style.opacity = '0';
+                sheet.style.transform = 'translateY(100%)';
+                setTimeout(() => {
+                    backdrop.style.display = 'none';
+                    sheet.style.display = 'none';
+                }, 280);
+            }
+        }
+
+        function selectMoreModule(panelId) {
+            toggleMobileMoreSheet(false);
+            switchNavPanel(panelId);
+        }
+
         function updateMobileNavActive(btn) {
-            document.querySelectorAll('.mb-nav-item').forEach(b => b.classList.remove('active'));
+            document.querySelectorAll('#mobile-bottom-nav .dock-item, .mb-nav-item').forEach(b => b.classList.remove('active'));
             if (btn) btn.classList.add('active');
         }
 
@@ -5606,8 +5726,11 @@
                 }
             });
 
-            // Update mobile bottom nav items visually
-            document.querySelectorAll('#mobile-bottom-nav .bottom-nav-item').forEach(b => {
+            // Update mobile bottom dock items visually
+            if (typeof toggleMobileMoreSheet === 'function') {
+                toggleMobileMoreSheet(false);
+            }
+            document.querySelectorAll('#mobile-bottom-nav .dock-item, #mobile-bottom-nav .bottom-nav-item, .mb-nav-item').forEach(b => {
                 if (b.getAttribute('data-panel') === panelId) {
                     b.classList.add('active');
                 } else {
