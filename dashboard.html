@@ -284,7 +284,7 @@
         body {
             background: var(--bg-main);
             color: var(--text-main);
-            height: 100vh;
+            /* height: 100vh; */
             display: flex;
             overflow: hidden;
         }
@@ -1850,6 +1850,7 @@
                 z-index: 10001 !important;
                 border: 3px solid rgba(255, 255, 255, 0.95) !important;
             }
+
             body.dark-mode .ai-fab {
                 border: 3px solid #1e293b !important;
             }
@@ -2412,21 +2413,198 @@
                 transform: scale(1)
             }
         }
-    
+
         /* Clear bottom padding so lowest cards and controls are never blocked */
-            .dashboard-scroll, .panel-section { padding-bottom: 40px !important; }
-
-            body { padding-bottom: 40px !important; }
-
-            #sidebar nav {
-                padding-bottom: 90px !important;
-            }
-
-            .collapsible-content.collapsed {
-                display: none !important;
-            }
+        .dashboard-scroll,
+        .panel-section {
+            padding-bottom: 40px !important;
         }
-    
+
+        body {
+            padding-bottom: 40px !important;
+        }
+
+        #sidebar nav {
+            padding-bottom: 90px !important;
+        }
+
+        .collapsible-content.collapsed {
+            display: none !important;
+        }
+
+        /* =======================================================
+           FARM INTELLIGENCE: HIGH-CONTRAST THEMED ADVISORY & RISK CARDS
+           ======================================================= */
+        .adv-card {
+            border-radius: 14px;
+            padding: 16px 18px;
+            margin-bottom: 12px;
+            position: relative;
+            transition: transform 0.2s ease, box-shadow 0.2s ease;
+            border-left-width: 5px !important;
+            border-left-style: solid !important;
+            box-sizing: border-box;
+        }
+        .adv-card:hover {
+            transform: translateY(-1px);
+        }
+
+        /* Critical Severity */
+        .adv-card.adv-critical {
+            background: #fef2f2;
+            border: 1px solid #fee2e2;
+            border-left-color: #ef4444 !important;
+        }
+        .adv-card.adv-critical .adv-title { color: #b91c1c; }
+        .adv-card.adv-critical .adv-action { color: #991b1b; }
+        .adv-card.adv-critical .adv-tag { background: #fee2e2; color: #b91c1c; border: 1px solid #fca5a5; }
+        .adv-card.adv-critical .adv-icon-wrap { background: #fee2e2; color: #ef4444; }
+
+        body.dark-mode .adv-card.adv-critical {
+            background: rgba(239, 68, 68, 0.14) !important;
+            border: 1px solid rgba(239, 68, 68, 0.35) !important;
+            border-left-color: #ef4444 !important;
+            box-shadow: 0 4px 20px rgba(239, 68, 68, 0.1);
+        }
+        body.dark-mode .adv-card.adv-critical .adv-title { color: #fca5a5 !important; }
+        body.dark-mode .adv-card.adv-critical .adv-action { color: #fee2e2 !important; }
+        body.dark-mode .adv-card.adv-critical .adv-tag { background: rgba(239, 68, 68, 0.25) !important; color: #fca5a5 !important; border-color: rgba(239, 68, 68, 0.4) !important; }
+        body.dark-mode .adv-card.adv-critical .adv-icon-wrap { background: rgba(239, 68, 68, 0.25) !important; color: #f87171 !important; }
+
+        /* Warning & High Severity */
+        .adv-card.adv-warning, .adv-card.adv-high {
+            background: #fffbeb;
+            border: 1px solid #fef3c7;
+            border-left-color: #f59e0b !important;
+        }
+        .adv-card.adv-warning .adv-title, .adv-card.adv-high .adv-title { color: #b45309; }
+        .adv-card.adv-warning .adv-action, .adv-card.adv-high .adv-action { color: #92400e; }
+        .adv-card.adv-warning .adv-tag, .adv-card.adv-high .adv-tag { background: #fef3c7; color: #b45309; border: 1px solid #fde68a; }
+        .adv-card.adv-warning .adv-icon-wrap, .adv-card.adv-high .adv-icon-wrap { background: #fef3c7; color: #d97706; }
+
+        body.dark-mode .adv-card.adv-warning, body.dark-mode .adv-card.adv-high {
+            background: rgba(245, 158, 11, 0.14) !important;
+            border: 1px solid rgba(245, 158, 11, 0.35) !important;
+            border-left-color: #f59e0b !important;
+            box-shadow: 0 4px 20px rgba(245, 158, 11, 0.1);
+        }
+        body.dark-mode .adv-card.adv-warning .adv-title, body.dark-mode .adv-card.adv-high .adv-title { color: #fde68a !important; }
+        body.dark-mode .adv-card.adv-warning .adv-action, body.dark-mode .adv-card.adv-high .adv-action { color: #fef3c7 !important; }
+        body.dark-mode .adv-card.adv-warning .adv-tag, body.dark-mode .adv-card.adv-high .adv-tag { background: rgba(245, 158, 11, 0.25) !important; color: #fde68a !important; border-color: rgba(245, 158, 11, 0.4) !important; }
+        body.dark-mode .adv-card.adv-warning .adv-icon-wrap, body.dark-mode .adv-card.adv-high .adv-icon-wrap { background: rgba(245, 158, 11, 0.25) !important; color: #fbbf24 !important; }
+
+        /* Moderate Severity */
+        .adv-card.adv-moderate {
+            background: #fffdf5;
+            border: 1px solid #fef9c3;
+            border-left-color: #eab308 !important;
+        }
+        .adv-card.adv-moderate .adv-title { color: #a16207; }
+        .adv-card.adv-moderate .adv-action { color: #854d0e; }
+        .adv-card.adv-moderate .adv-tag { background: #fef9c3; color: #854d0e; border: 1px solid #fef08a; }
+        .adv-card.adv-moderate .adv-icon-wrap { background: #fef9c3; color: #ca8a04; }
+
+        body.dark-mode .adv-card.adv-moderate {
+            background: rgba(234, 179, 8, 0.12) !important;
+            border: 1px solid rgba(234, 179, 8, 0.3) !important;
+            border-left-color: #eab308 !important;
+        }
+        body.dark-mode .adv-card.adv-moderate .adv-title { color: #fef08a !important; }
+        body.dark-mode .adv-card.adv-moderate .adv-action { color: #fef9c3 !important; }
+        body.dark-mode .adv-card.adv-moderate .adv-tag { background: rgba(234, 179, 8, 0.22) !important; color: #fef08a !important; border-color: rgba(234, 179, 8, 0.35) !important; }
+        body.dark-mode .adv-card.adv-moderate .adv-icon-wrap { background: rgba(234, 179, 8, 0.22) !important; color: #facc15 !important; }
+
+        /* Info Severity */
+        .adv-card.adv-info {
+            background: #eff6ff;
+            border: 1px solid #dbeafe;
+            border-left-color: #3b82f6 !important;
+        }
+        .adv-card.adv-info .adv-title { color: #1d4ed8; }
+        .adv-card.adv-info .adv-action { color: #1e40af; }
+        .adv-card.adv-info .adv-tag { background: #dbeafe; color: #1d4ed8; border: 1px solid #bfdbfe; }
+        .adv-card.adv-info .adv-icon-wrap { background: #dbeafe; color: #3b82f6; }
+
+        body.dark-mode .adv-card.adv-info {
+            background: rgba(59, 130, 246, 0.14) !important;
+            border: 1px solid rgba(59, 130, 246, 0.35) !important;
+            border-left-color: #3b82f6 !important;
+            box-shadow: 0 4px 20px rgba(59, 130, 246, 0.1);
+        }
+        body.dark-mode .adv-card.adv-info .adv-title { color: #93c5fd !important; }
+        body.dark-mode .adv-card.adv-info .adv-action { color: #bfdbfe !important; }
+        body.dark-mode .adv-card.adv-info .adv-tag { background: rgba(59, 130, 246, 0.25) !important; color: #93c5fd !important; border-color: rgba(59, 130, 246, 0.4) !important; }
+        body.dark-mode .adv-card.adv-info .adv-icon-wrap { background: rgba(59, 130, 246, 0.25) !important; color: #60a5fa !important; }
+
+        /* Safe / Low Severity */
+        .adv-card.adv-low, .adv-card.adv-safe {
+            background: #f0fdf4;
+            border: 1px solid #dcfce7;
+            border-left-color: #22c55e !important;
+        }
+        .adv-card.adv-low .adv-title, .adv-card.adv-safe .adv-title { color: #15803d; }
+        .adv-card.adv-low .adv-action, .adv-card.adv-safe .adv-action { color: #166534; }
+        .adv-card.adv-low .adv-tag, .adv-card.adv-safe .adv-tag { background: #dcfce7; color: #15803d; border: 1px solid #86efac; }
+        .adv-card.adv-low .adv-icon-wrap, .adv-card.adv-safe .adv-icon-wrap { background: #dcfce7; color: #16a34a; }
+
+        body.dark-mode .adv-card.adv-low, body.dark-mode .adv-card.adv-safe {
+            background: rgba(34, 197, 94, 0.14) !important;
+            border: 1px solid rgba(34, 197, 94, 0.35) !important;
+            border-left-color: #22c55e !important;
+            box-shadow: 0 4px 20px rgba(34, 197, 94, 0.1);
+        }
+        body.dark-mode .adv-card.adv-low .adv-title, body.dark-mode .adv-card.adv-safe .adv-title { color: #86efac !important; }
+        body.dark-mode .adv-card.adv-low .adv-action, body.dark-mode .adv-card.adv-safe .adv-action { color: #bbf7d0 !important; }
+        body.dark-mode .adv-card.adv-low .adv-tag, body.dark-mode .adv-card.adv-safe .adv-tag { background: rgba(34, 197, 94, 0.25) !important; color: #86efac !important; border-color: rgba(34, 197, 94, 0.4) !important; }
+        body.dark-mode .adv-card.adv-low .adv-icon-wrap, body.dark-mode .adv-card.adv-safe .adv-icon-wrap { background: rgba(34, 197, 94, 0.25) !important; color: #4ade80 !important; }
+
+        .adv-tag {
+            display: inline-block;
+            font-size: 0.68rem;
+            font-weight: 800;
+            padding: 2px 7px;
+            border-radius: 6px;
+            letter-spacing: 0.5px;
+            text-transform: uppercase;
+        }
+        .adv-meta {
+            font-size: 0.76rem;
+            color: var(--text-sub);
+            margin-top: 6px;
+            display: flex;
+            align-items: center;
+            gap: 10px;
+            flex-wrap: wrap;
+        }
+        body.dark-mode .adv-meta {
+            color: #94a3b8 !important;
+        }
+        .adv-dismiss-btn {
+            background: transparent;
+            border: none;
+            color: var(--text-sub);
+            font-size: 1.15rem;
+            cursor: pointer;
+            padding: 4px 8px;
+            border-radius: 8px;
+            transition: all 0.2s ease;
+            opacity: 0.65;
+            display: flex;
+            align-items: center;
+            justify-content: center;
+        }
+        .adv-dismiss-btn:hover {
+            opacity: 1;
+            background: rgba(0, 0, 0, 0.08);
+            color: var(--text-main);
+        }
+        body.dark-mode .adv-dismiss-btn {
+            color: #cbd5e1 !important;
+        }
+        body.dark-mode .adv-dismiss-btn:hover {
+            background: rgba(255, 255, 255, 0.15) !important;
+            color: #ffffff !important;
+        }
     </style>
 </head>
 
@@ -2498,8 +2676,10 @@
                     class="fa-solid fa-shield-halved" style="color:#f59e0b;"></i> Perimeter Security</button>
             <button class="nav-btn notranslate" onclick="switchNavPanel('farm_reports', this)"><i
                     class="fa-solid fa-chart-line" style="color:#6366f1;"></i> Farm Patrol Report</button>
-            <button class="nav-btn notranslate" onclick="switchNavPanel('farmer_advisory', this)" style="position:relative;"><i
-                    class="fa-solid fa-bell" style="color:#f59e0b;"></i> Farmer Advisory <span id="advisory-badge" style="display:none; margin-left:auto; background:#ef4444; color:white; font-size:0.7rem; font-weight:800; border-radius:10px; padding:2px 7px;"></span></button>
+            <button class="nav-btn notranslate" onclick="switchNavPanel('farmer_advisory', this)"
+                style="position:relative;"><i class="fa-solid fa-bell" style="color:#f59e0b;"></i> Farmer Advisory <span
+                    id="advisory-badge"
+                    style="display:none; margin-left:auto; background:#ef4444; color:white; font-size:0.7rem; font-weight:800; border-radius:10px; padding:2px 7px;"></span></button>
             <button class="nav-btn notranslate" onclick="switchNavPanel('farm_analytics', this)"><i
                     class="fa-solid fa-chart-simple" style="color:#06b6d4;"></i> Farm Analytics</button>
             <!-- Hidden by user request (preserved for future use) -->
@@ -2531,9 +2711,11 @@
                 </div>
                 <div style="min-width:0; flex:1;">
                     <div style="display:flex; align-items:center; gap:6px; flex-wrap:wrap;">
-                        <span id="breach-toast-title" style="font-weight:800; font-size:0.85rem; color:#b91c1c;">⚠️ Wild Boar detected</span>
+                        <span id="breach-toast-title" style="font-weight:800; font-size:0.85rem; color:#b91c1c;">⚠️ Wild
+                            Boar detected</span>
                         <span id="breach-toast-sector"
-                            style="background:#fee2e2; color:#b91c1c; font-size:0.7rem; font-weight:800; padding:1px 6px; border-radius:8px; border:1px solid #fca5a5;">Sector C</span>
+                            style="background:#fee2e2; color:#b91c1c; font-size:0.7rem; font-weight:800; padding:1px 6px; border-radius:8px; border:1px solid #fca5a5;">Sector
+                            C</span>
                     </div>
                     <div style="font-size:0.75rem; color:var(--text-sub); text-overflow:ellipsis; overflow:hidden; white-space:nowrap;"
                         id="toast-breach-sub">North-East Perimeter • Acoustic warning active</div>
@@ -2604,7 +2786,8 @@
                     <div class="ic-value">Sunny</div>
                     <div class="ic-bottom">
                         <span class="text-sub"><i class="fa-solid fa-wind"></i> <span id="v-wind">12</span> km/h</span>
-                        <span class="text-sub"><i class="fa-solid fa-temperature-half"></i> <span id="v-temp">28</span>°C</span>
+                        <span class="text-sub"><i class="fa-solid fa-temperature-half"></i> <span
+                                id="v-temp">28</span>°C</span>
                     </div>
                 </div>
 
@@ -3001,24 +3184,29 @@
                 </div>
             </div>
             <!-- Robot uptime -->
-                        <!-- Hardware Server IP Configuration Card in Network Panel -->
+            <!-- Hardware Server IP Configuration Card in Network Panel -->
             <div class="ctrl-card" style="margin-bottom:20px; border-left:4px solid var(--primary);">
-                <div style="display:flex; justify-content:space-between; align-items:center; margin-bottom:12px; flex-wrap:wrap; gap:10px;">
-                    <div style="font-weight:700; font-size:0.95rem; color:var(--text-main); display:flex; align-items:center; gap:8px;">
+                <div
+                    style="display:flex; justify-content:space-between; align-items:center; margin-bottom:12px; flex-wrap:wrap; gap:10px;">
+                    <div
+                        style="font-weight:700; font-size:0.95rem; color:var(--text-main); display:flex; align-items:center; gap:8px;">
                         <i class="fa-solid fa-satellite-dish" style="color:var(--primary);"></i> Hardware Server Target
                     </div>
-                    <button onclick="openSettingsModal()" class="action-btn" style="padding:6px 12px; font-size:0.8rem;">
+                    <button onclick="openSettingsModal()" class="action-btn"
+                        style="padding:6px 12px; font-size:0.8rem;">
                         <i class="fa-solid fa-gear"></i> Configure IP
                     </button>
                 </div>
                 <div style="font-size:0.85rem; color:var(--text-sub); margin-bottom:8px;">
-                    Configured Endpoint: <code id="net-configured-endpoint" style="font-weight:700; color:var(--primary); background:rgba(59,130,246,0.1); padding:2px 6px; border-radius:6px;">Standalone Mock Telemetry</code>
+                    Configured Endpoint: <code id="net-configured-endpoint"
+                        style="font-weight:700; color:var(--primary); background:rgba(59,130,246,0.1); padding:2px 6px; border-radius:6px;">Standalone Mock Telemetry</code>
                 </div>
                 <div style="font-size:0.8rem; color:var(--text-sub);">
-                    Connects directly to your ESP32 Robot WiFi Bridge or cloud server. When blank, system runs verified synchronized offline telemetry with zero latency.
+                    Connects directly to your ESP32 Robot WiFi Bridge or cloud server. When blank, system runs verified
+                    synchronized offline telemetry with zero latency.
                 </div>
             </div>
-<div class="ctrl-card" style="margin-bottom:20px;">
+            <div class="ctrl-card" style="margin-bottom:20px;">
                 <div class="sig-row" style="margin-bottom:0;">
                     <div><i class="fa-solid fa-clock" style="margin-right:8px; color:var(--primary);"></i> Robot Uptime
                     </div>
@@ -3306,8 +3494,8 @@
                         <div>
                             <span style="font-weight:800; font-size:1.05rem; color:var(--text-main);">Real
                                 Farm Area Satellite Map & Health Zoning</span>
-                            <div style="font-size:0.75rem; color:var(--text-sub);">Lat: 28.6139° N, Lon:
-                                77.2090° E • Plot: 6.00 Acres • Click sector to inspect</div>
+                            <div style="font-size:0.75rem; color:var(--text-sub);">Lat: 30.8995° N, Lon:
+                                75.8075° E • Plot: 6.00 Acres • PAU Agro Research Station, Punjab Wheat Belt</div>
                         </div>
                     </div>
                     <!-- Zone Legend -->
@@ -3333,8 +3521,8 @@
                         style="position:absolute; bottom:14px; right:14px; z-index:900; background:rgba(15, 23, 42, 0.85); backdrop-filter:blur(8px); border:1px solid #334155; border-radius:10px; padding:6px 12px; display:flex; align-items:center; gap:10px; font-size:0.75rem; color:#f8fafc; font-family:monospace; pointer-events:none;">
                         <span><i class="fa-solid fa-satellite" style="color:#38bdf8;"></i> SATELLITE HD</span>
                         <span style="color:#64748b;">|</span>
-                        <span><i class="fa-solid fa-location-crosshairs" style="color:#22c55e;"></i> GPS: 28.6139° N,
-                            77.2090° E</span>
+                        <span><i class="fa-solid fa-location-crosshairs" style="color:#22c55e;"></i> GPS: 30.8995° N,
+                            75.8075° E (Punjab Farmland)</span>
                     </div>
                 </div>
             </div>
@@ -3388,7 +3576,8 @@
                         zero-chemical weed and pest ablation.</p>
                 </div>
                 <div style="display:flex; gap:10px; align-items:center; flex-wrap:wrap;">
-                    <button class="action-btn" id="btn-live-pest-detect" onclick="if(window.PestDetector) PestDetector.toggle()"
+                    <button class="action-btn" id="btn-live-pest-detect"
+                        onclick="if(window.PestDetector) PestDetector.toggle()"
                         style="background:#16a34a; color:white; border:none; font-weight:700; padding:8px 16px; border-radius:12px;">
                         <i class="fa-solid fa-play"></i> Start Live Pest Vision
                     </button>
@@ -3472,19 +3661,24 @@
             </div>
 
             <!-- Live Pest Detection Sentinel Banner (Section 4 Edge AI) -->
-            <div style="background:var(--card-bg); border:1.5px solid var(--border); border-radius:14px; padding:14px 20px; margin-bottom:20px; display:flex; justify-content:space-between; align-items:center; flex-wrap:wrap; gap:12px;">
+            <div
+                style="background:var(--card-bg); border:1.5px solid var(--border); border-radius:14px; padding:14px 20px; margin-bottom:20px; display:flex; justify-content:space-between; align-items:center; flex-wrap:wrap; gap:12px;">
                 <div style="display:flex; align-items:center; gap:12px;">
-                    <div style="width:36px; height:36px; border-radius:10px; background:#eff6ff; color:#0284c7; display:flex; align-items:center; justify-content:center; font-size:1.1rem; flex-shrink:0;">
+                    <div
+                        style="width:36px; height:36px; border-radius:10px; background:#eff6ff; color:#0284c7; display:flex; align-items:center; justify-content:center; font-size:1.1rem; flex-shrink:0;">
                         <i class="fa-solid fa-video"></i>
                     </div>
                     <div>
-                        <div style="font-weight:800; font-size:0.9rem; color:var(--text-main);">Edge AI Pest Camera Sentinel (COCO-SSD)</div>
-                        <div id="pest-detection-status" style="font-size:0.8rem; color:var(--text-sub); margin-top:2px;">
+                        <div style="font-weight:800; font-size:0.9rem; color:var(--text-main);">Edge AI Pest Camera
+                            Sentinel (COCO-SSD)</div>
+                        <div id="pest-detection-status"
+                            style="font-size:0.8rem; color:var(--text-sub); margin-top:2px;">
                             Camera detection standby — click 'Start Live Pest Vision' to track pests in real time.
                         </div>
                     </div>
                 </div>
-                <div style="font-size:0.78rem; color:var(--text-sub); background:rgba(0,0,0,0.03); padding:4px 10px; border-radius:8px;">
+                <div
+                    style="font-size:0.78rem; color:var(--text-sub); background:rgba(0,0,0,0.03); padding:4px 10px; border-radius:8px;">
                     Surge Alert: <strong>&ge;3 detections / 15 min</strong> triggers early advisory
                 </div>
             </div>
@@ -3570,17 +3764,22 @@
                     <label
                         style="font-size:0.78rem; font-weight:700; color:var(--text-sub); display:block; margin-bottom:6px;">QUICK
                         LANDFIELD PRESET</label>
-                    <div id="landfield-presets-group" style="display:grid; grid-template-columns: repeat(4, 1fr); gap:8px; margin-bottom:16px;">
-                        <button type="button" class="action-btn" id="btn-preset-1" onclick="setLandfieldPreset(1.0, this)"
+                    <div id="landfield-presets-group"
+                        style="display:grid; grid-template-columns: repeat(4, 1fr); gap:8px; margin-bottom:16px;">
+                        <button type="button" class="action-btn" id="btn-preset-1"
+                            onclick="setLandfieldPreset(1.0, this)"
                             style="justify-content:center; padding:8px; font-size:0.82rem; background:var(--card-bg); border:1px solid var(--border); color:var(--text-main); cursor:pointer;">1
                             Acre</button>
-                        <button type="button" class="action-btn" id="btn-preset-2-5" onclick="setLandfieldPreset(2.5, this)"
+                        <button type="button" class="action-btn" id="btn-preset-2-5"
+                            onclick="setLandfieldPreset(2.5, this)"
                             style="justify-content:center; padding:8px; font-size:0.82rem; background:var(--card-bg); border:1px solid var(--border); color:var(--text-main); cursor:pointer;">2.5
                             Acres</button>
-                        <button type="button" class="action-btn active" id="btn-preset-5" onclick="setLandfieldPreset(5.0, this)"
+                        <button type="button" class="action-btn active" id="btn-preset-5"
+                            onclick="setLandfieldPreset(5.0, this)"
                             style="justify-content:center; padding:8px; font-size:0.82rem; background:#16a34a; color:white; border:none; cursor:pointer;">5
                             Acres</button>
-                        <button type="button" class="action-btn" id="btn-preset-10" onclick="setLandfieldPreset(10.0, this)"
+                        <button type="button" class="action-btn" id="btn-preset-10"
+                            onclick="setLandfieldPreset(10.0, this)"
                             style="justify-content:center; padding:8px; font-size:0.82rem; background:var(--card-bg); border:1px solid var(--border); color:var(--text-main); cursor:pointer;">10
                             Acres</button>
                     </div>
@@ -3853,7 +4052,8 @@
 
             <!-- 3-Stage Application Timeline for the Landfield -->
             <div class="ctrl-card">
-                <div style="display:flex; justify-content:space-between; align-items:center; margin-bottom:14px; flex-wrap:wrap; gap:10px;">
+                <div
+                    style="display:flex; justify-content:space-between; align-items:center; margin-bottom:14px; flex-wrap:wrap; gap:10px;">
                     <div class="cc-title" style="margin-bottom:0;"><i class="fa-solid fa-calendar-days"
                             style="color:#16a34a;"></i> 3-Stage Landfield Application Schedule</div>
                     <button type="button" class="action-btn" onclick="toggleAccordion('calc-schedule-collapse', this)"
@@ -3861,7 +4061,8 @@
                         <i class="fa-solid fa-chevron-up"></i> <span class="lbl-toggle">Collapse Schedule</span>
                     </button>
                 </div>
-                <div id="calc-schedule-collapse" class="collapsible-content" style="display:grid; grid-template-columns: repeat(auto-fit, minmax(280px, 1fr)); gap:16px;">
+                <div id="calc-schedule-collapse" class="collapsible-content"
+                    style="display:grid; grid-template-columns: repeat(auto-fit, minmax(280px, 1fr)); gap:16px;">
                     <div
                         style="background:var(--bg-main); border-left:4px solid #16a34a; border-radius:12px; padding:14px 16px;">
                         <span style="font-size:0.75rem; font-weight:800; color:#16a34a; text-transform:uppercase;">Stage
@@ -3901,14 +4102,17 @@
                     <h2 class="sec-title" style="margin-bottom:4px;"><i class="fa-solid fa-seedling"
                             style="color:#16a34a; margin-right:8px;"></i> Crop Health Diagnostics & Next Crop
                         Rotation AI</h2>
-                    <p style="color:var(--text-sub); font-size:0.9rem;">RGB canopy vigor index proxy & Edge AI leaf disease classifier combined with rotation agronomy.</p>
+                    <p style="color:var(--text-sub); font-size:0.9rem;">RGB canopy vigor index proxy & Edge AI leaf
+                        disease classifier combined with rotation agronomy.</p>
                 </div>
                 <div style="display:flex; gap:10px; flex-wrap:wrap;">
-                    <button class="action-btn" id="btn-scan-canopy" onclick="if(window.CropVigorAnalyzer) CropVigorAnalyzer.scan()"
+                    <button class="action-btn" id="btn-scan-canopy"
+                        onclick="if(window.CropVigorAnalyzer) CropVigorAnalyzer.scan()"
                         style="background:#16a34a; color:white; border:none;">
                         <i class="fa-solid fa-microscope"></i> Scan Canopy Vigor
                     </button>
-                    <button class="action-btn" id="btn-scan-disease" onclick="if(window.PlantDiseaseDetector) PlantDiseaseDetector.detect()"
+                    <button class="action-btn" id="btn-scan-disease"
+                        onclick="if(window.PlantDiseaseDetector) PlantDiseaseDetector.detect()"
                         style="background:#0284c7; color:white; border:none;">
                         <i class="fa-solid fa-virus"></i> Scan Leaf Disease
                     </button>
@@ -3923,16 +4127,21 @@
             <div class="cards-2x2-grid">
                 <div class="agro-stat-card stat-green">
                     <div style="font-size:0.8rem; font-weight:700; color:var(--text-sub); text-transform:uppercase;">
-                        RGB Canopy Vigor Index <span style="font-size:0.68rem; font-weight:400; text-transform:none; color:var(--text-sub);">(RGB Proxy)</span></div>
-                    <div style="font-size:2rem; font-weight:800; color:#16a34a; margin:8px 0;" id="vigor-index-val">0.78</div>
+                        RGB Canopy Vigor Index <span
+                            style="font-size:0.68rem; font-weight:400; text-transform:none; color:var(--text-sub);">(RGB
+                            Proxy)</span></div>
+                    <div style="font-size:2rem; font-weight:800; color:#16a34a; margin:8px 0;" id="vigor-index-val">0.78
+                    </div>
                     <div style="font-size:0.85rem; color:#10b981; font-weight:600;" id="vigor-index-label"><i
                             class="fa-solid fa-circle-check"></i> Dense & Vigorous Canopy</div>
-                    <div style="font-size:0.72rem; color:var(--text-sub); margin-top:4px;" id="vigor-index-sub">Live RGB camera proxy (not multispectral)</div>
+                    <div style="font-size:0.72rem; color:var(--text-sub); margin-top:4px;" id="vigor-index-sub">Live RGB
+                        camera proxy (not multispectral)</div>
                 </div>
                 <div class="agro-stat-card stat-purple">
                     <div style="font-size:0.8rem; font-weight:700; color:var(--text-sub); text-transform:uppercase;">
                         Chlorophyll Estimate</div>
-                    <div style="font-size:2rem; font-weight:800; color:#8b5cf6; margin:8px 0;" id="chlorophyll-spad-val">46.2 SPAD</div>
+                    <div style="font-size:2rem; font-weight:800; color:#8b5cf6; margin:8px 0;"
+                        id="chlorophyll-spad-val">46.2 SPAD</div>
                     <div style="font-size:0.85rem; color:var(--text-sub);">Derived from Canopy Greenness Ratio</div>
                 </div>
                 <div class="agro-stat-card stat-amber">
@@ -3945,8 +4154,10 @@
                     <div style="font-size:0.8rem; font-weight:700; color:var(--text-sub); text-transform:uppercase;">
                         Edge AI Pathogen Sentinel</div>
                     <div id="disease-detection-result" style="margin-top:6px;">
-                        <div style="font-size:1.05rem; font-weight:800; color:#16a34a;"><i class="fa-solid fa-shield-halved"></i> Healthy Foliage</div>
-                        <div style="font-size:0.78rem; color:var(--text-sub); margin-top:4px;">No foliar lesions detected in frame</div>
+                        <div style="font-size:1.05rem; font-weight:800; color:#16a34a;"><i
+                                class="fa-solid fa-shield-halved"></i> Healthy Foliage</div>
+                        <div style="font-size:0.78rem; color:var(--text-sub); margin-top:4px;">No foliar lesions
+                            detected in frame</div>
                     </div>
                 </div>
             </div>
@@ -3986,19 +4197,15 @@
                     </span>
                     <select id="weather-city-select" onchange="onWeatherCitySelectChange(this.value)"
                         style="padding:8px 14px; border-radius:10px; border:1px solid var(--border); background:var(--card-bg); color:var(--text-main); font-weight:600; font-size:0.88rem; outline:none; cursor:pointer;">
-                        <option value="28.6139,77.2090,New Delhi Farm Ridge" selected>New Delhi (Farm Ridge Central)
+                        <option value="30.8995,75.8075,PAU Agro Research Station (Punjab Wheat Belt)" selected>Punjab (PAU Agro Research Station, Ludhiana)
                         </option>
-                        <option value="18.5204,73.8567,Pune Agri Hub">Pune (Agri Hub)</option>
-                        <option value="30.9010,75.8573,Ludhiana Farm Zone">Ludhiana (Punjab Wheat Belt)</option>
-                        <option value="29.6857,76.9905,Karnal Agro Centre">Karnal (Haryana Basmati Region)</option>
-                        <option value="26.9124,75.7873,Jaipur Semi-Arid Fields">Jaipur (Rajasthan Fields)</option>
-                        <option value="22.7196,75.8577,Indore Black Soil Tract">Indore (Madhya Pradesh Tract)</option>
-                        <option value="12.9716,77.5946,Bengaluru Horticulture Zone">Bengaluru (Horticulture Zone)
-                        </option>
-                        <option value="17.3850,78.4867,Hyderabad Deccan Farm">Hyderabad (Deccan Farm)</option>
-                        <option value="26.8467,80.9462,Lucknow Gangetic Plains">Lucknow (Gangetic Plains)</option>
-                        <option value="36.7468,-119.7726,Fresno Central Valley">Fresno (California Central Valley)
-                        </option>
+                        <option value="29.6857,76.9905,Karnal ICAR Basmati Farm">Haryana (Karnal ICAR Basmati Region)</option>
+                        <option value="22.5360,72.9730,Anand Agri Research Farm (Gujarat)">Gujarat (Anand Agricultural University Farm)</option>
+                        <option value="18.1517,74.5772,Baramati ICAR-NIASM Agri Farm">Maharashtra (Baramati ICAR-NIASM Farm)</option>
+                        <option value="26.8467,80.9462,Lucknow IISR Sugarcane Farm">Uttar Pradesh (Lucknow IISR Plains)</option>
+                        <option value="12.9716,77.5946,Bengaluru GKVK Horticulture Farm">Karnataka (Bengaluru GKVK Campus)</option>
+                        <option value="17.3850,78.4867,Hyderabad ICRISAT Semi-Arid Farm">Telangana (Hyderabad ICRISAT Fields)</option>
+                        <option value="26.9124,75.7873,Jaipur Semi-Arid Fields">Rajasthan (Jaipur Agro Zone)</option>
                     </select>
                 </div>
                 <div style="display:flex; align-items:center; gap:8px; flex:1; max-width:500px; min-width:240px;">
@@ -4106,17 +4313,23 @@
 
             <!-- Environmental Risk Monitoring Alerts (Section 2) -->
             <div style="display:flex; justify-content:space-between; align-items:center; margin-bottom:12px;">
-                <h3 class="sec-title" style="font-size:1.05rem; margin-bottom:0;"><i class="fa-solid fa-triangle-exclamation"
-                        style="color:#ef4444;"></i> Environmental Risk Sentinel & Agro-Meteorological Alerts</h3>
+                <h3 class="sec-title" style="font-size:1.05rem; margin-bottom:0;"><i
+                        class="fa-solid fa-triangle-exclamation" style="color:#ef4444;"></i> Environmental Risk Sentinel
+                    & Agro-Meteorological Alerts</h3>
                 <button class="action-btn" onclick="if(window.EnvRiskMonitor) EnvRiskMonitor.poll()"
                     style="padding:5px 12px; font-size:0.8rem; background:var(--card-bg); border:1px solid var(--border); color:var(--text-sub);">
                     <i class="fa-solid fa-arrows-rotate"></i> Check Risks
                 </button>
             </div>
             <div id="env-risk-cards" style="margin-bottom:24px;">
-                <div style="background:#f0fdf4; border-left:4px solid #22c55e; border-radius:12px; padding:14px 18px; display:flex; align-items:center; gap:12px;">
+                <div
+                    style="background:#f0fdf4; border-left:4px solid #22c55e; border-radius:12px; padding:14px 18px; display:flex; align-items:center; gap:12px;">
                     <span style="font-size:1.4rem;">🛡️</span>
-                    <div><div style="font-weight:700; color:#16a34a;">No Environmental Risks Detected</div><div style="font-size:0.8rem; color:var(--text-sub); margin-top:2px;">All weather conditions (heat, drought, flood, fungal spore index) are within safe parameters.</div></div>
+                    <div>
+                        <div style="font-weight:700; color:#16a34a;">No Environmental Risks Detected</div>
+                        <div style="font-size:0.8rem; color:var(--text-sub); margin-top:2px;">All weather conditions
+                            (heat, drought, flood, fungal spore index) are within safe parameters.</div>
+                    </div>
                 </div>
             </div>
 
@@ -4129,7 +4342,8 @@
                         <i class="fa-solid fa-faucet-drip"></i>
                     </div>
                     <div>
-                        <div id="irrigation-banner-title" style="font-weight:800; font-size:1.05rem; color:var(--text-main); margin-bottom:2px;">
+                        <div id="irrigation-banner-title"
+                            style="font-weight:800; font-size:1.05rem; color:var(--text-main); margin-bottom:2px;">
                             Smart Rain Protection Active: Saving Water Automatically
                         </div>
                         <div id="irrigation-banner-desc" style="font-size:0.85rem; color:var(--text-sub);">
@@ -4154,9 +4368,12 @@
                         <div class="ic-icon" style="background:#dcfce7; color:#16a34a;"><i
                                 class="fa-solid fa-droplet"></i></div>
                     </div>
-                    <div class="ic-value"><span id="irrigation-moisture-val">48%</span> <span id="irrigation-moisture-stat" style="font-size:1.1rem; color:#10b981;">(Optimal)</span></div>
+                    <div class="ic-value"><span id="irrigation-moisture-val">48%</span> <span
+                            id="irrigation-moisture-stat" style="font-size:1.1rem; color:#10b981;">(Optimal)</span>
+                    </div>
                     <div class="ic-bottom">
-                        <span class="text-green" id="irrigation-moisture-sub"><i class="fa-solid fa-circle-check"></i> Within Ideal Range (40-60%)</span>
+                        <span class="text-green" id="irrigation-moisture-sub"><i class="fa-solid fa-circle-check"></i>
+                            Within Ideal Range (40-60%)</span>
                         <span class="text-sub">Trigger: &lt;35%</span>
                     </div>
                 </div>
@@ -4167,7 +4384,8 @@
                         <div class="ic-icon" style="background:#fef3c7; color:#d97706;"><i
                                 class="fa-solid fa-hand-holding-droplet"></i></div>
                     </div>
-                    <div class="ic-value"><span id="irrigation-water-saved">1,420</span> <span style="font-size:1.1rem; color:var(--text-sub);">Liters</span>
+                    <div class="ic-value"><span id="irrigation-water-saved">1,420</span> <span
+                            style="font-size:1.1rem; color:var(--text-sub);">Liters</span>
                     </div>
                     <div class="ic-bottom">
                         <span class="text-orange" id="irrigation-saved-status">Saved this week</span>
@@ -4210,13 +4428,19 @@
                 style="display:flex; justify-content:space-between; align-items:flex-start; flex-wrap:wrap; gap:16px; margin-bottom:24px; width:100%; box-sizing:border-box;">
                 <div style="flex:1; min-width:240px;">
                     <h2 class="sec-title" style="margin-bottom:4px; word-break:break-word;"><i
-                            class="fa-solid fa-shield-halved" style="color:#f59e0b; margin-right:8px;"></i> AI Camera Vision — Perimeter Intruder Detection</h2>
-                    <p style="color:var(--text-sub); font-size:0.9rem; word-break:break-word;">Real-time client-side neural detection (COCO-SSD) on live optical camera feed with real acoustic siren & visual strobe countermeasures.</p>
+                            class="fa-solid fa-shield-halved" style="color:#f59e0b; margin-right:8px;"></i> AI Camera
+                        Vision — Perimeter Intruder Detection</h2>
+                    <p style="color:var(--text-sub); font-size:0.9rem; word-break:break-word;">Real-time client-side
+                        neural detection (COCO-SSD) on live optical camera feed with real acoustic siren & visual strobe
+                        countermeasures.</p>
                 </div>
                 <div style="display:flex; gap:10px; flex-wrap:wrap; align-items:center;">
-                    <div style="display:flex; align-items:center; gap:6px; background:var(--card-bg); border:1px solid var(--border); padding:6px 12px; border-radius:8px;">
-                        <label for="perimeter-sector-select" style="font-size:0.8rem; font-weight:700; color:var(--text-sub);">Sector:</label>
-                        <select id="perimeter-sector-select" style="background:transparent; border:none; outline:none; color:var(--text-main); font-size:0.85rem; font-weight:700; cursor:pointer;">
+                    <div
+                        style="display:flex; align-items:center; gap:6px; background:var(--card-bg); border:1px solid var(--border); padding:6px 12px; border-radius:8px;">
+                        <label for="perimeter-sector-select"
+                            style="font-size:0.8rem; font-weight:700; color:var(--text-sub);">Sector:</label>
+                        <select id="perimeter-sector-select"
+                            style="background:transparent; border:none; outline:none; color:var(--text-main); font-size:0.85rem; font-weight:700; cursor:pointer;">
                             <option value="A">Sector A (South Pasture)</option>
                             <option value="B">Sector B (East Crop Boundary)</option>
                             <option value="C" selected>Sector C (North Ridge Boundary)</option>
@@ -4241,33 +4465,46 @@
 
             <!-- LIVE AI CAMERA VISION & DETECTION VIEWPORT -->
             <div class="ctrl-card" style="margin-bottom:24px; padding:18px;">
-                <div style="display:flex; justify-content:space-between; align-items:center; margin-bottom:12px; flex-wrap:wrap; gap:10px;">
-                    <div style="font-weight:800; font-size:1.05rem; color:var(--text-main); display:flex; align-items:center; gap:8px;">
-                        <i class="fa-solid fa-video" style="color:var(--primary);"></i> Live Optical Camera Vision & Neural Object Detector
+                <div
+                    style="display:flex; justify-content:space-between; align-items:center; margin-bottom:12px; flex-wrap:wrap; gap:10px;">
+                    <div
+                        style="font-weight:800; font-size:1.05rem; color:var(--text-main); display:flex; align-items:center; gap:8px;">
+                        <i class="fa-solid fa-video" style="color:var(--primary);"></i> Live Optical Camera Vision &
+                        Neural Object Detector
                     </div>
                     <div style="display:flex; gap:8px; align-items:center; flex-wrap:wrap;">
-                        <span id="hud-cam-model-badge" style="font-size:0.75rem; font-weight:800; padding:3px 10px; border-radius:12px; background:#fef3c7; color:#b45309; border:1px solid #fde68a;">
+                        <span id="hud-cam-model-badge"
+                            style="font-size:0.75rem; font-weight:800; padding:3px 10px; border-radius:12px; background:#fef3c7; color:#b45309; border:1px solid #fde68a;">
                             COCO-SSD Ready
                         </span>
-                        <span id="hud-cam-status-badge" style="font-size:0.75rem; font-weight:800; padding:3px 10px; border-radius:12px; background:#dcfce7; color:#16a34a; border:1px solid #86efac;">
+                        <span id="hud-cam-status-badge"
+                            style="font-size:0.75rem; font-weight:800; padding:3px 10px; border-radius:12px; background:#dcfce7; color:#16a34a; border:1px solid #86efac;">
                             <span class="pulse-dot"></span> OPTICAL STANDBY
                         </span>
                     </div>
                 </div>
 
                 <!-- Camera Stream & Canvas Bounding Box Viewport -->
-                <div style="position:relative; width:100%; height:400px; max-height:55vw; background:#07120a; border-radius:14px; overflow:hidden; border:2px solid var(--border); display:flex; align-items:center; justify-content:center;">
-                    <video id="perimeter-video" playsinline autoplay muted style="width:100%; height:100%; object-fit:cover; display:none;"></video>
-                    <canvas id="perimeter-canvas" style="position:absolute; inset:0; width:100%; height:100%; object-fit:cover; pointer-events:none; display:none;"></canvas>
-                    
+                <div
+                    style="position:relative; width:100%; height:400px; max-height:55vw; background:#07120a; border-radius:14px; overflow:hidden; border:2px solid var(--border); display:flex; align-items:center; justify-content:center;">
+                    <video id="perimeter-video" playsinline autoplay muted
+                        style="width:100%; height:100%; object-fit:cover; display:none;"></video>
+                    <canvas id="perimeter-canvas"
+                        style="position:absolute; inset:0; width:100%; height:100%; object-fit:cover; pointer-events:none; display:none;"></canvas>
+
                     <!-- Standby Placeholder View -->
-                    <div id="perimeter-placeholder" style="display:flex; flex-direction:column; align-items:center; justify-content:center; text-align:center; padding:24px; max-width:540px;">
-                        <div style="width:72px; height:72px; border-radius:50%; background:rgba(34,197,94,0.12); display:flex; align-items:center; justify-content:center; margin-bottom:16px; border:2px dashed #22c55e;">
+                    <div id="perimeter-placeholder"
+                        style="display:flex; flex-direction:column; align-items:center; justify-content:center; text-align:center; padding:24px; max-width:540px;">
+                        <div
+                            style="width:72px; height:72px; border-radius:50%; background:rgba(34,197,94,0.12); display:flex; align-items:center; justify-content:center; margin-bottom:16px; border:2px dashed #22c55e;">
                             <i class="fa-solid fa-camera-viewfinder" style="font-size:2rem; color:#22c55e;"></i>
                         </div>
-                        <div style="font-weight:800; font-size:1.15rem; color:#ffffff; margin-bottom:8px;">AI Optical Vision Feed Inactive</div>
+                        <div style="font-weight:800; font-size:1.15rem; color:#ffffff; margin-bottom:8px;">AI Optical
+                            Vision Feed Inactive</div>
                         <p style="font-size:0.85rem; color:#94a3b8; margin-bottom:18px; line-height:1.5;">
-                            Click below to initialize your laptop or phone camera. Frames are processed locally in your browser with <strong>TensorFlow.js COCO-SSD</strong> to detect unauthorized humans and stray livestock in real time.
+                            Click below to initialize your laptop or phone camera. Frames are processed locally in your
+                            browser with <strong>TensorFlow.js COCO-SSD</strong> to detect unauthorized humans and stray
+                            livestock in real time.
                         </p>
                         <button onclick="startPerimeterCamera()" class="action-btn"
                             style="background:#16a34a; color:white; border:none; padding:10px 22px; font-weight:700; border-radius:10px; cursor:pointer; font-size:0.9rem;">
@@ -4276,20 +4513,25 @@
                     </div>
 
                     <!-- Live HUD Overlay -->
-                    <div id="perimeter-hud" style="display:none; position:absolute; inset:0; pointer-events:none; padding:14px; flex-direction:column; justify-content:space-between; box-sizing:border-box;">
+                    <div id="perimeter-hud"
+                        style="display:none; position:absolute; inset:0; pointer-events:none; padding:14px; flex-direction:column; justify-content:space-between; box-sizing:border-box;">
                         <div style="display:flex; justify-content:space-between; align-items:flex-start;">
-                            <div style="background:rgba(0,0,0,0.75); color:#22c55e; border:1px solid rgba(34,197,94,0.4); padding:4px 10px; border-radius:6px; font-size:0.75rem; font-family:monospace; font-weight:800; display:flex; align-items:center; gap:6px;">
+                            <div
+                                style="background:rgba(0,0,0,0.75); color:#22c55e; border:1px solid rgba(34,197,94,0.4); padding:4px 10px; border-radius:6px; font-size:0.75rem; font-family:monospace; font-weight:800; display:flex; align-items:center; gap:6px;">
                                 <span class="pulse-dot" style="background:#22c55e;"></span> LIVE BROADCAST
                             </div>
-                            <div id="hud-cam-fps" style="background:rgba(0,0,0,0.75); color:#38bdf8; border:1px solid rgba(56,189,248,0.4); padding:4px 10px; border-radius:6px; font-size:0.75rem; font-family:monospace; font-weight:700;">
+                            <div id="hud-cam-fps"
+                                style="background:rgba(0,0,0,0.75); color:#38bdf8; border:1px solid rgba(56,189,248,0.4); padding:4px 10px; border-radius:6px; font-size:0.75rem; font-family:monospace; font-weight:700;">
                                 FPS: 28 • RES: 640x480
                             </div>
                         </div>
                         <div style="display:flex; justify-content:space-between; align-items:flex-end;">
-                            <div id="hud-cam-sector-label" style="background:rgba(0,0,0,0.75); color:#ffffff; border:1px solid rgba(255,255,255,0.2); padding:4px 10px; border-radius:6px; font-size:0.75rem; font-family:monospace; font-weight:700;">
+                            <div id="hud-cam-sector-label"
+                                style="background:rgba(0,0,0,0.75); color:#ffffff; border:1px solid rgba(255,255,255,0.2); padding:4px 10px; border-radius:6px; font-size:0.75rem; font-family:monospace; font-weight:700;">
                                 MOUNT: SECTOR C (NORTH RIDGE)
                             </div>
-                            <div id="hud-cam-threats" style="background:rgba(239,68,68,0.2); color:#ef4444; border:1px solid #ef4444; padding:4px 10px; border-radius:6px; font-size:0.75rem; font-family:monospace; font-weight:800;">
+                            <div id="hud-cam-threats"
+                                style="background:rgba(239,68,68,0.2); color:#ef4444; border:1px solid #ef4444; padding:4px 10px; border-radius:6px; font-size:0.75rem; font-family:monospace; font-weight:800;">
                                 THREATS: 0
                             </div>
                         </div>
@@ -4315,38 +4557,61 @@
 
             <!-- 3-PHASE ENGINEERING ROADMAP CALLOUT -->
             <div class="ctrl-card" style="margin-bottom:24px; padding:18px; border-left:4px solid #3b82f6;">
-                <div style="display:flex; justify-content:space-between; align-items:center; margin-bottom:12px; flex-wrap:wrap; gap:8px;">
-                    <div style="font-weight:800; font-size:0.95rem; color:var(--text-main); display:flex; align-items:center; gap:8px;">
-                        <i class="fa-solid fa-diagram-project" style="color:#3b82f6;"></i> Engineering Detection & Deterrence Roadmap
+                <div
+                    style="display:flex; justify-content:space-between; align-items:center; margin-bottom:12px; flex-wrap:wrap; gap:8px;">
+                    <div
+                        style="font-weight:800; font-size:0.95rem; color:var(--text-main); display:flex; align-items:center; gap:8px;">
+                        <i class="fa-solid fa-diagram-project" style="color:#3b82f6;"></i> Engineering Detection &
+                        Deterrence Roadmap
                     </div>
-                    <span style="font-size:0.75rem; font-weight:700; color:var(--text-sub);">Hardware & ML Architecture</span>
+                    <span style="font-size:0.75rem; font-weight:700; color:var(--text-sub);">Hardware & ML
+                        Architecture</span>
                 </div>
-                <div style="display:grid; grid-template-columns: repeat(auto-fit, minmax(min(100%, 250px), 1fr)); gap:14px;">
-                    <div style="background:var(--card-bg); border:1px solid var(--border); padding:12px 14px; border-radius:10px;">
-                        <div style="display:flex; justify-content:space-between; align-items:center; margin-bottom:6px;">
-                            <span style="font-weight:800; font-size:0.85rem; color:#16a34a;">Phase 1: In-Browser Vision</span>
-                            <span style="background:#dcfce7; color:#16a34a; font-weight:800; font-size:0.7rem; padding:2px 6px; border-radius:6px;">ACTIVE NOW</span>
+                <div
+                    style="display:grid; grid-template-columns: repeat(auto-fit, minmax(min(100%, 250px), 1fr)); gap:14px;">
+                    <div
+                        style="background:var(--card-bg); border:1px solid var(--border); padding:12px 14px; border-radius:10px;">
+                        <div
+                            style="display:flex; justify-content:space-between; align-items:center; margin-bottom:6px;">
+                            <span style="font-weight:800; font-size:0.85rem; color:#16a34a;">Phase 1: In-Browser
+                                Vision</span>
+                            <span
+                                style="background:#dcfce7; color:#16a34a; font-weight:800; font-size:0.7rem; padding:2px 6px; border-radius:6px;">ACTIVE
+                                NOW</span>
                         </div>
                         <p style="font-size:0.78rem; color:var(--text-sub); line-height:1.4; margin:0;">
-                            Laptop/phone RGB camera stream with client-side <strong>TensorFlow.js COCO-SSD</strong> for humans and livestock. Genuine Web Audio API acoustic siren and high-lux display strobe.
+                            Laptop/phone RGB camera stream with client-side <strong>TensorFlow.js COCO-SSD</strong> for
+                            humans and livestock. Genuine Web Audio API acoustic siren and high-lux display strobe.
                         </p>
                     </div>
-                    <div style="background:var(--card-bg); border:1px solid var(--border); padding:12px 14px; border-radius:10px;">
-                        <div style="display:flex; justify-content:space-between; align-items:center; margin-bottom:6px;">
-                            <span style="font-weight:800; font-size:0.85rem; color:#f59e0b;">Phase 2: Wildlife YOLOv8n</span>
-                            <span style="background:#fef3c7; color:#b45309; font-weight:800; font-size:0.7rem; padding:2px 6px; border-radius:6px;">ML PLANNED</span>
+                    <div
+                        style="background:var(--card-bg); border:1px solid var(--border); padding:12px 14px; border-radius:10px;">
+                        <div
+                            style="display:flex; justify-content:space-between; align-items:center; margin-bottom:6px;">
+                            <span style="font-weight:800; font-size:0.85rem; color:#f59e0b;">Phase 2: Wildlife
+                                YOLOv8n</span>
+                            <span
+                                style="background:#fef3c7; color:#b45309; font-weight:800; font-size:0.7rem; padding:2px 6px; border-radius:6px;">ML
+                                PLANNED</span>
                         </div>
                         <p style="font-size:0.78rem; color:var(--text-sub); line-height:1.4; margin:0;">
-                            Fine-tuned lightweight edge model trained on regional Indian wildlife datasets for fine-grained discrimination of Wild Boar (<em>Sus scrofa</em>), Nilgai, and Porcupines.
+                            Fine-tuned lightweight edge model trained on regional Indian wildlife datasets for
+                            fine-grained discrimination of Wild Boar (<em>Sus scrofa</em>), Nilgai, and Porcupines.
                         </p>
                     </div>
-                    <div style="background:var(--card-bg); border:1px solid var(--border); padding:12px 14px; border-radius:10px;">
-                        <div style="display:flex; justify-content:space-between; align-items:center; margin-bottom:6px;">
-                            <span style="font-weight:800; font-size:0.85rem; color:#8b5cf6;">Phase 3: Field Robotics</span>
-                            <span style="background:#f3e8ff; color:#7c3aed; font-weight:800; font-size:0.7rem; padding:2px 6px; border-radius:6px;">HARDWARE BRIDGE</span>
+                    <div
+                        style="background:var(--card-bg); border:1px solid var(--border); padding:12px 14px; border-radius:10px;">
+                        <div
+                            style="display:flex; justify-content:space-between; align-items:center; margin-bottom:6px;">
+                            <span style="font-weight:800; font-size:0.85rem; color:#8b5cf6;">Phase 3: Field
+                                Robotics</span>
+                            <span
+                                style="background:#f3e8ff; color:#7c3aed; font-weight:800; font-size:0.7rem; padding:2px 6px; border-radius:6px;">HARDWARE
+                                BRIDGE</span>
                         </div>
                         <p style="font-size:0.78rem; color:var(--text-sub); line-height:1.4; margin:0;">
-                            Autonomous GE-Bot-1 patrol dispatch, 110dB relay-driven horn, 4000-lumen LED arrays, and 24 kHz ultrasonic piezo transducer via <code>robotBridge</code>.
+                            Autonomous GE-Bot-1 patrol dispatch, 110dB relay-driven horn, 4000-lumen LED arrays, and 24
+                            kHz ultrasonic piezo transducer via <code>robotBridge</code>.
                         </p>
                     </div>
                 </div>
@@ -4354,11 +4619,13 @@
 
             <!-- RECENT VERIFIED AI INTRUSION DETECTIONS -->
             <h3 class="sec-title" style="font-size:1.05rem; margin-bottom:14px; word-break:break-word;"><i
-                    class="fa-solid fa-camera-retro" style="color:#ef4444;"></i> Recent Verified AI Intruder Captures</h3>
+                    class="fa-solid fa-camera-retro" style="color:#ef4444;"></i> Recent Verified AI Intruder Captures
+            </h3>
             <div class="intruder-captures-grid">
                 <!-- Capture 1: Unauthorized Human -->
                 <div class="ctrl-card" style="margin-bottom:0; padding:0; overflow:hidden; border:2px solid #ef4444;">
-                    <div style="position:relative; width:100%; height:180px; background:#0c192c; overflow:hidden; display:flex; align-items:center; justify-content:center;">
+                    <div
+                        style="position:relative; width:100%; height:180px; background:#0c192c; overflow:hidden; display:flex; align-items:center; justify-content:center;">
                         <!-- Honest Optical HUD SVG Graphic -->
                         <svg viewBox="0 0 400 200" style="width:100%; height:100%;">
                             <rect width="400" height="200" fill="#081426" />
@@ -4372,21 +4639,31 @@
                             <!-- Human Silhouette -->
                             <circle cx="200" cy="70" r="18" fill="#cbd5e1" opacity="0.9" />
                             <path d="M175,100 Q200,92 225,100 L220,165 L180,165 Z" fill="#94a3b8" opacity="0.85" />
-                            <line x1="175" y1="102" x2="155" y2="140" stroke="#94a3b8" stroke-width="7" stroke-linecap="round" />
-                            <line x1="225" y1="102" x2="245" y2="140" stroke="#94a3b8" stroke-width="7" stroke-linecap="round" />
+                            <line x1="175" y1="102" x2="155" y2="140" stroke="#94a3b8" stroke-width="7"
+                                stroke-linecap="round" />
+                            <line x1="225" y1="102" x2="245" y2="140" stroke="#94a3b8" stroke-width="7"
+                                stroke-linecap="round" />
                             <!-- Detection Bounding Box -->
-                            <rect x="145" y="45" width="110" height="135" fill="none" stroke="#ef4444" stroke-width="2.5" />
+                            <rect x="145" y="45" width="110" height="135" fill="none" stroke="#ef4444"
+                                stroke-width="2.5" />
                             <rect x="145" y="24" width="165" height="22" fill="#ef4444" />
-                            <text x="150" y="39" fill="#ffffff" font-size="10" font-weight="900" font-family="monospace">HUMAN INTRUDER: 94.2%</text>
-                            <text x="14" y="24" fill="#38bdf8" font-size="10" font-weight="800" font-family="monospace">RGB OPTICAL CAM // SECTOR E</text>
+                            <text x="150" y="39" fill="#ffffff" font-size="10" font-weight="900"
+                                font-family="monospace">HUMAN INTRUDER: 94.2%</text>
+                            <text x="14" y="24" fill="#38bdf8" font-size="10" font-weight="800"
+                                font-family="monospace">RGB OPTICAL CAM // SECTOR E</text>
                         </svg>
                     </div>
                     <div style="padding:14px;">
-                        <div style="display:flex; justify-content:space-between; align-items:center; margin-bottom:4px;">
-                            <span style="font-weight:800; color:#ef4444; font-size:0.95rem;">Unauthorized Human Intruder</span>
-                            <span style="font-size:0.75rem; background:#fee2e2; color:#b91c1c; font-weight:800; padding:2px 8px; border-radius:10px;">SECTOR E</span>
+                        <div
+                            style="display:flex; justify-content:space-between; align-items:center; margin-bottom:4px;">
+                            <span style="font-weight:800; color:#ef4444; font-size:0.95rem;">Unauthorized Human
+                                Intruder</span>
+                            <span
+                                style="font-size:0.75rem; background:#fee2e2; color:#b91c1c; font-weight:800; padding:2px 8px; border-radius:10px;">SECTOR
+                                E</span>
                         </div>
-                        <div style="font-size:0.8rem; color:var(--text-sub); margin-bottom:10px;">North Fence Breach • 110dB Siren & Strobe Ready</div>
+                        <div style="font-size:0.8rem; color:var(--text-sub); margin-bottom:10px;">North Fence Breach •
+                            110dB Siren & Strobe Ready</div>
                         <div style="display:grid; grid-template-columns:1fr 1fr; gap:8px;">
                             <button class="action-btn" onclick="triggerDeterrentAction(1, 'siren')"
                                 style="justify-content:center; background:#ef4444; color:white; border:none; padding:8px; font-size:0.8rem; border-radius:6px; cursor:pointer;">
@@ -4402,7 +4679,8 @@
 
                 <!-- Capture 2: Stray Cattle -->
                 <div class="ctrl-card" style="margin-bottom:0; padding:0; overflow:hidden; border:2px solid #f59e0b;">
-                    <div style="position:relative; width:100%; height:180px; background:#111b15; overflow:hidden; display:flex; align-items:center; justify-content:center;">
+                    <div
+                        style="position:relative; width:100%; height:180px; background:#111b15; overflow:hidden; display:flex; align-items:center; justify-content:center;">
                         <svg viewBox="0 0 400 200" style="width:100%; height:100%;">
                             <rect width="400" height="200" fill="#0b1710" />
                             <line x1="0" y1="50" x2="400" y2="50" stroke="#1b3323" stroke-width="1" />
@@ -4411,21 +4689,31 @@
                             <!-- Cattle Silhouette -->
                             <ellipse cx="205" cy="118" rx="68" ry="40" fill="#cbd5e1" opacity="0.85" />
                             <circle cx="130" cy="100" r="24" fill="#cbd5e1" opacity="0.9" />
-                            <line x1="165" y1="150" x2="165" y2="175" stroke="#94a3b8" stroke-width="8" stroke-linecap="round" />
-                            <line x1="245" y1="150" x2="245" y2="175" stroke="#94a3b8" stroke-width="8" stroke-linecap="round" />
+                            <line x1="165" y1="150" x2="165" y2="175" stroke="#94a3b8" stroke-width="8"
+                                stroke-linecap="round" />
+                            <line x1="245" y1="150" x2="245" y2="175" stroke="#94a3b8" stroke-width="8"
+                                stroke-linecap="round" />
                             <!-- Detection Bounding Box -->
-                            <rect x="95" y="70" width="190" height="110" fill="none" stroke="#f59e0b" stroke-width="2.5" />
+                            <rect x="95" y="70" width="190" height="110" fill="none" stroke="#f59e0b"
+                                stroke-width="2.5" />
                             <rect x="95" y="48" width="155" height="22" fill="#f59e0b" />
-                            <text x="100" y="63" fill="#ffffff" font-size="10" font-weight="900" font-family="monospace">STRAY CATTLE: 89.5%</text>
-                            <text x="14" y="24" fill="#4ade80" font-size="10" font-weight="800" font-family="monospace">RGB OPTICAL CAM // SECTOR B</text>
+                            <text x="100" y="63" fill="#ffffff" font-size="10" font-weight="900"
+                                font-family="monospace">STRAY CATTLE: 89.5%</text>
+                            <text x="14" y="24" fill="#4ade80" font-size="10" font-weight="800"
+                                font-family="monospace">RGB OPTICAL CAM // SECTOR B</text>
                         </svg>
                     </div>
                     <div style="padding:14px;">
-                        <div style="display:flex; justify-content:space-between; align-items:center; margin-bottom:4px;">
-                            <span style="font-weight:800; color:#f59e0b; font-size:0.95rem;">Stray Cattle (Bos taurus)</span>
-                            <span style="font-size:0.75rem; background:#fef3c7; color:#b45309; font-weight:800; padding:2px 8px; border-radius:10px;">SECTOR B</span>
+                        <div
+                            style="display:flex; justify-content:space-between; align-items:center; margin-bottom:4px;">
+                            <span style="font-weight:800; color:#f59e0b; font-size:0.95rem;">Stray Cattle (Bos
+                                taurus)</span>
+                            <span
+                                style="font-size:0.75rem; background:#fef3c7; color:#b45309; font-weight:800; padding:2px 8px; border-radius:10px;">SECTOR
+                                B</span>
                         </div>
-                        <div style="font-size:0.8rem; color:var(--text-sub); margin-bottom:10px;">Grazing Near Drip Line • Acoustic Horn Armed</div>
+                        <div style="font-size:0.8rem; color:var(--text-sub); margin-bottom:10px;">Grazing Near Drip Line
+                            • Acoustic Horn Armed</div>
                         <div style="display:grid; grid-template-columns:1fr 1fr; gap:8px;">
                             <button class="action-btn" onclick="triggerDeterrentAction(2, 'siren')"
                                 style="justify-content:center; background:#f59e0b; color:white; border:none; padding:8px; font-size:0.8rem; border-radius:6px; cursor:pointer;">
@@ -4441,7 +4729,8 @@
 
                 <!-- Capture 3: Domestic Stray -->
                 <div class="ctrl-card" style="margin-bottom:0; padding:0; overflow:hidden; border:2px solid #8b5cf6;">
-                    <div style="position:relative; width:100%; height:180px; background:#181028; overflow:hidden; display:flex; align-items:center; justify-content:center;">
+                    <div
+                        style="position:relative; width:100%; height:180px; background:#181028; overflow:hidden; display:flex; align-items:center; justify-content:center;">
                         <svg viewBox="0 0 400 200" style="width:100%; height:100%;">
                             <rect width="400" height="200" fill="#120c1f" />
                             <line x1="0" y1="50" x2="400" y2="50" stroke="#2b1b42" stroke-width="1" />
@@ -4450,21 +4739,31 @@
                             <!-- Stray Silhouette -->
                             <ellipse cx="200" cy="125" rx="42" ry="24" fill="#cbd5e1" opacity="0.85" />
                             <circle cx="160" cy="110" r="16" fill="#cbd5e1" opacity="0.9" />
-                            <line x1="175" y1="145" x2="175" y2="165" stroke="#94a3b8" stroke-width="6" stroke-linecap="round" />
-                            <line x1="225" y1="145" x2="225" y2="165" stroke="#94a3b8" stroke-width="6" stroke-linecap="round" />
+                            <line x1="175" y1="145" x2="175" y2="165" stroke="#94a3b8" stroke-width="6"
+                                stroke-linecap="round" />
+                            <line x1="225" y1="145" x2="225" y2="165" stroke="#94a3b8" stroke-width="6"
+                                stroke-linecap="round" />
                             <!-- Detection Bounding Box -->
-                            <rect x="135" y="85" width="130" height="85" fill="none" stroke="#8b5cf6" stroke-width="2.5" />
+                            <rect x="135" y="85" width="130" height="85" fill="none" stroke="#8b5cf6"
+                                stroke-width="2.5" />
                             <rect x="135" y="65" width="145" height="20" fill="#8b5cf6" />
-                            <text x="140" y="79" fill="#ffffff" font-size="10" font-weight="900" font-family="monospace">DOMESTIC STRAY: 82.1%</text>
-                            <text x="14" y="24" fill="#c084fc" font-size="10" font-weight="800" font-family="monospace">RGB OPTICAL CAM // SECTOR A</text>
+                            <text x="140" y="79" fill="#ffffff" font-size="10" font-weight="900"
+                                font-family="monospace">DOMESTIC STRAY: 82.1%</text>
+                            <text x="14" y="24" fill="#c084fc" font-size="10" font-weight="800"
+                                font-family="monospace">RGB OPTICAL CAM // SECTOR A</text>
                         </svg>
                     </div>
                     <div style="padding:14px;">
-                        <div style="display:flex; justify-content:space-between; align-items:center; margin-bottom:4px;">
-                            <span style="font-weight:800; color:#8b5cf6; font-size:0.95rem;">Domestic Stray Animal</span>
-                            <span style="font-size:0.75rem; background:#f3e8ff; color:#7c3aed; font-weight:800; padding:2px 8px; border-radius:10px;">SECTOR A</span>
+                        <div
+                            style="display:flex; justify-content:space-between; align-items:center; margin-bottom:4px;">
+                            <span style="font-weight:800; color:#8b5cf6; font-size:0.95rem;">Domestic Stray
+                                Animal</span>
+                            <span
+                                style="font-size:0.75rem; background:#f3e8ff; color:#7c3aed; font-weight:800; padding:2px 8px; border-radius:10px;">SECTOR
+                                A</span>
                         </div>
-                        <div style="font-size:0.8rem; color:var(--text-sub); margin-bottom:10px;">Foraging Near Seedling Beds • Sonic Alert Active</div>
+                        <div style="font-size:0.8rem; color:var(--text-sub); margin-bottom:10px;">Foraging Near Seedling
+                            Beds • Sonic Alert Active</div>
                         <div style="display:grid; grid-template-columns:1fr 1fr; gap:8px;">
                             <button class="action-btn" onclick="triggerDeterrentAction(3, 'siren')"
                                 style="justify-content:center; background:#8b5cf6; color:white; border:none; padding:8px; font-size:0.8rem; border-radius:6px; cursor:pointer;">
@@ -4480,15 +4779,19 @@
             </div>
 
             <!-- Deterrent Countermeasure Controls -->
-            <div style="display:grid; grid-template-columns: repeat(auto-fit, minmax(min(100%, 260px), 1fr)); gap:16px; margin-bottom:28px; width:100%; box-sizing:border-box;">
+            <div
+                style="display:grid; grid-template-columns: repeat(auto-fit, minmax(min(100%, 260px), 1fr)); gap:16px; margin-bottom:28px; width:100%; box-sizing:border-box;">
                 <button class="info-card" onclick="triggerDeterrentAction('all', 'siren')"
                     style="cursor:pointer; text-align:left; border-left:4px solid #ef4444; background:var(--card-bg);">
                     <div style="display:flex; justify-content:space-between; align-items:center; margin-bottom:6px;">
                         <div style="font-weight:800; font-size:1rem; color:var(--text-main);">Sonic Acoustic Siren</div>
                         <i class="fa-solid fa-bullhorn" style="font-size:1.3rem; color:#ef4444;"></i>
                     </div>
-                    <span style="display:inline-block; font-size:0.7rem; font-weight:800; color:#16a34a; background:#dcfce7; padding:2px 6px; border-radius:4px; margin-bottom:6px;">REAL DEVICE AUDIO (Web Audio)</span>
-                    <p style="font-size:0.82rem; color:var(--text-sub); margin:0;">Plays real 650Hz–1450Hz emergency siren sweep directly through device speakers to deter invaders.</p>
+                    <span
+                        style="display:inline-block; font-size:0.7rem; font-weight:800; color:#16a34a; background:#dcfce7; padding:2px 6px; border-radius:4px; margin-bottom:6px;">REAL
+                        DEVICE AUDIO (Web Audio)</span>
+                    <p style="font-size:0.82rem; color:var(--text-sub); margin:0;">Plays real 650Hz–1450Hz emergency
+                        siren sweep directly through device speakers to deter invaders.</p>
                 </button>
 
                 <button class="info-card" onclick="triggerDeterrentAction('all', 'strobe')"
@@ -4497,34 +4800,46 @@
                         <div style="font-weight:800; font-size:1rem; color:var(--text-main);">4000-Lumen Strobe</div>
                         <i class="fa-solid fa-lightbulb" style="font-size:1.3rem; color:#3b82f6;"></i>
                     </div>
-                    <span style="display:inline-block; font-size:0.7rem; font-weight:800; color:#2563eb; background:#dbeafe; padding:2px 6px; border-radius:4px; margin-bottom:6px;">REAL VISUAL STROBE (Display Flash)</span>
-                    <p style="font-size:0.82rem; color:var(--text-sub); margin:0;">Triggers high-frequency full-screen strobe flash (and camera torch where available) to disorient night invaders.</p>
+                    <span
+                        style="display:inline-block; font-size:0.7rem; font-weight:800; color:#2563eb; background:#dbeafe; padding:2px 6px; border-radius:4px; margin-bottom:6px;">REAL
+                        VISUAL STROBE (Display Flash)</span>
+                    <p style="font-size:0.82rem; color:var(--text-sub); margin:0;">Triggers high-frequency full-screen
+                        strobe flash (and camera torch where available) to disorient night invaders.</p>
                 </button>
 
                 <button class="info-card" onclick="triggerDeterrentAction('all', 'ultrasonic')"
                     style="cursor:pointer; text-align:left; border-left:4px solid #8b5cf6; background:var(--card-bg);">
                     <div style="display:flex; justify-content:space-between; align-items:center; margin-bottom:6px;">
-                        <div style="font-weight:800; font-size:1rem; color:var(--text-main);">24 kHz Ultrasonic Pulse</div>
+                        <div style="font-weight:800; font-size:1rem; color:var(--text-main);">24 kHz Ultrasonic Pulse
+                        </div>
                         <i class="fa-solid fa-wave-square" style="font-size:1.3rem; color:#8b5cf6;"></i>
                     </div>
-                    <span style="display:inline-block; font-size:0.7rem; font-weight:800; color:#7c3aed; background:#f3e8ff; padding:2px 6px; border-radius:4px; margin-bottom:6px;">SIMULATED / LOGGED ACTION</span>
-                    <p style="font-size:0.82rem; color:var(--text-sub); margin:0;">Speakers cannot physically emit 24 kHz. Logged to DB and queued for physical robot piezo transducer.</p>
+                    <span
+                        style="display:inline-block; font-size:0.7rem; font-weight:800; color:#7c3aed; background:#f3e8ff; padding:2px 6px; border-radius:4px; margin-bottom:6px;">SIMULATED
+                        / LOGGED ACTION</span>
+                    <p style="font-size:0.82rem; color:var(--text-sub); margin:0;">Speakers cannot physically emit 24
+                        kHz. Logged to DB and queued for physical robot piezo transducer.</p>
                 </button>
 
                 <button class="info-card" onclick="triggerDeterrentAction('all', 'robot_intercept')"
                     style="cursor:pointer; text-align:left; border-left:4px solid #10b981; background:var(--card-bg);">
                     <div style="display:flex; justify-content:space-between; align-items:center; margin-bottom:6px;">
-                        <div style="font-weight:800; font-size:1rem; color:var(--text-main);">Robot Intercept Patrol</div>
+                        <div style="font-weight:800; font-size:1rem; color:var(--text-main);">Robot Intercept Patrol
+                        </div>
                         <i class="fa-solid fa-robot" style="font-size:1.3rem; color:#10b981;"></i>
                     </div>
-                    <span style="display:inline-block; font-size:0.7rem; font-weight:800; color:#059669; background:#ecfdf5; padding:2px 6px; border-radius:4px; margin-bottom:6px;">SIMULATED / TELEMETRY QUEUED</span>
-                    <p style="font-size:0.82rem; color:var(--text-sub); margin:0;">Dispatches GE-Bot-1 coordinates. Awaiting physical robot hardware bridge connection.</p>
+                    <span
+                        style="display:inline-block; font-size:0.7rem; font-weight:800; color:#059669; background:#ecfdf5; padding:2px 6px; border-radius:4px; margin-bottom:6px;">SIMULATED
+                        / TELEMETRY QUEUED</span>
+                    <p style="font-size:0.82rem; color:var(--text-sub); margin:0;">Dispatches GE-Bot-1 coordinates.
+                        Awaiting physical robot hardware bridge connection.</p>
                 </button>
             </div>
 
             <!-- Intrusion History Table -->
             <div class="ctrl-card">
-                <div class="cc-title" style="margin-bottom:16px;"><i class="fa-solid fa-clipboard-list"></i> Perimeter Breach Logs & Deterrence Actions</div>
+                <div class="cc-title" style="margin-bottom:16px;"><i class="fa-solid fa-clipboard-list"></i> Perimeter
+                    Breach Logs & Deterrence Actions</div>
                 <div style="overflow-x:auto;">
                     <table style="width:100%; border-collapse:collapse; font-size:0.85rem; text-align:left;">
                         <thead>
@@ -4540,7 +4855,8 @@
                         </thead>
                         <tbody id="tbody-invader-alerts">
                             <tr>
-                                <td colspan="7" style="text-align:center; padding:20px; color:var(--text-sub);">Loading security logs...</td>
+                                <td colspan="7" style="text-align:center; padding:20px; color:var(--text-sub);">Loading
+                                    security logs...</td>
                             </tr>
                         </tbody>
                     </table>
@@ -4612,11 +4928,13 @@
 
         <!-- 7. FARMER ADVISORY PANEL (Consolidated Guidance Feed) -->
         <div class="dashboard-scroll panel-section" id="panel-farmer_advisory" style="display:none;">
-            <div style="display:flex; justify-content:space-between; align-items:center; flex-wrap:wrap; gap:16px; margin-bottom:24px;">
+            <div
+                style="display:flex; justify-content:space-between; align-items:center; flex-wrap:wrap; gap:16px; margin-bottom:24px;">
                 <div>
                     <h2 class="sec-title" style="margin-bottom:4px;"><i class="fa-solid fa-bell"
                             style="color:#f59e0b; margin-right:8px;"></i> Farmer Advisory Sentinel</h2>
-                    <p style="color:var(--text-sub); font-size:0.9rem;">Consolidated, plain-language actionable recommendations from real-time environmental, disease, irrigation, and pest intelligence.</p>
+                    <p style="color:var(--text-sub); font-size:0.9rem;">Consolidated, plain-language actionable
+                        recommendations from real-time environmental, disease, irrigation, and pest intelligence.</p>
                 </div>
                 <div style="display:flex; gap:10px;">
                     <button class="action-btn" onclick="if(window.FarmAdvisoryFeed) FarmAdvisoryFeed.poll()"
@@ -4627,9 +4945,11 @@
             </div>
 
             <!-- Quick Action Summary Banner -->
-            <div style="background:rgba(245, 158, 11, 0.08); border:1.5px solid #f59e0b; border-radius:16px; padding:18px 24px; margin-bottom:24px; display:flex; align-items:center; justify-content:space-between; gap:16px; flex-wrap:wrap;">
+            <div
+                style="background:rgba(245, 158, 11, 0.08); border:1.5px solid #f59e0b; border-radius:16px; padding:18px 24px; margin-bottom:24px; display:flex; align-items:center; justify-content:space-between; gap:16px; flex-wrap:wrap;">
                 <div style="display:flex; align-items:center; gap:16px;">
-                    <div style="width:48px; height:48px; border-radius:12px; background:#f59e0b; color:white; display:flex; align-items:center; justify-content:center; font-size:1.5rem; flex-shrink:0;">
+                    <div
+                        style="width:48px; height:48px; border-radius:12px; background:#f59e0b; color:white; display:flex; align-items:center; justify-content:center; font-size:1.5rem; flex-shrink:0;">
                         <i class="fa-solid fa-lightbulb"></i>
                     </div>
                     <div>
@@ -4637,7 +4957,8 @@
                             Autonomous Decision-Support System
                         </div>
                         <div style="font-size:0.85rem; color:var(--text-sub);">
-                            Plain-language guidance prioritized by severity (Critical 🚨, Warning ⚠️, Info ℹ️). Advisories update automatically as field sensors detect shifts.
+                            Plain-language guidance prioritized by severity (Critical 🚨, Warning ⚠️, Info ℹ️).
+                            Advisories update automatically as field sensors detect shifts.
                         </div>
                     </div>
                 </div>
@@ -4647,7 +4968,8 @@
             <div id="advisory-feed-list" style="display:flex; flex-direction:column; gap:12px;">
                 <!-- Populated dynamically by FarmAdvisoryFeed.poll() -->
                 <div style="text-align:center; padding:40px 20px; color:var(--text-sub);">
-                    <div style="font-size:2rem; margin-bottom:8px;"><i class="fa-solid fa-circle-notch fa-spin"></i></div>
+                    <div style="font-size:2rem; margin-bottom:8px;"><i class="fa-solid fa-circle-notch fa-spin"></i>
+                    </div>
                     <div>Loading active farm advisories...</div>
                 </div>
             </div>
@@ -4655,14 +4977,17 @@
 
         <!-- 8. FARM ANALYTICS DASHBOARD (Historical Trends, Yield Risk, Field-level Performance) -->
         <div class="dashboard-scroll panel-section" id="panel-farm_analytics" style="display:none;">
-            <div style="display:flex; justify-content:space-between; align-items:center; flex-wrap:wrap; gap:16px; margin-bottom:24px;">
+            <div
+                style="display:flex; justify-content:space-between; align-items:center; flex-wrap:wrap; gap:16px; margin-bottom:24px;">
                 <div>
                     <h2 class="sec-title" style="margin-bottom:4px;"><i class="fa-solid fa-chart-simple"
                             style="color:#06b6d4; margin-right:8px;"></i> Farm Analytics & Historical Trends</h2>
-                    <p style="color:var(--text-sub); font-size:0.9rem;">Persisted field sensor history, multi-factor crop yield risk assessments, and sector-by-sector performance comparison.</p>
+                    <p style="color:var(--text-sub); font-size:0.9rem;">Persisted field sensor history, multi-factor
+                        crop yield risk assessments, and sector-by-sector performance comparison.</p>
                 </div>
                 <div style="display:flex; gap:10px; align-items:center;">
-                    <select id="analytics-sector-select" onchange="if(window.FarmAnalyticsCharts) FarmAnalyticsCharts.renderSoilTrendChart(this.value)"
+                    <select id="analytics-sector-select"
+                        onchange="if(window.FarmAnalyticsCharts) FarmAnalyticsCharts.renderSoilTrendChart(this.value)"
                         style="padding:10px 14px; border-radius:10px; border:1.5px solid var(--border); background:var(--card-bg); color:var(--text-main); font-weight:700; font-size:0.9rem;">
                         <option value="">All Sectors (Mean)</option>
                         <option value="A">Sector A — North Orchard</option>
@@ -4672,7 +4997,8 @@
                         <option value="E">Sector E — West Mustard</option>
                         <option value="F">Sector F — Ridge Cover</option>
                     </select>
-                    <button class="action-btn" onclick="if(window.FarmAnalyticsCharts){ const s=document.getElementById('analytics-sector-select').value; FarmAnalyticsCharts.renderSoilTrendChart(s); FarmAnalyticsCharts.renderYieldRiskCards(); FarmAnalyticsCharts.renderSectorComparison(); }"
+                    <button class="action-btn"
+                        onclick="if(window.FarmAnalyticsCharts){ const s=document.getElementById('analytics-sector-select').value; FarmAnalyticsCharts.renderSoilTrendChart(s); FarmAnalyticsCharts.renderYieldRiskCards(); FarmAnalyticsCharts.renderSectorComparison(); }"
                         style="background:#06b6d4; color:white; border:none; padding:10px 16px; border-radius:10px; font-weight:700;">
                         <i class="fa-solid fa-rotate"></i> Refresh Analytics
                     </button>
@@ -4681,14 +5007,19 @@
 
             <!-- Historical Moisture & Ambient Temperature Trend (Chart.js) -->
             <div class="ctrl-card" style="margin-bottom:24px; padding:20px;">
-                <div style="display:flex; justify-content:space-between; align-items:center; margin-bottom:16px; flex-wrap:wrap; gap:10px;">
+                <div
+                    style="display:flex; justify-content:space-between; align-items:center; margin-bottom:16px; flex-wrap:wrap; gap:10px;">
                     <div>
-                        <h3 class="sec-title" style="font-size:1.05rem; margin-bottom:2px;"><i class="fa-solid fa-chart-line" style="color:#0ea5e9;"></i> 14-Day Soil Moisture & Temperature Trajectory</h3>
-                        <p style="font-size:0.8rem; color:var(--text-sub); margin:0;">Real sensor history queried from persisted SQLite database logs.</p>
+                        <h3 class="sec-title" style="font-size:1.05rem; margin-bottom:2px;"><i
+                                class="fa-solid fa-chart-line" style="color:#0ea5e9;"></i> 14-Day Soil Moisture &
+                            Temperature Trajectory</h3>
+                        <p style="font-size:0.8rem; color:var(--text-sub); margin:0;">Real sensor history queried from
+                            persisted SQLite database logs.</p>
                     </div>
                     <div id="analytics-npk-display" style="display:flex; gap:8px; flex-wrap:wrap;"></div>
                 </div>
-                <div id="soil-trend-loading" style="display:none; text-align:center; padding:20px; color:var(--text-sub); font-size:0.9rem;">
+                <div id="soil-trend-loading"
+                    style="display:none; text-align:center; padding:20px; color:var(--text-sub); font-size:0.9rem;">
                     <i class="fa-solid fa-circle-notch fa-spin"></i> Loading sensor history...
                 </div>
                 <div style="position:relative; height:280px; width:100%;">
@@ -4697,14 +5028,19 @@
             </div>
 
             <!-- 2-Column Analytics Layout: Yield Risk & Sector Comparison -->
-            <div style="display:grid; grid-template-columns: repeat(auto-fit, minmax(min(100%, 380px), 1fr)); gap:20px;">
+            <div
+                style="display:grid; grid-template-columns: repeat(auto-fit, minmax(min(100%, 380px), 1fr)); gap:20px;">
                 <!-- Yield Risk Assessment -->
                 <div class="ctrl-card" style="margin-bottom:0; padding:20px;">
                     <div style="display:flex; justify-content:space-between; align-items:center; margin-bottom:14px;">
-                        <h3 class="sec-title" style="font-size:1.05rem; margin-bottom:0;"><i class="fa-solid fa-scale-balanced" style="color:#f59e0b;"></i> Crop Yield Risk Forecasting</h3>
-                        <span style="font-size:0.75rem; color:var(--text-sub); font-weight:700;">Multi-Factor Algorithm</span>
+                        <h3 class="sec-title" style="font-size:1.05rem; margin-bottom:0;"><i
+                                class="fa-solid fa-scale-balanced" style="color:#f59e0b;"></i> Crop Yield Risk
+                            Forecasting</h3>
+                        <span style="font-size:0.75rem; color:var(--text-sub); font-weight:700;">Multi-Factor
+                            Algorithm</span>
                     </div>
-                    <p style="font-size:0.82rem; color:var(--text-sub); margin-bottom:14px;">Dynamic yield vulnerability computed from NPK deficits, soil pH, moisture reserves, and forecast weather stress.</p>
+                    <p style="font-size:0.82rem; color:var(--text-sub); margin-bottom:14px;">Dynamic yield vulnerability
+                        computed from NPK deficits, soil pH, moisture reserves, and forecast weather stress.</p>
                     <div id="yield-risk-container">
                         <!-- Injected by FarmAnalyticsCharts.renderYieldRiskCards() -->
                     </div>
@@ -4713,10 +5049,14 @@
                 <!-- Field Performance Sector Comparison -->
                 <div class="ctrl-card" style="margin-bottom:0; padding:20px;">
                     <div style="display:flex; justify-content:space-between; align-items:center; margin-bottom:14px;">
-                        <h3 class="sec-title" style="font-size:1.05rem; margin-bottom:0;"><i class="fa-solid fa-ranking-star" style="color:#10b981;"></i> Sector Field Health Comparison</h3>
-                        <span style="font-size:0.75rem; color:var(--text-sub); font-weight:700;">Ranked Performance</span>
+                        <h3 class="sec-title" style="font-size:1.05rem; margin-bottom:0;"><i
+                                class="fa-solid fa-ranking-star" style="color:#10b981;"></i> Sector Field Health
+                            Comparison</h3>
+                        <span style="font-size:0.75rem; color:var(--text-sub); font-weight:700;">Ranked
+                            Performance</span>
                     </div>
-                    <p style="font-size:0.82rem; color:var(--text-sub); margin-bottom:14px;">Relative ranking across Sectors A–F based on weighted soil fertility, moisture adequacy, and organic tilth.</p>
+                    <p style="font-size:0.82rem; color:var(--text-sub); margin-bottom:14px;">Relative ranking across
+                        Sectors A–F based on weighted soil fertility, moisture adequacy, and organic tilth.</p>
                     <div style="position:relative; height:340px; width:100%;">
                         <canvas id="sector-comparison-chart"></canvas>
                     </div>
@@ -4733,10 +5073,12 @@
             style="position:fixed; bottom:0; left:0; right:0; max-width:520px; margin:0 auto; background:var(--card-bg); border-top:1.5px solid var(--border); border-radius:28px 28px 0 0; z-index:10003; display:none; transform:translateY(100%); transition:transform 0.3s cubic-bezier(0.16, 1, 0.3, 1); box-shadow:0 -12px 40px rgba(0,0,0,0.35); padding:18px 18px 36px; box-sizing:border-box;">
             <div style="width:42px; height:4px; border-radius:4px; background:var(--border); margin:0 auto 16px;"></div>
             <div style="display:flex; justify-content:space-between; align-items:center; margin-bottom:16px;">
-                <div style="font-weight:800; font-size:1.05rem; color:var(--text-main); display:flex; align-items:center; gap:8px;">
+                <div
+                    style="font-weight:800; font-size:1.05rem; color:var(--text-main); display:flex; align-items:center; gap:8px;">
                     <i class="fa-solid fa-grid-2" style="color:var(--primary);"></i> Farm Management Hub
                 </div>
-                <button type="button" onclick="toggleMobileMoreSheet(false)" style="background:transparent; border:none; color:var(--text-sub); font-size:1.2rem; cursor:pointer; padding:4px 8px; border-radius:8px;">
+                <button type="button" onclick="toggleMobileMoreSheet(false)"
+                    style="background:transparent; border:none; color:var(--text-sub); font-size:1.2rem; cursor:pointer; padding:4px 8px; border-radius:8px;">
                     <i class="fa-solid fa-xmark"></i>
                 </button>
             </div>
@@ -4763,13 +5105,16 @@
                 </button>
                 <button type="button" onclick="selectMoreModule('activity_log')" class="action-btn"
                     style="justify-content:flex-start; padding:12px 14px; background:var(--bg-main); border:1px solid var(--border); color:var(--text-main); border-radius:14px; font-weight:700; font-size:0.84rem; gap:10px; cursor:pointer; width:100%; box-sizing:border-box;">
-                    <i class="fa-solid fa-clock-rotate-left" style="color:#64748b; font-size:1.15rem;"></i> Activity Logs
+                    <i class="fa-solid fa-clock-rotate-left" style="color:#64748b; font-size:1.15rem;"></i> Activity
+                    Logs
                 </button>
                 <button type="button" onclick="toggleMobileMoreSheet(false); openSettingsModal();" class="action-btn"
                     style="justify-content:flex-start; padding:12px 14px; background:var(--bg-main); border:1px solid var(--border); color:var(--text-main); border-radius:14px; font-weight:700; font-size:0.84rem; gap:10px; cursor:pointer; width:100%; box-sizing:border-box;">
                     <i class="fa-solid fa-gear" style="color:var(--primary); font-size:1.15rem;"></i> Settings
                 </button>
-                <button type="button" onclick="toggleMobileMoreSheet(false); document.getElementById('lang-modal').style.display='flex';" class="action-btn"
+                <button type="button"
+                    onclick="toggleMobileMoreSheet(false); document.getElementById('lang-modal').style.display='flex';"
+                    class="action-btn"
                     style="justify-content:flex-start; padding:12px 14px; background:var(--bg-main); border:1px solid var(--border); color:var(--text-main); border-radius:14px; font-weight:700; font-size:0.84rem; gap:10px; cursor:pointer; width:100%; box-sizing:border-box;">
                     <i class="fa-solid fa-language" style="color:#10b981; font-size:1.15rem;"></i> Language
                 </button>
@@ -4911,21 +5256,25 @@
                 </div>
             </div>
 
-                        <!-- HARDWARE & ROBOT SOCKET CONNECTION SETTINGS -->
+            <!-- HARDWARE & ROBOT SOCKET CONNECTION SETTINGS -->
             <div style="margin-bottom:24px; border-top:1px solid var(--border); padding-top:20px;">
                 <div style="display:flex; justify-content:space-between; align-items:center; margin-bottom:8px;">
                     <label style="font-weight:700; font-size:0.85rem; color:var(--text-sub);">
-                        <i class="fa-solid fa-satellite-dish" style="color:var(--primary); margin-right:6px;"></i>ROBOT / HARDWARE SERVER IP
+                        <i class="fa-solid fa-satellite-dish" style="color:var(--primary); margin-right:6px;"></i>ROBOT
+                        / HARDWARE SERVER IP
                     </label>
-                    <span id="robot-ip-status-badge" style="font-size:0.75rem; font-weight:700; padding:3px 10px; border-radius:12px; background:#fef3c7; color:#b45309; border:1px solid #fde68a;">
+                    <span id="robot-ip-status-badge"
+                        style="font-size:0.75rem; font-weight:700; padding:3px 10px; border-radius:12px; background:#fef3c7; color:#b45309; border:1px solid #fde68a;">
                         Mock Mode
                     </span>
                 </div>
                 <p style="font-size:0.78rem; color:var(--text-sub); margin-bottom:10px; line-height:1.4;">
-                    Enter your robot's IP / Host URL (e.g. <code>http://192.168.4.1:5000</code> or <code>http://localhost:5000</code>). Leave blank for verified synchronized mock telemetry.
+                    Enter your robot's IP / Host URL (e.g. <code>http://192.168.4.1:5000</code> or
+                    <code>http://localhost:5000</code>). Leave blank for verified synchronized mock telemetry.
                 </p>
                 <div style="position:relative; margin-bottom:10px;">
-                    <i class="fa-solid fa-network-wired" style="position:absolute; left:16px; top:16px; color:var(--primary);"></i>
+                    <i class="fa-solid fa-network-wired"
+                        style="position:absolute; left:16px; top:16px; color:var(--primary);"></i>
                     <input type="text" id="set-robot-ip" placeholder="http://192.168.4.1:5000"
                         style="width:100%; padding:14px 14px 14px 46px; border-radius:12px; border:1.5px solid var(--border); outline:none; background:var(--card-bg); color:var(--text-main); font-size:15px; font-family:monospace;">
                 </div>
@@ -4941,7 +5290,7 @@
                 </div>
             </div>
 
-<div
+            <div
                 style="display:flex; align-items:center; justify-content:space-between; border-top:1px solid var(--border); padding-top:24px; gap:12px;">
                 <button
                     style="flex:1; background:var(--card-bg); color:var(--text-main); border:1px solid var(--border); padding:12px 20px; border-radius:12px; font-weight:700; cursor:pointer; min-height:44px;"
@@ -4999,9 +5348,9 @@
 
     <script>
         const isFileMode = window.location.protocol === 'file:';
-        const isStaticHost = window.location.hostname.includes('vercel.app') || 
-                             window.location.hostname.includes('github.io') ||
-                             window.location.hostname.includes('netlify.app');
+        const isStaticHost = window.location.hostname.includes('vercel.app') ||
+            window.location.hostname.includes('github.io') ||
+            window.location.hostname.includes('netlify.app');
 
         // Centralized Farm Telemetry - Single Source of Truth across every single page
         window.FarmTelemetry = {
@@ -5016,7 +5365,7 @@
             weedTargets: 209
         };
 
-        
+
         // Default Mock Datasets for 100% Zero-Failure Standalone Telemetry
         const defaultCropRecommendations = {
             current_soil_assessment: {
@@ -5160,9 +5509,9 @@
                 mockData = currentSectorsData || [];
             } else if (url.includes('/api/logs')) {
                 mockData = [
-                    { id: 1, action: 'Autonomous Patrol Active', message: 'Bot completed Sector B optical sweep', timestamp: new Date(Date.now() - 1000*60*5).toISOString() },
-                    { id: 2, action: 'Laser Weed Elimination', message: 'Target Congress Grass neutralized in 140ms', timestamp: new Date(Date.now() - 1000*60*15).toISOString() },
-                    { id: 3, action: 'Perimeter Deterrence', message: 'Ultrasonic pulse triggered in Sector E', timestamp: new Date(Date.now() - 1000*60*45).toISOString() }
+                    { id: 1, action: 'Autonomous Patrol Active', message: 'Bot completed Sector B optical sweep', timestamp: new Date(Date.now() - 1000 * 60 * 5).toISOString() },
+                    { id: 2, action: 'Laser Weed Elimination', message: 'Target Congress Grass neutralized in 140ms', timestamp: new Date(Date.now() - 1000 * 60 * 15).toISOString() },
+                    { id: 3, action: 'Perimeter Deterrence', message: 'Ultrasonic pulse triggered in Sector E', timestamp: new Date(Date.now() - 1000 * 60 * 45).toISOString() }
                 ];
             }
             return Promise.resolve(new Response(JSON.stringify(mockData), {
@@ -5235,7 +5584,7 @@
             const connectTarget = backend || window.location.origin;
             try {
                 if (socket) {
-                    try { socket.disconnect(); } catch (e) {}
+                    try { socket.disconnect(); } catch (e) { }
                     socket = null;
                 }
 
@@ -5255,7 +5604,7 @@
                 socket.on('connect_error', () => {
                     socketReconnectAttempts++;
                     if (socketReconnectAttempts >= MAX_SOCKET_ATTEMPTS) {
-                        try { socket.disconnect(); } catch (e) {}
+                        try { socket.disconnect(); } catch (e) { }
                         updateRobotBadge(false);
                         updateNetworkStatusDisplay(false, 'Disconnected (Mock Mode Active)');
                         console.warn('[GE-Bot-1] Hardware connection timeout. Running in Standalone Mock mode.');
@@ -5318,7 +5667,7 @@
             const input = document.getElementById('set-robot-ip');
             if (input) input.value = '';
             if (socket) {
-                try { socket.disconnect(); } catch (e) {}
+                try { socket.disconnect(); } catch (e) { }
                 socket = null;
             }
             updateRobotIpBadge('');
@@ -5383,7 +5732,7 @@
             switchNavPanel(panelId);
         }
 
-        function updateMobileNavActive(btn) {}
+        function updateMobileNavActive(btn) { }
 
         function updateNetworkStatusDisplay(connected, targetLabel) {
             const esp32El = document.getElementById('net-esp32-status');
@@ -5972,9 +6321,9 @@
                 return;
             }
 
-            // Create Leaflet map centered at farm coordinates
+            // Create Leaflet map centered at farm coordinates (PAU Agro Research Station, Punjab)
             farmLeafletMap = L.map('farm-interactive-map', {
-                center: [28.6138, 77.2094],
+                center: [30.8995, 75.8075],
                 zoom: 17,
                 zoomControl: true,
                 attributionControl: false
@@ -5987,14 +6336,14 @@
                 attribution: 'Tiles &copy; Esri &mdash; Farm Satellite'
             }).addTo(farmLeafletMap);
 
-            // Sector Polygons Coordinates (Sectors A-F)
+            // Sector Polygons Coordinates (Sectors A-F: Real agricultural acreage at PAU Research Farm)
             const sectorPolys = [
-                { id: 'A', name: 'Sector A - North Orchard', zone: 'danger', coords: [[28.6143, 77.2078], [28.6143, 77.2088], [28.6138, 77.2088], [28.6138, 77.2078]], color: '#ef4444' },
-                { id: 'B', name: 'Sector B - East Grains', zone: 'moderate', coords: [[28.6143, 77.2089], [28.6143, 77.2099], [28.6138, 77.2099], [28.6138, 77.2089]], color: '#f59e0b' },
-                { id: 'C', name: 'Sector C - Central Wheat', zone: 'safe', coords: [[28.6143, 77.2100], [28.6143, 77.2110], [28.6138, 77.2110], [28.6138, 77.2100]], color: '#22c55e' },
-                { id: 'D', name: 'Sector D - South Pulses', zone: 'moderate', coords: [[28.6137, 77.2078], [28.6137, 77.2088], [28.6132, 77.2088], [28.6132, 77.2078]], color: '#f59e0b' },
-                { id: 'E', name: 'Sector E - West Mustard', zone: 'safe', coords: [[28.6137, 77.2089], [28.6137, 77.2099], [28.6132, 77.2099], [28.6132, 77.2089]], color: '#22c55e' },
-                { id: 'F', name: 'Sector F - Ridge Cover', zone: 'safe', coords: [[28.6137, 77.2100], [28.6137, 77.2110], [28.6132, 77.2110], [28.6132, 77.2100]], color: '#22c55e' }
+                { id: 'A', name: 'Sector A - North Orchard', zone: 'danger', coords: [[30.9002, 75.8062], [30.9002, 75.8071], [30.8995, 75.8071], [30.8995, 75.8062]], color: '#ef4444' },
+                { id: 'B', name: 'Sector B - East Grains', zone: 'moderate', coords: [[30.9002, 75.8071], [30.9002, 75.8080], [30.8995, 75.8080], [30.8995, 75.8071]], color: '#f59e0b' },
+                { id: 'C', name: 'Sector C - Central Wheat', zone: 'safe', coords: [[30.9002, 75.8080], [30.9002, 75.8089], [30.8995, 75.8089], [30.8995, 75.8080]], color: '#22c55e' },
+                { id: 'D', name: 'Sector D - South Pulses', zone: 'moderate', coords: [[30.8995, 75.8062], [30.8995, 75.8071], [30.8988, 75.8071], [30.8988, 75.8062]], color: '#f59e0b' },
+                { id: 'E', name: 'Sector E - West Mustard', zone: 'safe', coords: [[30.8995, 75.8071], [30.8995, 75.8080], [30.8988, 75.8080], [30.8988, 75.8071]], color: '#22c55e' },
+                { id: 'F', name: 'Sector F - Ridge Cover', zone: 'safe', coords: [[30.8995, 75.8080], [30.8995, 75.8089], [30.8988, 75.8089], [30.8988, 75.8080]], color: '#22c55e' }
             ];
 
             sectorPolys.forEach(sp => {
@@ -6046,7 +6395,7 @@
                 iconAnchor: [17, 17]
             });
 
-            farmBotMarker = L.marker([28.6139, 77.2094], { icon: botIcon }).addTo(farmLeafletMap);
+            farmBotMarker = L.marker([30.8995, 75.8075], { icon: botIcon }).addTo(farmLeafletMap);
             farmBotMarker.bindPopup(`
                 <div style="font-family:'Outfit',sans-serif; padding:4px;">
                     <b style="color:#1d4ed8; font-size:14px;"><i class="fa-solid fa-robot"></i> GE-Bot-1 Rover Unit</b><br>
@@ -6427,7 +6776,7 @@
         // ══════════════════════════════════════════════════════════════════════
         //  GO EARTH ORGANIC CALCULATOR (P25) BY LANDFIELD & WASTE TYPE
         // ══════════════════════════════════════════════════════════════════════
-                function setLandfieldPreset(val, btn) {
+        function setLandfieldPreset(val, btn) {
             const numVal = parseFloat(val) || 1.0;
             const input = document.getElementById('ge-land-acres');
             const legacyInput = document.getElementById('calc-landfield-acres');
@@ -6765,9 +7114,9 @@
         // ══════════════════════════════════════════════════════════════════════
         let isIrrigationOn = false;
         let currentFarmLocation = {
-            name: 'New Delhi Farm Ridge',
-            lat: 28.6139,
-            lon: 77.2090
+            name: 'PAU Agro Research Station (Punjab Wheat Belt)',
+            lat: 30.8995,
+            lon: 75.8075
         };
 
         const WMO_WEATHER_MAP = {
@@ -6865,7 +7214,7 @@
             if (elLoc) elLoc.textContent = `Farm Location: ${locationName} • GPS: ${lat.toFixed(2)}°N, ${lon.toFixed(2)}°E`;
             if (elHumid) elHumid.textContent = `${cur.relative_humidity_2m}%`;
             if (elWind) elWind.textContent = `${Math.round(cur.wind_speed_10m)} km/h`;
-            
+
             const rainProb = (daily.precipitation_probability_max && daily.precipitation_probability_max[0] != null) ? daily.precipitation_probability_max[0] : 0;
             if (elRain) {
                 elRain.textContent = `${rainProb}% (${rainProb > 40 ? 'High' : 'Low'})`;
@@ -6957,6 +7306,15 @@
                 const flushHour = rainProb >= 40 ? 'Postponed (Rain Risk)' : (now.getHours() < 6 ? 'Today 06:30 AM' : 'Tomorrow 06:30 AM');
                 elNextFlush.textContent = flushHour;
             }
+
+            // Sync Environmental Risk Sentinel with live Open-Meteo metrics
+            if (window.EnvRiskMonitor && typeof window.EnvRiskMonitor.evaluateFromWeather === 'function') {
+                try {
+                    window.EnvRiskMonitor.evaluateFromWeather(data);
+                } catch (e) {
+                    console.warn('EnvRiskMonitor.evaluateFromWeather error:', e);
+                }
+            }
         }
 
         function onWeatherCitySelectChange(val) {
@@ -7043,7 +7401,7 @@
         // ══════════════════════════════════════════════════════════════════════
         //  INVADER SECURITY & ALERTS
         // ══════════════════════════════════════════════════════════════════════
-                // =============================================
+        // =============================================
         // REAL PERIMETER INVADER DETECTION & DETERRENTS
         // (TensorFlow.js COCO-SSD + Web Audio API Siren + Visual Strobe)
         // =============================================
@@ -7159,7 +7517,7 @@
                     activeStrobeInterval = null;
                     overlay.style.display = 'none';
                     if (torchTrack) {
-                        torchTrack.applyConstraints({ advanced: [{ torch: false }] }).catch(() => {});
+                        torchTrack.applyConstraints({ advanced: [{ torch: false }] }).catch(() => { });
                     }
                     return;
                 }
@@ -7167,7 +7525,7 @@
                 overlay.style.background = isWhite ? 'rgba(255, 255, 255, 0.95)' : 'rgba(0, 0, 0, 0.85)';
 
                 if (torchTrack) {
-                    torchTrack.applyConstraints({ advanced: [{ torch: isWhite }] }).catch(() => {});
+                    torchTrack.applyConstraints({ advanced: [{ torch: isWhite }] }).catch(() => { });
                 }
             }, intervalMs);
 
@@ -7562,8 +7920,8 @@
                     : '<span style="background:#dcfce7; color:#16a34a; font-weight:800; font-size:0.75rem; padding:3px 8px; border-radius:8px;">Deterred</span>';
 
                 const btnLabel = isActive ? 'Deploy Siren' : 'Re-Trigger';
-                const btnStyle = isActive 
-                    ? 'background:#ef4444; color:white; border:none; font-weight:700;' 
+                const btnStyle = isActive
+                    ? 'background:#ef4444; color:white; border:none; font-weight:700;'
                     : 'background:var(--card-bg); border:1px solid var(--border); color:var(--text-main);';
 
                 return `
@@ -7679,7 +8037,7 @@
             await loadInvaderAlerts();
         }
 
-        
+
         function dismissInvaderAlert() {
             const toast = document.getElementById('breach-compact-toast');
             if (toast) toast.style.display = 'none';
@@ -7782,7 +8140,7 @@
             }
 
             if (!isFileMode) {
-                safeFetch('/api/robot/mode', { method: 'POST', headers: { 'Content-Type': 'application/json' }, body: JSON.stringify({ mode }) }).catch(() => {});
+                safeFetch('/api/robot/mode', { method: 'POST', headers: { 'Content-Type': 'application/json' }, body: JSON.stringify({ mode }) }).catch(() => { });
             }
         }
 
@@ -8460,7 +8818,7 @@
             // Sensor cards: battery, mode etc. are simulated when ESP32 not connected
             // Badges removed on robotConnectionStatus event (see Socket.io listener below)
         }
-    
+
         // =======================================================
         // DRAGGABLE AI CHATBOT FAB (MOVABLE TO ANY SIDE / BOUNDED VIEWPORT)
         // =======================================================
@@ -8500,7 +8858,7 @@
                 fab.classList.add('is-dragging');
                 fab.style.setProperty('transition', 'none', 'important');
                 if (typeof navigator.vibrate === 'function') {
-                    try { navigator.vibrate(10); } catch(e) {}
+                    try { navigator.vibrate(10); } catch (e) { }
                 }
             }
 
@@ -8592,7 +8950,7 @@
             });
         })();
 
-        
+
         // =======================================================
 
     </script>

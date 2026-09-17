@@ -814,6 +814,14 @@ function addWaypoint(data) {
 // =============================================
 function addAdvisory(data) {
     try {
+        // Prevent healthy scans from creating false disease advisories
+        if (data.category === 'disease' && (
+            (data.title && (data.title.toLowerCase().includes('healthy') || data.title.toLowerCase().includes('clean') || data.title.toLowerCase().includes('no pathogen'))) ||
+            (data.action && data.action.toLowerCase().includes('healthy'))
+        )) {
+            return { success: false, reason: 'Healthy scan does not create disease advisory' };
+        }
+
         const res = db.prepare(`
             INSERT INTO farm_advisories (category, severity, title, action, sector_id, source)
             VALUES (?, ?, ?, ?, ?, ?)

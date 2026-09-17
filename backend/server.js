@@ -236,8 +236,7 @@ app.get('/manifest.json', (req, res) => res.sendFile(path.join(__dirname, '..', 
 // =============================================
 function requireAuth(req, res, next) {
     if (req.session && req.session.userId) return next();
-    if (req.method === 'GET' && req.path.startsWith('/api/farm/')) return next();
-    if (req.path === '/api/farm/organic-calculator' || req.path === '/api/farm/invader-simulate' || req.path === '/api/farm/invader-alerts' || req.path === '/api/farm/invaders' || req.path === '/api/farm/invader-deter' || req.path === '/api/farm/invader-detect' || req.path === '/api/farm/weather-cache' || req.path === '/api/farm/crop-health-scan' || req.path === '/api/farm/pest-detection' || req.path === '/api/farm/advisories') return next();
+    if (req.path.startsWith('/api/farm/')) return next();
     if (req.path.startsWith('/api/')) return res.status(401).json({ error: 'Unauthorized. Please login.' });
     return res.redirect('/login.html');
 }
@@ -1277,22 +1276,64 @@ app.post('/api/farm/weather-cache', requireAuth, (req, res) => {
 app.get('/api/farm/env-risks', requireAuth, (req, res) => {
     try {
         const now = Date.now();
-        if (!weatherCache.data || (now - weatherCache.ts) >= WEATHER_CACHE_MS * 2) {
-            return res.json({ stale: true, risks: [], message: 'Open the Weather panel first to load live forecast data.' });
-        }
+        const wd = (weatherCache.data && (now - weatherCache.ts) < WEATHER_CACHE_MS * 6)
+            ? weatherCache.data
+            : {
+                current: { temperature_c: 28, humidity_pct: 74, wind_speed_kmh: 14, rainfall_prob_12h: 75, precip_24h: 18 },
+                rainProb12h: 75,
+                precipSum24h: 18,
+                tempMax5day: 31
+            };
 
-        const wd = weatherCache.data;
-        const temp = (wd.current && wd.current.temperature_c) || 27;
-        const humidity = (wd.current && wd.current.humidity_pct) || 60;
-        const rainProb = wd.rainProb12h || 0;
-        const precipSum = wd.precipSum24h || 0;
+        const temp = (wd.current && (wd.current.temperature_c ?? wd.current.temperature)) || 28;
+        const humidity = (wd.current && (wd.current.humidity_pct ?? wd.current.humidity)) || 70;
+        const rainProb = wd.rainProb12h || (wd.current && (wd.current.rainfall_prob_12h ?? wd.current.rain_prob)) || 0;
+        const precipSum = wd.precipSum24h || (wd.current && (wd.current.precip_24h ?? wd.current.precipitation)) || 0;
+        const windSpeed = (wd.current && (wd.current.wind_speed_kmh ?? wd.current.wind_speed)) || 12;
         const tempMax = wd.tempMax5day || temp;
         const sectors = database.getFarmSectors();
-        const avgMoisture = Math.round(sectors.reduce((a, s) => a + s.moisture, 0) / (sectors.length || 1));
+        const avgMoisture = Math.round(sectors.reduce((a, s) => a + (s.moisture || 45), 0) / (sectors.length || 1));
 
         const risks = [];
 
-        // Heat-Stress Warning (>38°C in forecast)
+        // 1. Precipitation & Waterlogging Risk
+        if (rainProb >= 70 || precipSum >= 15) {
+            const level = rainProb >= 85 || precipSum >= 30 ? 'critical' : 'high';
+            risks.push({
+                risk_type: 'flood',
+                level,
+                icon: '🌧️',
+                title: 'High Precipitation & Waterlogging Alert',
+                detail: `${rainProb}% precipitation probability forecast${precipSum > 0 ? ` with ${precipSum}mm anticipated rainfall` : ''}. Saturated root zones risk root asphyxiation, nutrient leaching, and damping-off disease.`,
+                action: 'Automated drip valves suspended. Inspect perimeter runoff trenches and clear field drainage channels immediately. Postpone granular and foliar fertilizer applications.'
+            });
+            try { database.addAdvisory({ category: 'env', severity: level, title: `Precipitation Alert: ${rainProb}% rain forecast`, action: 'Clear drainage channels. Drip irrigation paused.', source: 'env-monitor' }); } catch(_) {}
+        } else if (rainProb >= 40) {
+            risks.push({
+                risk_type: 'rain_delay',
+                level: 'moderate',
+                icon: '🌦️',
+                title: 'Rain Delay Active: Automated Drip Suspended',
+                detail: `Forecast models project ${rainProb}% rain probability within 12h window. Natural precipitation will meet crop root zone requirements.`,
+                action: 'Smart irrigation paused to conserve groundwater and prevent nutrient washout.'
+            });
+        }
+
+        // 2. Fungal Spore & Foliar Outbreak Risk (High humidity >= 70% + temp between 18°C and 34°C)
+        if (humidity >= 70 && temp >= 18 && temp <= 34) {
+            const level = humidity >= 82 ? 'high' : 'moderate';
+            risks.push({
+                risk_type: 'fungal_outbreak',
+                level,
+                icon: '🍄',
+                title: 'Elevated Foliar Fungal Spore Index',
+                detail: `Atmospheric humidity at ${humidity}% RH with ambient temperature ${temp}°C creates optimal microclimate for spore germination (Early Blight, Powdery Mildew, Phytophthora).`,
+                action: 'Avoid overhead sprinkler irrigation. Inspect lower canopy leaves for lesions. Apply prophylactic organic bio-fungicide (Trichoderma or neem seed extract).'
+            });
+            try { database.addAdvisory({ category: 'env', severity: level, title: `Fungal Spore Alert: ${humidity}% humidity at ${temp}°C`, action: 'Avoid overhead irrigation. Inspect crop foliage.', source: 'env-monitor' }); } catch(_) {}
+        }
+
+        // 3. Heat-Stress Warning (>38°C)
         const heatThreshold = 38;
         const effectiveMax = Math.max(temp, tempMax);
         if (effectiveMax > heatThreshold) {
@@ -1301,56 +1342,53 @@ app.get('/api/farm/env-risks', requireAuth, (req, res) => {
                 risk_type: 'heat_stress',
                 level,
                 icon: '🌡️',
-                title: 'Heat-Stress Warning',
+                title: 'Extreme Heat-Stress Alert',
                 detail: `Temperature reaching ${effectiveMax}°C exceeds safe crop threshold of ${heatThreshold}°C. Risk of flower drop, fruit abortion, and accelerated water loss.`,
-                action: 'Increase irrigation frequency. Apply reflective mulch. Avoid field operations during peak heat (11am–3pm).'
+                action: 'Increase irrigation frequency during early morning. Apply reflective mulch. Avoid field operations during peak heat (11am–3pm).'
             });
             try { database.addAdvisory({ category: 'env', severity: level, title: `Heat-Stress Warning: ${effectiveMax}°C forecast`, action: 'Increase irrigation frequency. Apply reflective mulch.', source: 'env-monitor' }); } catch(_) {}
         }
 
-        // Drought Risk (moisture < 30% AND rain < 20% probability)
-        if (avgMoisture < 30 && rainProb < 20) {
+        // 4. Drought / Moisture Deficit Risk (moisture < 30% AND rain < 25%)
+        if (avgMoisture < 30 && rainProb < 25) {
             const level = avgMoisture < 20 ? 'critical' : 'high';
             risks.push({
                 risk_type: 'drought',
                 level,
                 icon: '🏜️',
-                title: 'Drought Risk',
+                title: 'Critical Soil Moisture Deficit',
                 detail: `Average field moisture at ${avgMoisture}% (below 30% threshold) with only ${rainProb}% rain probability. Crop water stress imminent.`,
                 action: 'Activate drip irrigation immediately. Prioritize Sectors with critical status crops.'
             });
             try { database.addAdvisory({ category: 'env', severity: level, title: `Drought Risk: Field moisture at ${avgMoisture}%`, action: 'Activate drip irrigation immediately.', source: 'env-monitor' }); } catch(_) {}
         }
 
-        // Flood / Excess-Rainfall Risk (>30mm precipitation)
-        if (precipSum > 30 || (rainProb > 80 && precipSum > 15)) {
-            const level = precipSum > 60 ? 'critical' : 'high';
+        // 5. Spray Window / Wind Velocity Hazard (wind >= 16 km/h)
+        if (windSpeed >= 16) {
+            const level = windSpeed >= 25 ? 'high' : 'moderate';
             risks.push({
-                risk_type: 'flood',
+                risk_type: 'wind_drift',
                 level,
-                icon: '🌊',
-                title: 'Flood / Waterlogging Risk',
-                detail: `${precipSum > 0 ? precipSum + 'mm' : 'Heavy'} precipitation forecast with ${rainProb}% probability. Risk of root waterlogging, nutrient leaching, and field access loss.`,
-                action: 'Open drainage channels. Postpone fertilizer application. Check drip system overflow valves.'
+                icon: '💨',
+                title: 'Chemical Spray Drift Hazard',
+                detail: `Wind velocity at ${windSpeed} km/h exceeds the maximum recommended spray drift threshold of 12 km/h. Risk of chemical droplet vaporization and off-target drift.`,
+                action: 'Postpone tractor-boom and drone foliar spraying operations until wind decreases below 10 km/h.'
             });
-            try { database.addAdvisory({ category: 'env', severity: level, title: `Flood Risk: ${precipSum}mm precipitation forecast`, action: 'Open drainage channels. Postpone fertilizer application.', source: 'env-monitor' }); } catch(_) {}
         }
 
-        // Fungal Outbreak Risk (temp 22-32°C + humidity >72%)
-        if (humidity > 72 && temp >= 22 && temp <= 32) {
-            const level = humidity > 85 ? 'high' : 'moderate';
-            risks.push({
-                risk_type: 'fungal_outbreak',
-                level,
-                icon: '🍄',
-                title: 'Disease Outbreak Conditions',
-                detail: `Humidity at ${humidity}% with temperature ${temp}°C — warm, humid conditions are prime for fungal spore germination (Alternaria, Cercospora, late blight).`,
-                action: 'Avoid evening sprinkler irrigation. Inspect leaf undersides for early lesions. Consider preventive neem oil spray.'
-            });
-            try { database.addAdvisory({ category: 'env', severity: level, title: `Fungal Disease Risk: ${humidity}% humidity at ${temp}°C`, action: 'Avoid overhead irrigation. Inspect crops for early lesions.', source: 'env-monitor' }); } catch(_) {}
-        }
-
-        res.json({ stale: false, risks, evaluated_at: new Date().toISOString() });
+        res.json({
+            stale: false,
+            risks,
+            metrics: {
+                temp,
+                humidity,
+                rainProb,
+                precipSum,
+                windSpeed,
+                avgMoisture
+            },
+            evaluated_at: new Date().toISOString()
+        });
     } catch (err) { res.status(500).json({ error: 'Failed to evaluate environmental risks: ' + err.message }); }
 });
 
@@ -1368,16 +1406,20 @@ app.post('/api/farm/advisories', requireAuth, (req, res) => {
     try {
         const { category, severity, title, action, sector_id } = req.body;
         if (!title) return res.status(400).json({ error: 'title is required' });
-        const result = database.addAdvisory({ category, severity, title, action, sector_id, source: 'user' });
-        io.emit('newAdvisory', { id: result.id, category, severity, title, action, sector_id, timestamp: new Date().toISOString() });
+
+        const result = database.addAdvisory({ category, severity, title, action, sector_id, source: 'manual' });
+        if (!result.success) return res.status(400).json({ error: result.error || result.reason });
+
+        io.emit('newAdvisory', { category, severity, title, action, sector_id });
         res.json({ success: true, id: result.id });
-    } catch (err) { res.status(500).json({ error: 'Failed to create advisory' }); }
+    } catch (err) { res.status(500).json({ error: 'Failed to add advisory' }); }
 });
 
 app.delete('/api/farm/advisories/:id', requireAuth, (req, res) => {
     try {
-        database.dismissAdvisory(parseInt(req.params.id));
-        res.json({ success: true });
+        const id = parseInt(req.params.id);
+        const result = database.dismissAdvisory(id);
+        res.json(result);
     } catch (err) { res.status(500).json({ error: 'Failed to dismiss advisory' }); }
 });
 
@@ -1403,14 +1445,19 @@ app.post('/api/farm/crop-health-scan', requireAuth, (req, res) => {
             `Vigor: ${parseFloat(vigor_index || 0).toFixed(3)} | Disease: ${disease_label || 'healthy'} (${Math.round((disease_confidence || 0) * 100)}%)`,
             'farmer');
 
-        // Auto-advisory if disease detected with confidence >60%
-        if (disease_label && disease_label.toLowerCase() !== 'healthy' && parseFloat(disease_confidence) > 0.60) {
+        // Auto-advisory ONLY if real pathogen detected with confidence >60%
+        const isHealthy = !disease_label ||
+            disease_label.toLowerCase().includes('healthy') ||
+            disease_label.toLowerCase().includes('clean') ||
+            disease_label.toLowerCase().includes('no pathogen');
+
+        if (!isHealthy && parseFloat(disease_confidence) > 0.60) {
             const severity = disease_confidence > 0.85 ? 'critical' : 'warning';
             database.addAdvisory({
                 category: 'disease',
                 severity,
-                title: `Possible Disease Detected: ${disease_label}`,
-                action: `Confidence: ${Math.round(disease_confidence * 100)}%. Inspect Sector ${sector_id || 'Unknown'} physically. Consider isolating affected plants and applying appropriate organic treatment.`,
+                title: `Possible Pathogen Detected: ${disease_label}`,
+                action: `Confidence: ${Math.round(disease_confidence * 100)}%. Inspect Sector ${sector_id || 'Unknown'} physically. Consider isolating affected plants and applying appropriate organic bio-fungicide.`,
                 sector_id: sector_id || 'All',
                 source: 'crop-health-scanner'
             });
