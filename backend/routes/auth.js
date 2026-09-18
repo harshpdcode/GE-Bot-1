@@ -76,7 +76,16 @@ router.post('/forgot-password', (req, res) => {
         const otp = database.generateOTP(user.id);
         database.addLog(user.id, 'OTP Requested', 'system', `Password reset OTP requested`, 'general');
 
-        res.json({ success: true, message: 'OTP generated', userId: user.id, otp_dev: otp });
+        const responsePayload = {
+            success: true,
+            message: 'OTP generated and sent to registered contact',
+            userId: user.id
+        };
+        if (process.env.NODE_ENV !== 'production') {
+            responsePayload.otp_dev = otp;
+        }
+
+        res.json(responsePayload);
     } catch (err) {
         console.error('Forgot password error:', err);
         res.status(500).json({ error: 'Server error' });

@@ -578,9 +578,19 @@
                 const data = await res.json();
                 btn.classList.remove('loading');
                 if (data.success) {
-                    resetState.userId = data.userId; resetState.otpDev = data.otp_dev;
-                    showView('view-otp'); showMsg('OTP sent!', 'success');
-                    if (data.otp_dev) { document.getElementById('otp-reveal').style.display='block'; document.getElementById('otp-display').textContent=data.otp_dev; }
+                    resetState.userId = data.userId;
+                    resetState.otpDev = data.otp_dev || null;
+                    showView('view-otp');
+                    showMsg(data.otp_dev ? 'OTP sent! (Dev Mode)' : 'OTP sent to registered email/phone!', 'success');
+                    const revealEl = document.getElementById('otp-reveal');
+                    if (revealEl) {
+                        if (data.otp_dev) {
+                            revealEl.style.display = 'block';
+                            document.getElementById('otp-display').textContent = data.otp_dev;
+                        } else {
+                            revealEl.style.display = 'none';
+                        }
+                    }
                     document.querySelector('.otp-input[data-otp-idx="0"]').focus();
                 } else showMsg(data.error || 'Failed to send OTP');
             } catch { showMsg('Server error'); btn.classList.remove('loading'); }

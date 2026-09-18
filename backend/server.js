@@ -202,9 +202,47 @@ const OP_MODE_ID_MAP = {
 // Initialize database
 database.initDatabase();
 
+// Production Security Gate: require SESSION_SECRET in production
+if (process.env.NODE_ENV === 'production' && !process.env.SESSION_SECRET) {
+    console.error('FATAL: SESSION_SECRET environment variable is required in production.');
+    process.exit(1);
+}
+const SESSION_SECRET = process.env.SESSION_SECRET || 'dynorex-x1-dev-secret-local-avishkar';
+
+// CORS Whitelist Configuration
+const allowedOrigins = [
+    'https://ge-bot-1.vercel.app',
+    /^http:\/\/localhost(:\d+)?$/,
+    /^http:\/\/127\.0\.0\.1(:\d+)?$/
+];
+if (process.env.ALLOWED_ORIGINS) {
+    process.env.ALLOWED_ORIGINS.split(',').map(s => s.trim()).filter(Boolean).forEach(o => allowedOrigins.push(o));
+}
+
+function isOriginAllowed(origin, callback) {
+    if (!origin) return callback(null, true);
+    const allowed = allowedOrigins.some(pattern => {
+        if (pattern instanceof RegExp) return pattern.test(origin);
+        return pattern === origin;
+    });
+    if (allowed) {
+        return callback(null, true);
+    }
+    return callback(new Error(`CORS blocked for origin: ${origin}`));
+}
+
 const app = express();
 const server = http.createServer(app);
-const io = new Server(server, { cors: { origin: '*' } });
+const io = new Server(server, {
+    cors: {
+        origin: (origin, callback) => {
+            isOriginAllowed(origin, (err, allowed) => {
+                callback(err, allowed ? origin : false);
+            });
+        },
+        credentials: true
+    }
+});
 
 // Wire the IO instance into the robot bridge
 robotBridge.setIO(io);
@@ -215,19 +253,28 @@ robotBridge.connect();
 // MIDDLEWARE
 // =============================================
 app.set('trust proxy', 1);
-app.use(cors());
+app.use(cors({
+    origin: isOriginAllowed,
+    credentials: true
+}));
 app.use(express.json());
 app.use(express.urlencoded({ extended: true }));
 
 app.use(session({
-    secret: process.env.SESSION_SECRET || 'dynorex-x1-secret-2024-avishkar',
+    secret: SESSION_SECRET,
     resave: false,
     saveUninitialized: false,
-    cookie: { secure: 'auto', maxAge: 24 * 60 * 60 * 1000 }
+    cookie: {
+        secure: process.env.NODE_ENV === 'production' ? true : 'auto',
+        sameSite: 'lax',
+        httpOnly: true,
+        maxAge: 24 * 60 * 60 * 1000
+    }
 }));
 
 app.use(express.static(path.join(__dirname, '..', 'frontend')));
 app.use('/assets', express.static(path.join(__dirname, '..', 'assets')));
+app.use('/models', express.static(path.join(__dirname, '..', 'models')));
 app.use('/models', express.static(path.join(__dirname, '..', 'frontend', 'models')));
 
 // UX: Manifest serving
@@ -238,7 +285,6 @@ app.get('/manifest.json', (req, res) => res.sendFile(path.join(__dirname, '..', 
 // =============================================
 function requireAuth(req, res, next) {
     if (req.session && req.session.userId) return next();
-    if (req.path.startsWith('/api/farm/')) return next();
     if (req.path.startsWith('/api/')) return res.status(401).json({ error: 'Unauthorized. Please login.' });
     return res.redirect('/login.html');
 }
@@ -1183,6 +1229,19 @@ let irrigationValveActive = false;
 let weatherCache = { data: null, ts: 0 };
 const WEATHER_CACHE_MS = 5 * 60 * 1000;
 
+// Unified rain delay computation helper for consistent irrigation & weather logic
+function getRainDelayStatus() {
+    const now = Date.now();
+    let rainProb12h = 30;
+    if (weatherCache.data && (now - weatherCache.ts) < WEATHER_CACHE_MS) {
+        rainProb12h = weatherCache.data.rainProb12h ?? 30;
+    }
+    return {
+        rainProb12h,
+        rainDelayActive: rainProb12h >= 60
+    };
+}
+
 app.get('/api/farm/weather-irrigation', requireAuth, (req, res) => {
     try {
         const sectors = database.getFarmSectors();
@@ -1208,11 +1267,7 @@ app.get('/api/farm/weather-irrigation', requireAuth, (req, res) => {
         });
         const avgMoist = Math.round(moistureEstimates.reduce((a, v) => a + v, 0) / (moistureEstimates.length || 1));
 
-        let rainProb12h = 30;
-        if (weatherCache.data && (now - weatherCache.ts) < WEATHER_CACHE_MS) {
-            rainProb12h = weatherCache.data.rainProb12h || 30;
-        }
-        const rainDelayActive = rainProb12h >= 60;
+        const { rainProb12h, rainDelayActive } = getRainDelayStatus();
 
         // Real fungal risk from actual temp + humidity thresholds
         let fungalRisk = 'Low';
@@ -1725,12 +1780,14 @@ app.get('/api/farm/irrigation/status', requireAuth, (req, res) => {
     try {
         const sectors = database.getFarmSectors();
         const avgMoist = Math.round(sectors.reduce((a, s) => a + s.moisture, 0) / (sectors.length || 1));
+        const { rainProb12h, rainDelayActive } = getRainDelayStatus();
         res.json({
             valve_active: irrigationValveActive,
             field_avg_moisture: avgMoist,
             critical_threshold: 35,
             optimal_target: 65,
-            rain_delay_active: false
+            rain_delay_active: rainDelayActive,
+            rain_probability_12h: rainProb12h
         });
     } catch (err) { res.status(500).json({ error: 'Failed to get irrigation status' }); }
 });
@@ -1876,13 +1933,23 @@ app.post('/api/users', requireAuth, requireAdmin, (req, res) => {
     } catch (err) { res.status(500).json({ error: 'Failed to create user' }); }
 });
 
-app.put('/api/users/:id', requireAuth, requireAdmin, (req, res) => {
+const handleUserUpdate = (req, res) => {
     try {
-        const result = database.updateUser(parseInt(req.params.id), req.body);
+        const targetId = parseInt(req.params.id);
+        if (req.session.role !== 'admin' && req.session.userId !== targetId) {
+            return res.status(403).json({ error: 'Forbidden. Admin privileges required.' });
+        }
+        if (req.session.role !== 'admin') {
+            delete req.body.role;
+        }
+        const result = database.updateUser(targetId, req.body);
         if (result.success) res.json({ success: true });
         else res.status(400).json({ error: result.error });
     } catch (err) { res.status(500).json({ error: 'Failed to update user' }); }
-});
+};
+
+app.put('/api/users/:id', requireAuth, handleUserUpdate);
+app.put('/api/admin/users/:id', requireAuth, handleUserUpdate);
 
 app.delete('/api/users/:id', requireAuth, requireAdmin, (req, res) => {
     try {
@@ -1908,6 +1975,13 @@ app.post('/api/users/:id/reset-password', requireAuth, requireAdmin, (req, res) 
 // ADMIN DATABASE SYNC & GIT PUSH API
 // =============================================
 app.post('/api/admin/sync-database-and-git', requireAuth, requireAdmin, async (req, res) => {
+    // Security check: Git push from HTTP is strictly disabled in production
+    if (process.env.NODE_ENV === 'production' || process.env.ENABLE_GIT_SYNC !== 'true') {
+        return res.status(403).json({
+            success: false,
+            error: 'Git auto-sync via HTTP endpoint is disabled in production for security.'
+        });
+    }
     try {
         // 1. Refresh database schema & ensure all tables / columns / defaults exist
         database.initDatabase();
@@ -2068,7 +2142,7 @@ app.get('/', (req, res) => {
     res.redirect('/login.html');
 });
 
-app.get('/dashboard.html', requireAuth, (req, res) => {
+app.get(['/dashboard', '/dashboard.html', '/dashboard/*'], requireAuth, (req, res) => {
     res.sendFile(path.join(__dirname, '..', 'frontend', 'dashboard.html'));
 });
 
@@ -2250,9 +2324,7 @@ function startServer(portToTry) {
         console.log('║   🧪 P25 Engine: Organic Fertilizer & C:N Balanced       ║');
         console.log('║   🚨 Perimeter Security: Invader Deterrent Active        ║');
         console.log('╠═════════════════════════════════════════════════════════╣');
-        console.log('║   🔑 Accounts:                                          ║');
-        console.log('║   👨‍💼 Admin  → admin / admin123                        ║');
-        console.log('║   👤 User   → user  / user123                           ║');
+        console.log('║   🔒 Security: RBAC Session Auth & CORS Policy Active    ║');
         console.log('╚═════════════════════════════════════════════════════════╝');
         console.log('');
     });

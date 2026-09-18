@@ -3104,6 +3104,8 @@
                     class="fa-solid fa-flask" style="color:#8b5cf6;"></i> Organic Fertilizer (P25)</button>
             <button class="nav-btn notranslate" onclick="switchNavPanel('crop_rotation', this)"><i
                     class="fa-solid fa-seedling" style="color:#16a34a;"></i> Next Crop AI</button>
+            <button class="nav-btn notranslate" onclick="switchNavPanel('leaf_scanner', this)"><i
+                    class="fa-solid fa-leaf" style="color:#0284c7;"></i> Leaf Scanner</button>
             <button class="nav-btn notranslate" onclick="switchNavPanel('weather_irrigation', this)"><i
                     class="fa-solid fa-cloud-sun-rain" style="color:#0ea5e9;"></i> Weather & Irrigation</button>
             <button class="nav-btn notranslate" onclick="switchNavPanel('invader_security', this)"><i
@@ -4537,9 +4539,9 @@
                         <i class="fa-solid fa-microscope"></i> Scan Canopy Vigor
                     </button>
                     <button class="action-btn" id="btn-scan-disease"
-                        onclick="if(window.PlantDiseaseDetector) PlantDiseaseDetector.detect()"
+                        onclick="switchNavPanel('leaf_scanner', document.querySelector('.nav-btn[onclick*=\'leaf_scanner\']'))"
                         style="background:#0284c7; color:white; border:none;">
-                        <i class="fa-solid fa-virus"></i> Scan Leaf Disease
+                        <i class="fa-solid fa-virus"></i> Open Dedicated Leaf Scanner
                     </button>
                     <button class="action-btn" onclick="loadCropRecommendations()"
                         style="background:var(--card-bg); color:var(--text-main); border:1px solid var(--border);">
@@ -4593,6 +4595,211 @@
             <div id="crop-recommendations-container"
                 style="display:flex; flex-direction:column; gap:20px; width:100%; box-sizing:border-box;">
                 <!-- Dynamically populated -->
+            </div>
+        </div>
+
+        <!-- DEDICATED LEAF DISEASE & FOLIAGE SCANNER PANEL -->
+        <div class="dashboard-scroll panel-section" id="panel-leaf_scanner" style="display:none;">
+            <div
+                style="display:flex; justify-content:space-between; align-items:flex-start; flex-wrap:wrap; gap:16px; margin-bottom:24px; width:100%; box-sizing:border-box;">
+                <div style="flex:1; min-width:260px;">
+                    <h2 class="sec-title" style="margin-bottom:4px; word-break:break-word;">
+                        <i class="fa-solid fa-leaf" style="color:#16a34a; margin-right:8px;"></i>
+                        Edge AI Leaf Disease & Foliage Scanner
+                    </h2>
+                    <p style="color:var(--text-sub); font-size:0.9rem; word-break:break-word;">
+                        Real-time client-side neural diagnostics powered by <strong>PlantVillage MobileNet</strong>. Processes foliage frames directly in your browser with zero latency or cloud data dependency.
+                    </p>
+                </div>
+                <div style="display:flex; gap:10px; flex-wrap:wrap; align-items:center;">
+                    <button class="action-btn" id="btn-leaf-cam-toggle" onclick="toggleLeafCamera()"
+                        style="background:#16a34a; color:white; border:none; padding:9px 18px; border-radius:10px; font-weight:700; font-size:0.88rem; cursor:pointer; display:inline-flex; align-items:center; gap:6px;">
+                        <i class="fa-solid fa-camera"></i> <span id="lbl-leaf-cam-btn">Activate Camera Feed</span>
+                    </button>
+                    <label class="action-btn"
+                        style="background:var(--card-bg); border:1.5px solid var(--border); color:var(--text-main); padding:9px 16px; border-radius:10px; font-weight:700; font-size:0.88rem; cursor:pointer; display:inline-flex; align-items:center; gap:6px;">
+                        <i class="fa-solid fa-upload" style="color:#0284c7;"></i> Upload Leaf Photo
+                        <input type="file" id="leaf-photo-upload" accept="image/*" style="display:none;" onchange="handleLeafPhotoUpload(this)">
+                    </label>
+                    <button class="action-btn" onclick="resetLeafScanner()"
+                        style="background:var(--card-bg); border:1px solid var(--border); color:var(--text-main); padding:9px 14px; border-radius:10px; font-weight:700; font-size:0.88rem; cursor:pointer;">
+                        <i class="fa-solid fa-rotate-right"></i> Reset
+                    </button>
+                </div>
+            </div>
+
+            <!-- LIVE OPTICAL SCANNER & DIAGNOSTIC VIEWPORT CARD -->
+            <div class="ctrl-card" style="margin-bottom:24px; padding:20px;">
+                <div
+                    style="display:flex; justify-content:space-between; align-items:center; margin-bottom:14px; flex-wrap:wrap; gap:10px;">
+                    <div
+                        style="font-weight:800; font-size:1.05rem; color:var(--text-main); display:flex; align-items:center; gap:8px;">
+                        <i class="fa-solid fa-microscope" style="color:#0284c7;"></i> Optical Foliage Viewfinder & Neural Classifier
+                    </div>
+                    <div style="display:flex; gap:8px; align-items:center; flex-wrap:wrap;">
+                        <span id="hud-leaf-model-badge"
+                            style="font-size:0.75rem; font-weight:800; padding:3px 10px; border-radius:12px; background:#fef3c7; color:#b45309; border:1px solid #fde68a;">
+                            PlantVillage MobileNet Ready
+                        </span>
+                        <span id="hud-leaf-status-badge"
+                            style="font-size:0.75rem; font-weight:800; padding:3px 10px; border-radius:12px; background:#dcfce7; color:#16a34a; border:1px solid #86efac;">
+                            <span class="pulse-dot"></span> OPTICAL STANDBY
+                        </span>
+                    </div>
+                </div>
+
+                <!-- Camera Stream, Upload Preview & Targeting Canvas Viewport -->
+                <div
+                    style="position:relative; width:100%; height:440px; max-height:60vw; background:#07120a; border-radius:14px; overflow:hidden; border:2px solid var(--border); display:flex; align-items:center; justify-content:center;">
+                    
+                    <video id="leaf-camera-feed" playsinline autoplay muted
+                        style="width:100%; height:100%; object-fit:cover; display:none;"></video>
+                    
+                    <canvas id="leaf-canvas"
+                        style="position:absolute; inset:0; width:100%; height:100%; object-fit:cover; pointer-events:none; display:none;"></canvas>
+
+                    <img id="leaf-image-preview"
+                        style="width:100%; height:100%; object-fit:contain; display:none; background:#0b1912;"
+                        alt="Uploaded Leaf Sample" />
+
+                    <!-- Standby Placeholder View (mirrors Perimeter Security aesthetic) -->
+                    <div id="leaf-placeholder"
+                        style="display:flex; flex-direction:column; align-items:center; justify-content:center; text-align:center; padding:24px; max-width:540px;">
+                        <div
+                            style="width:76px; height:76px; border-radius:50%; background:rgba(2,132,199,0.12); display:flex; align-items:center; justify-content:center; margin-bottom:16px; border:2px dashed #0284c7;">
+                            <i class="fa-solid fa-camera-viewfinder" style="font-size:2.2rem; color:#0284c7;"></i>
+                        </div>
+                        <div style="font-weight:800; font-size:1.2rem; color:#ffffff; margin-bottom:8px;">Optical Foliage Feed Inactive</div>
+                        <p style="font-size:0.88rem; color:#94a3b8; margin-bottom:20px; line-height:1.55;">
+                            Activate your phone or laptop camera to scan live leaf foliage, or upload a photo directly from your device. Frames are processed locally with the <strong>PlantVillage 38-Class MobileNet</strong> model to diagnose foliar pathogens with real softmax probability.
+                        </p>
+                        <div style="display:flex; gap:12px; flex-wrap:wrap; justify-content:center;">
+                            <button onclick="startLeafCamera()" class="action-btn"
+                                style="background:#16a34a; color:white; border:none; padding:11px 24px; font-weight:700; border-radius:10px; cursor:pointer; font-size:0.92rem; display:inline-flex; align-items:center; gap:8px;">
+                                <i class="fa-solid fa-camera"></i> Activate Camera Feed
+                            </button>
+                            <button onclick="document.getElementById('leaf-photo-upload').click()" class="action-btn"
+                                style="background:rgba(255,255,255,0.12); border:1px solid rgba(255,255,255,0.25); color:#ffffff; padding:11px 20px; font-weight:700; border-radius:10px; cursor:pointer; font-size:0.92rem; display:inline-flex; align-items:center; gap:8px;">
+                                <i class="fa-solid fa-upload"></i> Upload a Photo
+                            </button>
+                        </div>
+                    </div>
+
+                    <!-- Live HUD Overlay -->
+                    <div id="leaf-hud"
+                        style="display:none; position:absolute; inset:0; pointer-events:none; padding:14px; flex-direction:column; justify-content:space-between; box-sizing:border-box;">
+                        <div style="display:flex; justify-content:space-between; align-items:flex-start;">
+                            <div
+                                style="background:rgba(0,0,0,0.75); color:#22c55e; border:1px solid rgba(34,197,94,0.4); padding:4px 10px; border-radius:6px; font-size:0.75rem; font-family:monospace; font-weight:800; display:flex; align-items:center; gap:6px;">
+                                <span class="pulse-dot" style="background:#22c55e;"></span> OPTICAL LIVE
+                            </div>
+                            <div id="hud-leaf-fps"
+                                style="background:rgba(0,0,0,0.75); color:#38bdf8; border:1px solid rgba(56,189,248,0.4); padding:4px 10px; border-radius:6px; font-size:0.75rem; font-family:monospace; font-weight:700;">
+                                RES: 224x224 RGB
+                            </div>
+                        </div>
+                        <div style="display:flex; justify-content:space-between; align-items:flex-end;">
+                            <div
+                                style="background:rgba(0,0,0,0.75); color:#ffffff; border:1px solid rgba(255,255,255,0.2); padding:4px 10px; border-radius:6px; font-size:0.75rem; font-family:monospace; font-weight:700;">
+                                TARGET: FOLIAR CANOPY
+                            </div>
+                            <div id="hud-leaf-mode-tag"
+                                style="background:rgba(2,132,199,0.3); color:#38bdf8; border:1px solid #0284c7; padding:4px 10px; border-radius:6px; font-size:0.75rem; font-family:monospace; font-weight:800;">
+                                ENVIRONMENT LENS
+                            </div>
+                        </div>
+                    </div>
+                </div>
+
+                <!-- Action Controls Under Video Viewport -->
+                <div style="display:flex; gap:12px; margin-top:16px; flex-wrap:wrap; align-items:center;">
+                    <button class="action-btn" id="btn-capture-leaf-scan" onclick="captureAndScanLeaf()"
+                        style="background:#0284c7; color:white; border:none; padding:12px 24px; font-weight:800; font-size:0.95rem; border-radius:12px; box-shadow:0 4px 14px rgba(2,132,199,0.35); cursor:pointer; display:inline-flex; align-items:center; gap:8px;">
+                        <i class="fa-solid fa-camera-viewfinder"></i> Capture & Scan Leaf
+                    </button>
+                    <button class="action-btn" id="btn-resume-leaf" onclick="resumeLeafCamera()"
+                        style="display:none; background:var(--card-bg); border:1.5px solid var(--border); color:var(--text-main); padding:12px 20px; font-weight:700; font-size:0.9rem; border-radius:12px; cursor:pointer; align-items:center; gap:6px;">
+                        <i class="fa-solid fa-play" style="color:#16a34a;"></i> Resume Live Camera
+                    </button>
+                    <button class="action-btn" onclick="document.getElementById('leaf-photo-upload').click()"
+                        style="background:var(--card-bg); border:1.5px solid var(--border); color:var(--text-main); padding:12px 18px; font-weight:700; font-size:0.9rem; border-radius:12px; cursor:pointer; display:inline-flex; align-items:center; gap:6px;">
+                        <i class="fa-solid fa-file-image" style="color:#0284c7;"></i> Choose Photo File
+                    </button>
+                    <button class="action-btn" id="btn-flip-leaf-camera" onclick="switchLeafCameraDevice()"
+                        style="background:var(--card-bg); border:1.5px solid var(--border); color:var(--text-sub); padding:12px 16px; border-radius:12px; font-size:0.9rem; cursor:pointer;"
+                        title="Flip Camera (Rear / Front)">
+                        <i class="fa-solid fa-camera-rotate"></i> Flip Camera
+                    </button>
+                </div>
+
+                <!-- DEDICATED RESULT CARD (rendered right under capture button) -->
+                <div id="leaf-disease-result" style="margin-top:20px; width:100%;">
+                    <div class="adv-card adv-info" style="margin-bottom:0; padding:16px 20px;">
+                        <div style="display:flex; align-items:center; gap:16px;">
+                            <div style="width:46px; height:46px; border-radius:12px; background:rgba(2,132,199,0.12); color:#0284c7; display:flex; align-items:center; justify-content:center; font-size:1.4rem; flex-shrink:0;">
+                                <i class="fa-solid fa-virus"></i>
+                            </div>
+                            <div style="flex:1;">
+                                <div class="adv-title" style="font-weight:800; font-size:0.98rem; color:#0284c7;">Scanner Ready for Foliar Sample</div>
+                                <div class="adv-action" style="font-size:0.84rem; color:var(--text-sub); margin-top:3px;">
+                                    Align plant leaf in the frame and click <strong>Capture & Scan Leaf</strong>, or select a leaf photo above. The diagnostic readout with pathogen identification and organic treatment protocols will appear here immediately.
+                                </div>
+                            </div>
+                        </div>
+                    </div>
+                </div>
+            </div>
+
+            <!-- AGRONOMIC INTELLIGENCE REFERENCE CARDS -->
+            <div class="ctrl-card" style="margin-bottom:24px; padding:20px;">
+                <h3 class="sec-title" style="font-size:1.05rem; margin-bottom:14px;">
+                    <i class="fa-solid fa-book-open-reader" style="color:#16a34a; margin-right:8px;"></i>
+                    Supported Crops & Field Scanning Best Practices
+                </h3>
+                
+                <div style="margin-bottom:16px;">
+                    <div style="font-size:0.8rem; font-weight:700; color:var(--text-sub); text-transform:uppercase; margin-bottom:8px;">
+                        Trained PlantVillage Crop Varieties (38 Pathology Classes)
+                    </div>
+                    <div style="display:flex; gap:8px; flex-wrap:wrap;">
+                        <span style="background:rgba(22,163,74,0.1); color:#16a34a; border:1px solid rgba(22,163,74,0.25); padding:5px 12px; border-radius:20px; font-weight:700; font-size:0.82rem;">🍅 Tomato (10 classes)</span>
+                        <span style="background:rgba(217,119,6,0.1); color:#d97706; border:1px solid rgba(217,119,6,0.25); padding:5px 12px; border-radius:20px; font-weight:700; font-size:0.82rem;">🥔 Potato (Early/Late Blight)</span>
+                        <span style="background:rgba(234,179,8,0.1); color:#ca8a04; border:1px solid rgba(234,179,8,0.25); padding:5px 12px; border-radius:20px; font-weight:700; font-size:0.82rem;">🌽 Corn / Maize (Rust & Blight)</span>
+                        <span style="background:rgba(16,185,129,0.1); color:#059669; border:1px solid rgba(16,185,129,0.25); padding:5px 12px; border-radius:20px; font-weight:700; font-size:0.82rem;">🫑 Bell Pepper (Bacterial Spot)</span>
+                        <span style="background:rgba(139,92,246,0.1); color:#7c3aed; border:1px solid rgba(139,92,246,0.25); padding:5px 12px; border-radius:20px; font-weight:700; font-size:0.82rem;">🍇 Grape (Black Rot, Esca, Blight)</span>
+                        <span style="background:rgba(239,68,68,0.1); color:#dc2626; border:1px solid rgba(239,68,68,0.25); padding:5px 12px; border-radius:20px; font-weight:700; font-size:0.82rem;">🍎 Apple (Scab, Rust, Black Rot)</span>
+                        <span style="background:rgba(244,63,94,0.1); color:#e11d48; border:1px solid rgba(244,63,94,0.25); padding:5px 12px; border-radius:20px; font-weight:700; font-size:0.82rem;">🍓 Strawberry (Leaf Scorch)</span>
+                        <span style="background:rgba(2,132,199,0.1); color:#0284c7; border:1px solid rgba(2,132,199,0.25); padding:5px 12px; border-radius:20px; font-weight:700; font-size:0.82rem;">🫐 Blueberry & Raspberry</span>
+                        <span style="background:rgba(100,116,139,0.1); color:#475569; border:1px solid rgba(100,116,139,0.25); padding:5px 12px; border-radius:20px; font-weight:700; font-size:0.82rem;">🌱 Soybean & Squash</span>
+                    </div>
+                </div>
+
+                <div style="display:grid; grid-template-columns:repeat(auto-fit, minmax(260px, 1fr)); gap:12px;">
+                    <div style="background:var(--bg-main); border:1px solid var(--border); padding:12px 16px; border-radius:10px;">
+                        <div style="font-weight:700; font-size:0.88rem; color:var(--text-main); margin-bottom:4px;">
+                            <i class="fa-solid fa-sun" style="color:#f59e0b; margin-right:6px;"></i> Natural Uniform Illumination
+                        </div>
+                        <p style="font-size:0.8rem; color:var(--text-sub); margin:0; line-height:1.45;">
+                            Avoid harsh direct sun glare or deep shadows on the foliage. Diffused morning or overcast light yields highest classification accuracy.
+                        </p>
+                    </div>
+                    <div style="background:var(--bg-main); border:1px solid var(--border); padding:12px 16px; border-radius:10px;">
+                        <div style="font-weight:700; font-size:0.88rem; color:var(--text-main); margin-bottom:4px;">
+                            <i class="fa-solid fa-crop-simple" style="color:#0284c7; margin-right:6px;"></i> 60%+ Frame Coverage
+                        </div>
+                        <p style="font-size:0.8rem; color:var(--text-sub); margin:0; line-height:1.45;">
+                            Position the camera 10–20 cm from the diseased foliage so the leaf lamina and any spot lesions fill the majority of the viewfinder.
+                        </p>
+                    </div>
+                    <div style="background:var(--bg-main); border:1px solid var(--border); padding:12px 16px; border-radius:10px;">
+                        <div style="font-weight:700; font-size:0.88rem; color:var(--text-main); margin-bottom:4px;">
+                            <i class="fa-solid fa-magnifying-glass" style="color:#16a34a; margin-right:6px;"></i> Inspect Undersides
+                        </div>
+                        <p style="font-size:0.8rem; color:var(--text-sub); margin:0; line-height:1.45;">
+                            Pathogens such as powdery mildew, downy mildew, and spider mites often colonize abaxial (underside) surfaces first.
+                        </p>
+                    </div>
+                </div>
             </div>
         </div>
 
@@ -5042,10 +5249,14 @@
                 </div>
             </div>
 
-            <!-- RECENT VERIFIED AI INTRUSION DETECTIONS -->
-            <h3 class="sec-title" style="font-size:1.05rem; margin-bottom:14px; word-break:break-word;"><i
-                    class="fa-solid fa-camera-retro" style="color:#ef4444;"></i> Recent Verified AI Intruder Captures
-            </h3>
+            <!-- HISTORICAL INTRUSION ARCHETYPES & REFERENCE BENCHMARKS -->
+            <div style="margin-bottom:14px;">
+                <h3 class="sec-title" style="font-size:1.05rem; margin-bottom:4px; word-break:break-word;"><i
+                        class="fa-solid fa-shield-halved" style="color:#ef4444;"></i> Historical Intrusion Profiles & Reference Archetypes
+                    <span style="font-size:0.75rem; font-weight:600; background:#334155; color:#cbd5e1; padding:2px 8px; border-radius:12px; margin-left:6px; vertical-align:middle;">Simulated Benchmarks</span>
+                </h3>
+                <p style="font-size:0.8rem; color:var(--text-sub); margin:0;">Reference detection profiles used to calibrate ultrasonic thresholds and automated response protocols. Active real-time optical detections are processed directly in the live camera feed above.</p>
+            </div>
             <div class="intruder-captures-grid">
                 <!-- Capture 1: Unauthorized Human -->
                 <div class="ctrl-card" style="margin-bottom:0; padding:0; overflow:hidden; border:2px solid #ef4444;">
@@ -5075,14 +5286,13 @@
                             <text x="150" y="39" fill="#ffffff" font-size="10" font-weight="900"
                                 font-family="monospace">HUMAN INTRUDER: 94.2%</text>
                             <text x="14" y="24" fill="#38bdf8" font-size="10" font-weight="800"
-                                font-family="monospace">RGB OPTICAL CAM // SECTOR E</text>
+                                font-family="monospace">BENCHMARK // SECTOR E</text>
                         </svg>
                     </div>
                     <div style="padding:14px;">
                         <div
                             style="display:flex; justify-content:space-between; align-items:center; margin-bottom:4px;">
-                            <span style="font-weight:800; color:#ef4444; font-size:0.95rem;">Unauthorized Human
-                                Intruder</span>
+                            <span style="font-weight:800; color:#ef4444; font-size:0.95rem;">Unauthorized Human Intruder <span style="font-size:0.65rem; background:#475569; color:#f8fafc; padding:1px 6px; border-radius:4px; margin-left:4px;">SIMULATED</span></span>
                             <span
                                 style="font-size:0.75rem; background:#fee2e2; color:#b91c1c; font-weight:800; padding:2px 8px; border-radius:10px;">SECTOR
                                 E</span>
@@ -5125,14 +5335,13 @@
                             <text x="100" y="63" fill="#ffffff" font-size="10" font-weight="900"
                                 font-family="monospace">STRAY CATTLE: 89.5%</text>
                             <text x="14" y="24" fill="#4ade80" font-size="10" font-weight="800"
-                                font-family="monospace">RGB OPTICAL CAM // SECTOR B</text>
+                                font-family="monospace">BENCHMARK // SECTOR B</text>
                         </svg>
                     </div>
                     <div style="padding:14px;">
                         <div
                             style="display:flex; justify-content:space-between; align-items:center; margin-bottom:4px;">
-                            <span style="font-weight:800; color:#f59e0b; font-size:0.95rem;">Stray Cattle (Bos
-                                taurus)</span>
+                            <span style="font-weight:800; color:#f59e0b; font-size:0.95rem;">Stray Cattle (Bos taurus) <span style="font-size:0.65rem; background:#475569; color:#f8fafc; padding:1px 6px; border-radius:4px; margin-left:4px;">SIMULATED</span></span>
                             <span
                                 style="font-size:0.75rem; background:#fef3c7; color:#b45309; font-weight:800; padding:2px 8px; border-radius:10px;">SECTOR
                                 B</span>
@@ -5175,14 +5384,13 @@
                             <text x="140" y="79" fill="#ffffff" font-size="10" font-weight="900"
                                 font-family="monospace">DOMESTIC STRAY: 82.1%</text>
                             <text x="14" y="24" fill="#c084fc" font-size="10" font-weight="800"
-                                font-family="monospace">RGB OPTICAL CAM // SECTOR A</text>
+                                font-family="monospace">BENCHMARK // SECTOR A</text>
                         </svg>
                     </div>
                     <div style="padding:14px;">
                         <div
                             style="display:flex; justify-content:space-between; align-items:center; margin-bottom:4px;">
-                            <span style="font-weight:800; color:#8b5cf6; font-size:0.95rem;">Domestic Stray
-                                Animal</span>
+                            <span style="font-weight:800; color:#8b5cf6; font-size:0.95rem;">Domestic Stray Animal <span style="font-size:0.65rem; background:#475569; color:#f8fafc; padding:1px 6px; border-radius:4px; margin-left:4px;">SIMULATED</span></span>
                             <span
                                 style="font-size:0.75rem; background:#f3e8ff; color:#7c3aed; font-weight:800; padding:2px 8px; border-radius:10px;">SECTOR
                                 A</span>
@@ -6064,10 +6272,10 @@
             }
         }
 
-        if (!isFileMode) {
-            initSocket();
-            window.addEventListener('load', () => { if (!socket) initSocket(); handleHashRoute(); });
-        }
+        window.addEventListener('load', () => {
+            if (!isFileMode && !socket) initSocket();
+            handlePathRoute();
+        });
 
         // Hardware Server IP configuration handlers
         function saveRobotServerIP() {
@@ -6358,11 +6566,15 @@
             const data = await res2.json();
             if (data.success) {
                 pendingUserId = data.userId;
-                lastOTP = data.otp_dev;
+                lastOTP = data.otp_dev || null;
                 document.getElementById('profile-no-otp').style.display = 'none';
                 document.getElementById('profile-otp-sub').style.display = 'flex';
                 document.getElementById('profile-otp-input').focus();
-                showToast('Verification OTP Sent! (Demo: ' + data.otp_dev + ')', 'success');
+                if (data.otp_dev) {
+                    showToast('Verification OTP Sent! (Dev: ' + data.otp_dev + ')', 'success');
+                } else {
+                    showToast('Verification OTP Sent to your registered contact.', 'success');
+                }
             } else showToast(data.error, 'danger');
         }
 
@@ -6371,8 +6583,17 @@
                 showToast('Profile save unavailable in local file mode', 'warning');
                 return;
             }
-            const entered = document.getElementById('profile-otp-input').value;
-            if (entered !== lastOTP) return showToast('Invalid OTP code', 'danger');
+            const entered = document.getElementById('profile-otp-input').value.trim();
+            if (!entered) return showToast('Please enter the 6-digit OTP code', 'warning');
+
+            // Secure server-side OTP validation
+            const vRes = await safeFetch('/api/verify-otp', {
+                method: 'POST',
+                headers: { 'Content-Type': 'application/json' },
+                body: JSON.stringify({ userId: pendingUserId, otp: entered })
+            });
+            const vData = await vRes.json();
+            if (!vData.success) return showToast(vData.error || 'Invalid or expired OTP code', 'danger');
 
             const payload = {
                 username: (await (await safeFetch('/api/session')).json()).user.username,
@@ -6382,7 +6603,7 @@
                 phone: document.getElementById('set-phone').value
             };
 
-            const res = await safeFetch('/api/admin/users/' + pendingUserId, {
+            const res = await safeFetch('/api/users/' + pendingUserId, {
                 method: 'PUT',
                 headers: { 'Content-Type': 'application/json' },
                 body: JSON.stringify(payload)
@@ -6418,7 +6639,11 @@
             const data = await res2.json();
             if (data.success) {
                 pendingUserId = data.userId;
-                showToast('OTP Sent! For Demo: ' + data.otp_dev, 'success');
+                if (data.otp_dev) {
+                    showToast('OTP Sent! (Dev: ' + data.otp_dev + ')', 'success');
+                } else {
+                    showToast('OTP Sent! Please check your registered email or phone.', 'success');
+                }
             }
         }
 
@@ -6479,7 +6704,89 @@
             document.getElementById('sidebar-overlay').classList.remove('active');
         }
 
-        function switchNavPanel(panelId, btnElement) {
+        // Clean URL Slug mapping for readable and bookmarkable routes
+        const PANEL_TO_SLUG = {
+            'dashboard': 'overview',
+            'crop_rotation': 'crop-rotation',
+            'organic_calculator': 'organic-fertilizer',
+            'soil_zoning': 'field-soil-zoning',
+            'weather_irrigation': 'weather-irrigation',
+            'invader_security': 'perimeter-security',
+            'laser_defense': 'laser-defense',
+            'leaf_scanner': 'leaf-scanner',
+            'farmer_advisory': 'farmer-advisory',
+            'farm_analytics': 'farm-analytics',
+            'camera_live': 'camera-live',
+            'robot_diagnostics': 'robot-diagnostics',
+            'farm_reports': 'farm-reports',
+            'activity_log': 'activity-log',
+            'network_status': 'network-status',
+            'control_modules': 'control-modules'
+        };
+
+        const SLUG_TO_PANEL = {
+            'overview': 'dashboard',
+            'dashboard': 'dashboard',
+            'crop-rotation': 'crop_rotation',
+            'crop_rotation': 'crop_rotation',
+            'organic-fertilizer': 'organic_calculator',
+            'organic_calculator': 'organic_calculator',
+            'fertilizer': 'organic_calculator',
+            'p25': 'organic_calculator',
+            'calculator': 'organic_calculator',
+            'field-soil-zoning': 'soil_zoning',
+            'soil-zoning': 'soil_zoning',
+            'soil_zoning': 'soil_zoning',
+            'map': 'soil_zoning',
+            'soil': 'soil_zoning',
+            'weather-irrigation': 'weather_irrigation',
+            'weather_irrigation': 'weather_irrigation',
+            'weather': 'weather_irrigation',
+            'irrigation': 'weather_irrigation',
+            'perimeter-security': 'invader_security',
+            'invader_security': 'invader_security',
+            'invaders': 'invader_security',
+            'security': 'invader_security',
+            'perimeter': 'invader_security',
+            'laser-defense': 'laser_defense',
+            'laser_defense': 'laser_defense',
+            'laser': 'laser_defense',
+            'leaf-scanner': 'leaf_scanner',
+            'leaf_scanner': 'leaf_scanner',
+            'leaf': 'leaf_scanner',
+            'scanner': 'leaf_scanner',
+            'disease': 'leaf_scanner',
+            'farmer-advisory': 'farmer_advisory',
+            'farmer_advisory': 'farmer_advisory',
+            'advisory': 'farmer_advisory',
+            'farm-analytics': 'farm_analytics',
+            'farm_analytics': 'farm_analytics',
+            'analytics': 'farm_analytics',
+            'camera-live': 'camera_live',
+            'camera_live': 'camera_live',
+            'camera': 'camera_live',
+            'live': 'camera_live',
+            'robot-diagnostics': 'robot_diagnostics',
+            'robot_diagnostics': 'robot_diagnostics',
+            'diagnostics': 'robot_diagnostics',
+            'farm-reports': 'farm_reports',
+            'farm_reports': 'farm_reports',
+            'reports': 'farm_reports',
+            'activity-log': 'activity_log',
+            'activity_log': 'activity_log',
+            'activity': 'activity_log',
+            'network-status': 'network_status',
+            'network_status': 'network_status',
+            'network': 'network_status',
+            'control-modules': 'control_modules',
+            'control_modules': 'control_modules'
+        };
+
+        function slugFor(panelId) {
+            return PANEL_TO_SLUG[panelId] || panelId.replace(/_/g, '-');
+        }
+
+        function switchNavPanel(panelId, btnElement, options = {}) {
             // Auto close sidebar on mobile if it is open
             if (window.innerWidth <= 768 && typeof closeSidebar === 'function') {
                 closeSidebar();
@@ -6499,9 +6806,20 @@
                 toggleMobileMoreSheet(false);
             }
 
-            // Sync URL hash so direct links and refresh stay on active panel
-            if (window.location.hash !== '#' + panelId) {
-                history.replaceState(null, '', '#' + panelId);
+            // Sync Clean URL routing
+            const slug = slugFor(panelId);
+            if (window.location.protocol === 'file:') {
+                if (window.location.hash !== '#' + slug && window.location.hash !== '#' + panelId) {
+                    history.replaceState({ panelId }, '', '#' + slug);
+                }
+            } else {
+                const targetPath = (panelId === 'dashboard') ? '/dashboard' : `/dashboard/${slug}`;
+                const currentPath = window.location.pathname.replace(/\/+$/, '');
+                if (options.replace) {
+                    history.replaceState({ panelId }, '', targetPath);
+                } else if (options.push !== false && (currentPath !== targetPath || window.location.hash)) {
+                    history.pushState({ panelId }, '', targetPath);
+                }
             }
 
             // Hide all panels
@@ -6514,14 +6832,23 @@
                 window.scrollTo({ top: 0, behavior: 'smooth' });
             }
 
-            // Auto-stop camera feed when navigating away from camera panel to eliminate lag & save battery
+            // Auto-stop camera feeds when navigating away from camera panel to eliminate lag & save battery
             if (panelId !== 'camera_live' && typeof laptopStream !== 'undefined' && laptopStream) {
                 disconnectCamera(false);
+            }
+            if (panelId !== 'leaf_scanner' && typeof isLeafCamActive !== 'undefined' && isLeafCamActive) {
+                stopLeafCamera();
+            }
+            if (panelId !== 'invader_security' && (typeof isPerimeterDetectionRunning !== 'undefined' && isPerimeterDetectionRunning || typeof perimeterCamStream !== 'undefined' && perimeterCamStream)) {
+                if (typeof stopPerimeterCamera === 'function') {
+                    stopPerimeterCamera();
+                }
             }
 
             // Special handling per panel
             if (panelId === 'activity_log') loadActivityLogs();
             if (panelId === 'camera_live' && (!laptopStream || !laptopStream.active)) startLaptopCamera();
+            if (panelId === 'leaf_scanner' && window.PlantDiseaseDetector) window.PlantDiseaseDetector.loadModel();
             if (panelId === 'soil_zoning') {
                 loadSoilZoning();
                 loadCropRecommendations();
@@ -6561,42 +6888,39 @@
             }
         }
 
-        // URL Hash routing on initial page load and popstate/hashchange (Prompt v3)
-        function handleHashRoute() {
-            let hash = (window.location.hash || '').replace('#', '').trim().toLowerCase();
-            if (!hash) return;
-            const aliasMap = {
-                'calculator': 'organic_calculator',
-                'p25': 'organic_calculator',
-                'fertilizer': 'organic_calculator',
-                'compost': 'organic_calculator',
-                'map': 'soil_zoning',
-                'soil': 'soil_zoning',
-                'zoning': 'soil_zoning',
-                'weather': 'weather_irrigation',
-                'irrigation': 'weather_irrigation',
-                'laser': 'laser_defense',
-                'pest': 'laser_defense',
-                'weeds': 'laser_defense',
-                'invaders': 'invader_security',
-                'security': 'invader_security',
-                'perimeter': 'invader_security',
-                'camera': 'camera_live',
-                'live': 'camera_live',
-                'diagnostics': 'robot_diagnostics',
-                'diag': 'robot_diagnostics',
-                'reports': 'farm_reports',
-                'report': 'farm_reports',
-                'activity': 'activity_log',
-                'network': 'network_status',
-                'dashboard': 'dashboard'
-            };
-            const target = aliasMap[hash] || hash;
-            if (document.getElementById(`panel-${target}`)) {
-                switchNavPanel(target);
+        // Clean URL routing on initial page load, popstate, and legacy hash fallback
+        function handlePathRoute() {
+            // 1. Backward compatibility: check for legacy #hash first
+            if (window.location.hash) {
+                const legacyHash = window.location.hash.replace('#', '').trim().toLowerCase();
+                const panelFromHash = SLUG_TO_PANEL[legacyHash] || legacyHash;
+                if (document.getElementById(`panel-${panelFromHash}`)) {
+                    const slug = slugFor(panelFromHash);
+                    if (window.location.protocol !== 'file:') {
+                        const cleanPath = (panelFromHash === 'dashboard') ? '/dashboard' : `/dashboard/${slug}`;
+                        history.replaceState({ panelId: panelFromHash }, '', cleanPath);
+                    }
+                    switchNavPanel(panelFromHash, null, { push: false });
+                    return;
+                }
+            }
+
+            // 2. Parse pathname for clean URL routing
+            if (window.location.protocol !== 'file:') {
+                const pathname = window.location.pathname.replace(/\/+$/, '');
+                const match = pathname.match(/\/dashboard(?:\/([^\/]+))?$/i);
+                if (match) {
+                    const slug = (match[1] || 'overview').toLowerCase();
+                    const panelId = SLUG_TO_PANEL[slug] || slug;
+                    if (panelId && document.getElementById(`panel-${panelId}`)) {
+                        switchNavPanel(panelId, null, { push: false });
+                        return;
+                    }
+                }
             }
         }
-        window.addEventListener('hashchange', handleHashRoute);
+        window.addEventListener('popstate', handlePathRoute);
+        window.addEventListener('hashchange', handlePathRoute);
 
         // ══════════════════════════════════════════════════════════════════════
         //  GE-BOT-1 REAL LAPTOP WEBCAM STREAMING (WITH DISCONNECT & POWER-OFF)
@@ -7829,6 +8153,358 @@
         }
 
         // ══════════════════════════════════════════════════════════════════════
+        //  REAL LEAF DISEASE SCANNER CAMERA & OPTICAL PIPELINE
+        //  (WebRTC getUserMedia + Mobile Rear/Environment Lens + Frozen Reticle + Photo Upload)
+        // ══════════════════════════════════════════════════════════════════════
+        let leafCamStream = null;
+        let isLeafCamActive = false;
+        let leafFacingMode = 'environment';
+        let leafReticleAnimId = null;
+
+        function updateLeafHudStatus(text, color) {
+            const badge = document.getElementById('hud-leaf-status-badge');
+            if (badge) {
+                badge.innerHTML = `<span class="pulse-dot" style="background:${color};"></span> ${text.toUpperCase()}`;
+                badge.style.color = color;
+                badge.style.borderColor = color;
+            }
+        }
+
+        async function toggleLeafCamera() {
+            if (isLeafCamActive) {
+                stopLeafCamera();
+            } else {
+                await startLeafCamera();
+            }
+        }
+
+        async function startLeafCamera() {
+            const video = document.getElementById('leaf-camera-feed');
+            const canvas = document.getElementById('leaf-canvas');
+            const preview = document.getElementById('leaf-image-preview');
+            const placeholder = document.getElementById('leaf-placeholder');
+            const hud = document.getElementById('leaf-hud');
+            const toggleBtn = document.getElementById('btn-leaf-cam-toggle');
+            const lblBtn = document.getElementById('lbl-leaf-cam-btn');
+            const resumeBtn = document.getElementById('btn-resume-leaf');
+
+            if (!video || !canvas) return;
+
+            try {
+                updateLeafHudStatus('Connecting Cam...', '#3b82f6');
+                if (navigator.mediaDevices && navigator.mediaDevices.getUserMedia) {
+                    if (leafCamStream) {
+                        leafCamStream.getTracks().forEach(t => t.stop());
+                        leafCamStream = null;
+                    }
+
+                    leafCamStream = await navigator.mediaDevices.getUserMedia({
+                        video: {
+                            facingMode: leafFacingMode,
+                            width: { ideal: 1280 },
+                            height: { ideal: 720 }
+                        },
+                        audio: false
+                    });
+
+                    video.srcObject = leafCamStream;
+                    await video.play();
+
+                    video.style.display = 'block';
+                    canvas.style.display = 'block';
+                    if (preview) preview.style.display = 'none';
+                    if (placeholder) placeholder.style.display = 'none';
+                    if (hud) hud.style.display = 'flex';
+                    if (resumeBtn) resumeBtn.style.display = 'none';
+
+                    if (lblBtn) lblBtn.textContent = 'Stop Camera Feed';
+                    if (toggleBtn) {
+                        toggleBtn.innerHTML = '<i class="fa-solid fa-stop"></i> Stop Camera Feed';
+                        toggleBtn.style.background = '#ef4444';
+                    }
+
+                    isLeafCamActive = true;
+                    updateLeafHudStatus('Optical Live', '#22c55e');
+
+                    // Pre-load MobileNet model in background
+                    if (window.PlantDiseaseDetector) {
+                        window.PlantDiseaseDetector.loadModel();
+                    }
+
+                    startLeafReticleLoop();
+                    showToast('Leaf Scanner Camera Activated (' + (leafFacingMode === 'environment' ? 'Rear Lens' : 'Front Lens') + ')', 'success');
+                } else {
+                    showToast('Camera not supported in this browser', 'error');
+                }
+            } catch (err) {
+                console.error('Leaf camera error:', err);
+                showToast('Camera error: ' + err.message, 'error');
+                updateLeafHudStatus('Camera Inactive', '#ef4444');
+            }
+        }
+
+        function stopLeafCamera() {
+            isLeafCamActive = false;
+            if (leafReticleAnimId) {
+                cancelAnimationFrame(leafReticleAnimId);
+                leafReticleAnimId = null;
+            }
+
+            if (leafCamStream) {
+                leafCamStream.getTracks().forEach(track => track.stop());
+                leafCamStream = null;
+            }
+
+            const video = document.getElementById('leaf-camera-feed');
+            const canvas = document.getElementById('leaf-canvas');
+            const placeholder = document.getElementById('leaf-placeholder');
+            const hud = document.getElementById('leaf-hud');
+            const toggleBtn = document.getElementById('btn-leaf-cam-toggle');
+            const resumeBtn = document.getElementById('btn-resume-leaf');
+
+            if (video) {
+                video.srcObject = null;
+                video.style.display = 'none';
+            }
+            if (canvas) {
+                canvas.style.display = 'none';
+                canvas.removeAttribute('data-has-frame');
+            }
+            if (placeholder) placeholder.style.display = 'flex';
+            if (hud) hud.style.display = 'none';
+            if (resumeBtn) resumeBtn.style.display = 'none';
+
+            if (toggleBtn) {
+                toggleBtn.innerHTML = '<i class="fa-solid fa-camera"></i> <span id="lbl-leaf-cam-btn">Activate Camera Feed</span>';
+                toggleBtn.style.background = '#16a34a';
+            }
+
+            updateLeafHudStatus('Optical Standby', '#16a34a');
+            showToast('Leaf Scanner Camera Stopped', 'info');
+        }
+
+        async function switchLeafCameraDevice() {
+            leafFacingMode = (leafFacingMode === 'environment') ? 'user' : 'environment';
+            const modeTag = document.getElementById('hud-leaf-mode-tag');
+            if (modeTag) modeTag.textContent = (leafFacingMode === 'environment') ? 'ENVIRONMENT LENS' : 'FRONT LENS';
+            if (isLeafCamActive) {
+                await startLeafCamera();
+            } else {
+                showToast('Switched default lens to ' + (leafFacingMode === 'environment' ? 'Rear (Field)' : 'Front (Selfie)'), 'info');
+            }
+        }
+
+        function startLeafReticleLoop() {
+            const video = document.getElementById('leaf-camera-feed');
+            const canvas = document.getElementById('leaf-canvas');
+            if (!video || !canvas) return;
+
+            function renderReticle() {
+                if (!isLeafCamActive) return;
+                if (video.readyState >= 2) {
+                    if (canvas.width !== video.videoWidth || canvas.height !== video.videoHeight) {
+                        canvas.width = video.videoWidth || 640;
+                        canvas.height = video.videoHeight || 480;
+                    }
+                    const ctx = canvas.getContext('2d');
+                    ctx.clearRect(0, 0, canvas.width, canvas.height);
+
+                    const w = canvas.width;
+                    const h = canvas.height;
+                    const boxSize = Math.min(w, h) * 0.55;
+                    const x = (w - boxSize) / 2;
+                    const y = (h - boxSize) / 2;
+                    const corner = 24;
+
+                    ctx.lineWidth = 3;
+                    ctx.strokeStyle = '#0284c7';
+
+                    // Top-Left corner
+                    ctx.beginPath(); ctx.moveTo(x, y + corner); ctx.lineTo(x, y); ctx.lineTo(x + corner, y); ctx.stroke();
+                    // Top-Right corner
+                    ctx.beginPath(); ctx.moveTo(x + boxSize - corner, y); ctx.lineTo(x + boxSize, y); ctx.lineTo(x + boxSize, y + corner); ctx.stroke();
+                    // Bottom-Left corner
+                    ctx.beginPath(); ctx.moveTo(x, y + boxSize - corner); ctx.lineTo(x, y + boxSize); ctx.lineTo(x + corner, y + boxSize); ctx.stroke();
+                    // Bottom-Right corner
+                    ctx.beginPath(); ctx.moveTo(x + boxSize - corner, y + boxSize); ctx.lineTo(x + boxSize, y + boxSize); ctx.lineTo(x + boxSize, y + boxSize - corner); ctx.stroke();
+
+                    // Subtle center reticle crosshair
+                    ctx.lineWidth = 1.5;
+                    ctx.strokeStyle = 'rgba(2, 132, 199, 0.45)';
+                    const cx = w / 2;
+                    const cy = h / 2;
+                    ctx.beginPath();
+                    ctx.moveTo(cx - 14, cy); ctx.lineTo(cx + 14, cy);
+                    ctx.moveTo(cx, cy - 14); ctx.lineTo(cx, cy + 14);
+                    ctx.stroke();
+
+                    const fpsEl = document.getElementById('hud-leaf-fps');
+                    if (fpsEl) fpsEl.textContent = `RES: ${w}x${h} • LIVE`;
+                }
+                leafReticleAnimId = requestAnimationFrame(renderReticle);
+            }
+
+            if (leafReticleAnimId) cancelAnimationFrame(leafReticleAnimId);
+            leafReticleAnimId = requestAnimationFrame(renderReticle);
+        }
+
+        async function captureAndScanLeaf() {
+            const video = document.getElementById('leaf-camera-feed');
+            const canvas = document.getElementById('leaf-canvas');
+            const preview = document.getElementById('leaf-image-preview');
+            const resumeBtn = document.getElementById('btn-resume-leaf');
+
+            // 1. Case A: Uploaded image preview is active
+            if (preview && preview.style.display !== 'none' && preview.complete && preview.naturalWidth > 0) {
+                if (window.PlantDiseaseDetector) {
+                    await window.PlantDiseaseDetector.detect('All', preview, 'leaf-disease-result');
+                }
+                return;
+            }
+
+            // 2. Case B: Live camera feed is active -> freeze frame to canvas and scan
+            if (video && video.readyState >= 2 && !video.paused) {
+                if (leafReticleAnimId) {
+                    cancelAnimationFrame(leafReticleAnimId);
+                    leafReticleAnimId = null;
+                }
+
+                if (canvas) {
+                    canvas.width = video.videoWidth || 640;
+                    canvas.height = video.videoHeight || 480;
+                    const ctx = canvas.getContext('2d');
+                    ctx.drawImage(video, 0, 0, canvas.width, canvas.height);
+                    canvas.setAttribute('data-has-frame', 'true');
+                    canvas.style.display = 'block';
+                }
+
+                video.pause();
+                if (resumeBtn) resumeBtn.style.display = 'inline-flex';
+                updateLeafHudStatus('Frame Captured', '#f59e0b');
+
+                if (window.PlantDiseaseDetector) {
+                    await window.PlantDiseaseDetector.detect('All', canvas, 'leaf-disease-result');
+                }
+                return;
+            }
+
+            // 3. Case C: Camera not active -> prompt user honestly
+            if (window.PlantDiseaseDetector) {
+                window.PlantDiseaseDetector.detect('All', null, 'leaf-disease-result');
+            } else {
+                showToast('Please activate the camera or upload a leaf photo first', 'warning');
+            }
+        }
+
+        function resumeLeafCamera() {
+            const video = document.getElementById('leaf-camera-feed');
+            const canvas = document.getElementById('leaf-canvas');
+            const preview = document.getElementById('leaf-image-preview');
+            const resumeBtn = document.getElementById('btn-resume-leaf');
+
+            if (preview) preview.style.display = 'none';
+
+            if (video && leafCamStream) {
+                video.play();
+                video.style.display = 'block';
+                if (canvas) {
+                    canvas.style.display = 'block';
+                    canvas.removeAttribute('data-has-frame');
+                }
+                if (resumeBtn) resumeBtn.style.display = 'none';
+                updateLeafHudStatus('Optical Live', '#22c55e');
+                startLeafReticleLoop();
+                showToast('Live camera feed resumed', 'info');
+            } else {
+                startLeafCamera();
+            }
+        }
+
+        function handleLeafPhotoUpload(input) {
+            if (!input || !input.files || input.files.length === 0) return;
+            const file = input.files[0];
+            if (!file.type.startsWith('image/')) {
+                showToast('Please select a valid image file (JPEG/PNG)', 'warning');
+                return;
+            }
+
+            const reader = new FileReader();
+            reader.onload = function (e) {
+                const dataUrl = e.target.result;
+                const preview = document.getElementById('leaf-image-preview');
+                const video = document.getElementById('leaf-camera-feed');
+                const canvas = document.getElementById('leaf-canvas');
+                const placeholder = document.getElementById('leaf-placeholder');
+                const hud = document.getElementById('leaf-hud');
+                const resumeBtn = document.getElementById('btn-resume-leaf');
+
+                // Stop live camera if running
+                if (isLeafCamActive && leafCamStream) {
+                    leafCamStream.getTracks().forEach(t => t.stop());
+                    leafCamStream = null;
+                    isLeafCamActive = false;
+                }
+                if (leafReticleAnimId) {
+                    cancelAnimationFrame(leafReticleAnimId);
+                    leafReticleAnimId = null;
+                }
+
+                if (video) { video.srcObject = null; video.style.display = 'none'; }
+                if (canvas) canvas.style.display = 'none';
+                if (placeholder) placeholder.style.display = 'none';
+                if (hud) hud.style.display = 'flex';
+
+                if (preview) {
+                    preview.src = dataUrl;
+                    preview.style.display = 'block';
+                    preview.onload = async function () {
+                        updateLeafHudStatus('Photo Uploaded', '#3b82f6');
+                        const fpsEl = document.getElementById('hud-leaf-fps');
+                        if (fpsEl) fpsEl.textContent = `IMG: ${preview.naturalWidth}x${preview.naturalHeight} RGB`;
+                        if (resumeBtn) resumeBtn.style.display = 'inline-flex';
+                        showToast(`Uploaded ${file.name}. Running MobileNet neural classifier...`, 'info');
+
+                        // Automatically trigger detection on the uploaded image
+                        if (window.PlantDiseaseDetector) {
+                            await window.PlantDiseaseDetector.detect('All', preview, 'leaf-disease-result');
+                        }
+                    };
+                }
+            };
+            reader.readAsDataURL(file);
+        }
+
+        function resetLeafScanner() {
+            stopLeafCamera();
+            const preview = document.getElementById('leaf-image-preview');
+            const fileInput = document.getElementById('leaf-photo-upload');
+            const resultBox = document.getElementById('leaf-disease-result');
+            const resumeBtn = document.getElementById('btn-resume-leaf');
+
+            if (preview) { preview.src = ''; preview.style.display = 'none'; }
+            if (fileInput) fileInput.value = '';
+            if (resumeBtn) resumeBtn.style.display = 'none';
+
+            if (resultBox) {
+                resultBox.innerHTML = `
+                    <div class="adv-card adv-info" style="margin-bottom:0; padding:16px 20px;">
+                        <div style="display:flex; align-items:center; gap:16px;">
+                            <div style="width:46px; height:46px; border-radius:12px; background:rgba(2,132,199,0.12); color:#0284c7; display:flex; align-items:center; justify-content:center; font-size:1.4rem; flex-shrink:0;">
+                                <i class="fa-solid fa-virus"></i>
+                            </div>
+                            <div style="flex:1;">
+                                <div class="adv-title" style="font-weight:800; font-size:0.98rem; color:#0284c7;">Scanner Ready for Foliar Sample</div>
+                                <div class="adv-action" style="font-size:0.84rem; color:var(--text-sub); margin-top:3px;">
+                                    Align plant leaf in the frame and click <strong>Capture & Scan Leaf</strong>, or select a leaf photo above. The diagnostic readout with pathogen identification and organic treatment protocols will appear here immediately.
+                                </div>
+                            </div>
+                        </div>
+                    </div>`;
+            }
+            showToast('Leaf Scanner Reset to Standby', 'info');
+        }
+
+        // ══════════════════════════════════════════════════════════════════════
         //  INVADER SECURITY & ALERTS
         // ══════════════════════════════════════════════════════════════════════
         // =============================================
@@ -7975,14 +8651,43 @@
         // --- IN-BROWSER TENSORFLOW.JS COCO-SSD MODEL LOADER ---
         async function loadPerimeterCocoModel() {
             if (perimeterCocoModel) return perimeterCocoModel;
+            if (window._sharedCocoModel) {
+                perimeterCocoModel = window._sharedCocoModel;
+                const mBadge = document.getElementById('hud-cam-model-badge');
+                if (mBadge) {
+                    mBadge.textContent = 'COCO-SSD Loaded';
+                    mBadge.style.background = '#dcfce7';
+                    mBadge.style.color = '#16a34a';
+                    mBadge.style.borderColor = '#86efac';
+                }
+                updatePerimeterHudStatus('Model Ready', '#10b981');
+                return perimeterCocoModel;
+            }
+            if (window._sharedCocoModelPromise) {
+                updatePerimeterHudStatus('Loading COCO-SSD...', '#f59e0b');
+                try {
+                    perimeterCocoModel = await window._sharedCocoModelPromise;
+                    const mBadge = document.getElementById('hud-cam-model-badge');
+                    if (mBadge) {
+                        mBadge.textContent = 'COCO-SSD Loaded';
+                        mBadge.style.background = '#dcfce7';
+                        mBadge.style.color = '#16a34a';
+                        mBadge.style.borderColor = '#86efac';
+                    }
+                    updatePerimeterHudStatus('Model Ready', '#10b981');
+                    return perimeterCocoModel;
+                } catch (_) {}
+            }
             if (isPerimeterModelLoading) return null;
             isPerimeterModelLoading = true;
             updatePerimeterHudStatus('Loading COCO-SSD...', '#f59e0b');
 
             try {
                 if (typeof cocoSsd !== 'undefined' && cocoSsd.load) {
-                    perimeterCocoModel = await cocoSsd.load();
-                    console.log('Perimeter COCO-SSD neural model loaded');
+                    window._sharedCocoModelPromise = cocoSsd.load();
+                    perimeterCocoModel = await window._sharedCocoModelPromise;
+                    window._sharedCocoModel = perimeterCocoModel;
+                    console.log('Perimeter COCO-SSD neural model loaded (shared instance)');
                     const mBadge = document.getElementById('hud-cam-model-badge');
                     if (mBadge) {
                         mBadge.textContent = 'COCO-SSD Loaded';
@@ -7997,6 +8702,7 @@
                     return null;
                 }
             } catch (err) {
+                window._sharedCocoModelPromise = null;
                 console.warn('Failed to load COCO-SSD model:', err);
                 return null;
             } finally {
