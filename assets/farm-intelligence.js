@@ -645,18 +645,29 @@ const PlantDiseaseDetector = {
                     return prediction.dataSync();
                 });
 
-                // Find top-1 argmax index and its softmax probability
-                let maxIdx = 0;
-                let maxProb = probs[0] || 0;
-                for (let i = 1; i < probs.length; i++) {
-                    if (probs[i] > maxProb) {
-                        maxProb = probs[i];
-                        maxIdx = i;
-                    }
+                // Build ranked prediction list and find top-1
+                const indexedProbs = [];
+                for (let i = 0; i < probs.length; i++) {
+                    indexedProbs.push({ index: i, prob: probs[i] });
                 }
+                indexedProbs.sort((a, b) => b.prob - a.prob);
 
+                const maxIdx = indexedProbs[0] ? indexedProbs[0].index : 0;
+                const maxProb = indexedProbs[0] ? indexedProbs[0].prob : 0;
+
+                // Raw uninflated softmax confidence
                 confidence = parseFloat(maxProb.toFixed(3));
-                if (confidence < 0.50) confidence = parseFloat((0.72 + confidence * 0.4).toFixed(3));
+
+                // Extract top-3 candidates for transparency
+                var top3 = indexedProbs.slice(0, 3).map(item => {
+                    const cls = (Array.isArray(this.classes) && this.classes[item.index]) ? this.classes[item.index] : null;
+                    return {
+                        crop: cls ? cls.crop : 'Unknown',
+                        disease: cls ? cls.disease : `Class #${item.index}`,
+                        prob: item.prob,
+                        pct: Math.round(item.prob * 100)
+                    };
+                });
 
                 if (Array.isArray(this.classes) && this.classes[maxIdx]) {
                     predictedClass = this.classes[maxIdx];
@@ -688,25 +699,105 @@ const PlantDiseaseDetector = {
                 ? `${predictedClass.crop}: ${predictedClass.disease} (${predictedClass.pathogen})`
                 : `${predictedClass.crop}: ${predictedClass.disease}`;
 
-            const resultCardHtml = `
-                <div class="adv-card ${isDiseased ? 'adv-critical' : 'adv-safe'}" style="margin-bottom:0; padding:18px 20px; border-radius:14px; box-shadow:0 4px 18px rgba(0,0,0,0.06);">
-                    <div style="display:flex; align-items:flex-start; gap:14px;">
-                        <span style="font-size:2rem; flex-shrink:0; margin-top:2px;">${isDiseased ? '⚠️' : '🌿'}</span>
-                        <div style="flex:1;">
-                            <div style="display:flex; align-items:center; gap:8px; flex-wrap:wrap; margin-bottom:6px;">
-                                <span class="adv-tag" style="font-size:0.72rem; padding:3px 8px;">${isDiseased ? 'PATHOGEN DETECTED' : 'CLEAN HEALTHY FOLIAGE'}</span>
-                                <span class="adv-title" style="font-weight:800; font-size:1.05rem;">${diseaseLabel}</span>
+            // ── Confidence Thresholding & Crop Sanity Check ──
+            const CONFIDENCE_THRESHOLD = 0.80; // 80% threshold per agronomy guidelines
+            const isLowConfidence = confidence < CONFIDENCE_THRESHOLD;
+
+            // Check optional crop filter from DOM
+            const cropFilterEl = document.getElementById('leaf-crop-filter');
+            const selectedCrop = (cropFilterEl ? cropFilterEl.value : 'auto').trim();
+            const outOfDistributionCrops = ['Wheat', 'Rice', 'Cotton', 'Other'];
+
+            let cropSanityHtml = '';
+            if (selectedCrop && selectedCrop !== 'auto') {
+                if (outOfDistributionCrops.includes(selectedCrop)) {
+                    cropSanityHtml = `
+                        <div style="margin-top:10px; background:rgba(245,158,11,0.12); border:1px solid #f59e0b; border-radius:8px; padding:9px 12px; font-size:0.82rem; color:#b45309; display:flex; align-items:flex-start; gap:8px;">
+                            <i class="fa-solid fa-triangle-exclamation" style="margin-top:2px; flex-shrink:0;"></i>
+                            <div>
+                                <strong>Out-of-Distribution Warning:</strong> "<strong>${selectedCrop}</strong>" is not in the 14 PlantVillage training crop classes. The model was forced to map this leaf to closest visual pattern (<strong>${predictedClass.crop}</strong>). Do not rely on this prediction for ${selectedCrop}.
                             </div>
-                            <div style="font-size:0.85rem; color:var(--text-sub); line-height:1.5;">
-                                MobileNetV2 Softmax Confidence: <strong style="color:var(--text-main);">${confPct}%</strong> • Scanned: ${new Date().toLocaleTimeString([], { hour: '2-digit', minute: '2-digit', second: '2-digit' })} • Mode: Edge Neural In-Browser
+                        </div>`;
+                } else if (predictedClass.crop.toLowerCase() !== selectedCrop.toLowerCase()) {
+                    cropSanityHtml = `
+                        <div style="margin-top:10px; background:rgba(234,88,12,0.12); border:1px solid #ea580c; border-radius:8px; padding:9px 12px; font-size:0.82rem; color:#c2410c; display:flex; align-items:flex-start; gap:8px;">
+                            <i class="fa-solid fa-circle-exclamation" style="margin-top:2px; flex-shrink:0;"></i>
+                            <div>
+                                <strong>Crop Mismatch Advisory:</strong> You selected <strong>${selectedCrop}</strong>, but neural model classified foliar structure as <strong>${predictedClass.crop}</strong> (${confPct}% confidence). Verify selected crop or ensure clean single-leaf framing.
                             </div>
-                            ${predictedClass.treatment ? `
-                                <div class="adv-action" style="font-size:0.85rem; margin-top:8px; font-weight:600; line-height:1.45; background:rgba(0,0,0,0.03); padding:8px 12px; border-radius:8px; border-left:3px solid ${isDiseased ? '#ef4444' : '#22c55e'};">
-                                    <strong style="color:${isDiseased ? '#dc2626' : '#15803d'};">→ Agronomic Protocol:</strong> ${predictedClass.treatment}
-                                </div>` : ''}
+                        </div>`;
+                }
+            }
+
+            // Top candidates breakdown HTML
+            let top3Html = '';
+            if (typeof top3 !== 'undefined' && top3.length > 1) {
+                top3Html = `
+                    <div style="margin-top:8px; font-size:0.78rem; color:var(--text-sub);">
+                        <span style="font-weight:700;">Top Class Distribution:</span>
+                        <div style="display:flex; gap:6px; flex-wrap:wrap; margin-top:4px;">
+                            ${top3.map((c, i) => `
+                                <span style="background:var(--card-bg, #ffffff); border:1px solid var(--border, #e2e8f0); border-radius:6px; padding:2px 7px; font-size:0.74rem;">
+                                    #${i+1} ${c.crop} (${c.disease}): <strong>${c.pct}%</strong>
+                                </span>
+                            `).join('')}
                         </div>
-                    </div>
-                </div>`;
+                    </div>`;
+            }
+
+            let resultCardHtml = '';
+            if (isLowConfidence) {
+                // Softer low-confidence state per agronomic guidelines
+                resultCardHtml = `
+                    <div class="adv-card adv-warning" style="margin-bottom:0; padding:18px 20px; border-radius:14px; box-shadow:0 4px 18px rgba(0,0,0,0.06); border-left:4px solid #f59e0b;">
+                        <div style="display:flex; align-items:flex-start; gap:14px;">
+                            <span style="font-size:2rem; flex-shrink:0; margin-top:2px;">🔍</span>
+                            <div style="flex:1;">
+                                <div style="display:flex; align-items:center; gap:8px; flex-wrap:wrap; margin-bottom:6px;">
+                                    <span class="adv-tag" style="background:#fef3c7; color:#b45309; border:1px solid #fde68a; font-size:0.72rem; padding:3px 8px; border-radius:6px; font-weight:700;">LOW CONFIDENCE MATCH</span>
+                                    <span class="adv-title" style="font-weight:800; font-size:1.02rem; color:var(--text-main);">
+                                        Possible match: ${diseaseLabel} (${confPct}% — low confidence, verify manually or rescan with better lighting/framing)
+                                    </span>
+                                </div>
+                                <div style="font-size:0.84rem; color:var(--text-sub); line-height:1.5;">
+                                    MobileNetV2 Softmax Confidence: <strong style="color:#b45309;">${confPct}%</strong> (Below ${Math.round(CONFIDENCE_THRESHOLD * 100)}% threshold) • Scanned: ${new Date().toLocaleTimeString([], { hour: '2-digit', minute: '2-digit', second: '2-digit' })} • Mode: Edge Neural In-Browser
+                                </div>
+                                ${cropSanityHtml}
+                                ${top3Html}
+                                <div class="adv-action" style="font-size:0.83rem; margin-top:10px; font-weight:600; line-height:1.45; background:rgba(245,158,11,0.08); padding:8px 12px; border-radius:8px; border-left:3px solid #f59e0b;">
+                                    <strong style="color:#b45309;"><i class="fa-solid fa-lightbulb"></i> Rescan Recommendation:</strong> Align affected leaf to fill 70%+ of frame with diffuse, even lighting and tap to focus before capturing.
+                                </div>
+                                ${predictedClass.treatment ? `
+                                    <div style="font-size:0.82rem; margin-top:8px; color:var(--text-sub); line-height:1.45;">
+                                        <em>Tentative protocol if confirmed: ${predictedClass.treatment}</em>
+                                    </div>` : ''}
+                            </div>
+                        </div>
+                    </div>`;
+            } else {
+                // High-confidence diagnosis state
+                resultCardHtml = `
+                    <div class="adv-card ${isDiseased ? 'adv-critical' : 'adv-safe'}" style="margin-bottom:0; padding:18px 20px; border-radius:14px; box-shadow:0 4px 18px rgba(0,0,0,0.06);">
+                        <div style="display:flex; align-items:flex-start; gap:14px;">
+                            <span style="font-size:2rem; flex-shrink:0; margin-top:2px;">${isDiseased ? '⚠️' : '🌿'}</span>
+                            <div style="flex:1;">
+                                <div style="display:flex; align-items:center; gap:8px; flex-wrap:wrap; margin-bottom:6px;">
+                                    <span class="adv-tag" style="font-size:0.72rem; padding:3px 8px;">${isDiseased ? 'PATHOGEN DETECTED' : 'CLEAN HEALTHY FOLIAGE'}</span>
+                                    <span class="adv-title" style="font-weight:800; font-size:1.05rem;">${diseaseLabel}</span>
+                                </div>
+                                <div style="font-size:0.85rem; color:var(--text-sub); line-height:1.5;">
+                                    MobileNetV2 Softmax Confidence: <strong style="color:var(--text-main);">${confPct}%</strong> • Scanned: ${new Date().toLocaleTimeString([], { hour: '2-digit', minute: '2-digit', second: '2-digit' })} • Mode: Edge Neural In-Browser
+                                </div>
+                                ${cropSanityHtml}
+                                ${top3Html}
+                                ${predictedClass.treatment ? `
+                                    <div class="adv-action" style="font-size:0.85rem; margin-top:8px; font-weight:600; line-height:1.45; background:rgba(0,0,0,0.03); padding:8px 12px; border-radius:8px; border-left:3px solid ${isDiseased ? '#ef4444' : '#22c55e'};">
+                                        <strong style="color:${isDiseased ? '#dc2626' : '#15803d'};">→ Agronomic Protocol:</strong> ${predictedClass.treatment}
+                                    </div>` : ''}
+                            </div>
+                        </div>
+                    </div>`;
+            }
 
             resultEls.forEach(el => { el.innerHTML = resultCardHtml; });
 

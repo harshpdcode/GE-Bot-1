@@ -24,7 +24,8 @@ try { WebSocket = require('ws'); } catch(e) { WebSocket = null; }
 // Change ESP32_IP to your robot's IP address
 // (shown in Serial Monitor after WiFi connects)
 // =============================================
-const ESP32_IP   = process.env.ESP32_IP   || '192.168.255.25'; // <-- SET YOUR ROBOT IP HERE
+const RAW_ESP32_IP = (process.env.ESP32_IP || '10.180.221.70').trim();
+const ESP32_IP   = RAW_ESP32_IP.replace(/^https?:\/\//i, '').replace(/^wss?:\/\//i, '').replace(/\/+$/, '');
 const ESP32_PORT = process.env.ESP32_PORT || 80;
 
 // =============================================

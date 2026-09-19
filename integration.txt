@@ -60,8 +60,18 @@
 #endif
 
 // ─── Network credentials ────────────────────────────────────
-#define WIFI_SSID      "Nothing Phone1"
-#define WIFI_PASSWORD  "00000000"
+// Security Note: For public repositories, put real Wi-Fi credentials
+// in an untracked "secrets.h" file in the same directory (see secrets.h.example).
+#if __has_include("secrets.h")
+  #include "secrets.h"
+#else
+  #ifndef WIFI_SSID
+    #define WIFI_SSID      "YOUR_WIFI_SSID"
+  #endif
+  #ifndef WIFI_PASSWORD
+    #define WIFI_PASSWORD  "YOUR_WIFI_PASSWORD"
+  #endif
+#endif
 
 // ─── Pin definitions – LOCKED – DO NOT CHANGE ────────────────
 #define MOTOR_A_IN1  4
@@ -1069,6 +1079,20 @@ void setup() {
   // ── WiFi – STA only, no hotspot fallback ──
   WiFi.mode(WIFI_STA);
   WiFi.setSleep(false);
+
+  // ── Optional Static IP to prevent IP-Drift ──────────────────
+  // Option A (Recommended): Reserve 10.180.221.70 for ESP32 MAC in router DHCP settings.
+  // Option B (Firmware-side static IP): Uncomment the block below to lock 10.180.221.70:
+  /*
+  IPAddress local_IP(10, 180, 221, 70);
+  IPAddress gateway(10, 180, 221, 1);       // Match your router gateway (e.g. 10.180.221.1)
+  IPAddress subnet(255, 255, 255, 0);
+  IPAddress primaryDNS(8, 8, 8, 8);
+  if (!WiFi.config(local_IP, gateway, subnet, primaryDNS)) {
+    Serial.println("[WiFi] ⚠️ STA Failed to configure Static IP");
+  }
+  */
+
   WiFi.begin(WIFI_SSID, WIFI_PASSWORD);
   Serial.printf("[WiFi] Connecting to %s", WIFI_SSID);
   for (uint8_t i = 0; i < 40 && WiFi.status() != WL_CONNECTED; i++) {

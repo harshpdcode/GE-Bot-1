@@ -3094,43 +3094,43 @@
                 </div>
             </div>
 
-            <button class="nav-btn active notranslate" onclick="switchNavPanel('dashboard', this)"
+            <button class="nav-btn active" onclick="switchNavPanel('dashboard', this)"
                 data-i18n="dashboard"><i class="fa-solid fa-chart-pie"></i> Dashboard</button>
-            <button class="nav-btn notranslate" onclick="switchNavPanel('soil_zoning', this)"><i
+            <button class="nav-btn" onclick="switchNavPanel('soil_zoning', this)" data-i18n="soil_zoning"><i
                     class="fa-solid fa-layer-group" style="color:#10b981;"></i> Field Soil & Zoning</button>
-            <button class="nav-btn notranslate" onclick="switchNavPanel('laser_defense', this)"><i
+            <button class="nav-btn" onclick="switchNavPanel('laser_defense', this)" data-i18n="laser_defense"><i
                     class="fa-solid fa-crosshairs" style="color:#ef4444;"></i> Laser Weed & Pest</button>
-            <button class="nav-btn notranslate" onclick="switchNavPanel('organic_calculator', this)"><i
+            <button class="nav-btn" onclick="switchNavPanel('organic_calculator', this)" data-i18n="organic_calculator"><i
                     class="fa-solid fa-flask" style="color:#8b5cf6;"></i> Organic Fertilizer (P25)</button>
-            <button class="nav-btn notranslate" onclick="switchNavPanel('crop_rotation', this)"><i
+            <button class="nav-btn" onclick="switchNavPanel('crop_rotation', this)" data-i18n="crop_rotation"><i
                     class="fa-solid fa-seedling" style="color:#16a34a;"></i> Next Crop AI</button>
-            <button class="nav-btn notranslate" onclick="switchNavPanel('leaf_scanner', this)"><i
+            <button class="nav-btn" onclick="switchNavPanel('leaf_scanner', this)" data-i18n="leaf_scanner"><i
                     class="fa-solid fa-leaf" style="color:#0284c7;"></i> Leaf Scanner</button>
-            <button class="nav-btn notranslate" onclick="switchNavPanel('weather_irrigation', this)"><i
+            <button class="nav-btn" onclick="switchNavPanel('weather_irrigation', this)" data-i18n="weather_irrigation"><i
                     class="fa-solid fa-cloud-sun-rain" style="color:#0ea5e9;"></i> Weather & Irrigation</button>
-            <button class="nav-btn notranslate" onclick="switchNavPanel('invader_security', this)"><i
+            <button class="nav-btn" onclick="switchNavPanel('invader_security', this)" data-i18n="invader_security"><i
                     class="fa-solid fa-shield-halved" style="color:#f59e0b;"></i> Perimeter Security</button>
-            <button class="nav-btn notranslate" onclick="switchNavPanel('farm_reports', this)"><i
+            <button class="nav-btn" onclick="switchNavPanel('farm_reports', this)" data-i18n="farm_reports"><i
                     class="fa-solid fa-chart-line" style="color:#6366f1;"></i> Farm Patrol Report</button>
-            <button class="nav-btn notranslate" onclick="switchNavPanel('farmer_advisory', this)"
+            <button class="nav-btn" onclick="switchNavPanel('farmer_advisory', this)" data-i18n="farmer_advisory"
                 style="position:relative;"><i class="fa-solid fa-bell" style="color:#f59e0b;"></i> Farmer Advisory <span
                     id="advisory-badge"
                     style="display:none; margin-left:auto; background:#ef4444; color:white; font-size:0.7rem; font-weight:800; border-radius:10px; padding:2px 7px;"></span></button>
-            <button class="nav-btn notranslate" onclick="switchNavPanel('farm_analytics', this)"><i
+            <button class="nav-btn" onclick="switchNavPanel('farm_analytics', this)" data-i18n="farm_analytics"><i
                     class="fa-solid fa-chart-simple" style="color:#06b6d4;"></i> Farm Analytics</button>
             <!-- Hidden by user request (preserved for future use) -->
-            <button class="nav-btn notranslate" onclick="switchNavPanel('control_modules', this)" data-i18n="control"
+            <button class="nav-btn" onclick="switchNavPanel('control_modules', this)" data-i18n="control"
                 style="display:none !important;"><i class="fa-solid fa-sliders"></i> Control Modules</button>
-            <button class="nav-btn notranslate" onclick="switchNavPanel('activity_log', this)" data-i18n="log"><i
+            <button class="nav-btn" onclick="switchNavPanel('activity_log', this)" data-i18n="log"><i
                     class="fa-solid fa-clock-rotate-left"></i> Activity Log</button>
-            <button class="nav-btn notranslate" onclick="switchNavPanel('network_status', this)" data-i18n="network"><i
+            <button class="nav-btn" onclick="switchNavPanel('network_status', this)" data-i18n="network"><i
                     class="fa-solid fa-wifi"></i> Network Status</button>
-            <button class="nav-btn camera-btn notranslate" onclick="switchNavPanel('camera_live', this)"
+            <button class="nav-btn camera-btn" onclick="switchNavPanel('camera_live', this)"
                 data-i18n="camera"><i class="fa-solid fa-video"></i> Camera Live</button>
-            <button class="nav-btn diag-btn notranslate" onclick="switchNavPanel('robot_diagnostics', this)"
+            <button class="nav-btn diag-btn" onclick="switchNavPanel('robot_diagnostics', this)"
                 data-i18n="diag"><i class="fa-solid fa-stethoscope"></i> Robot Diagnostics</button>
             <div style="height: 10px;"></div>
-            <button class="nav-btn danger-text notranslate" onclick="logout()" data-i18n="logout"><i
+            <button class="nav-btn danger-text" onclick="logout()" data-i18n="logout"><i
                     class="fa-solid fa-right-from-bracket"></i> Logout</button>
         </nav>
     </aside>
@@ -4713,6 +4713,37 @@
 
                 <!-- Action Controls Under Video Viewport -->
                 <div style="display:flex; gap:12px; margin-top:16px; flex-wrap:wrap; align-items:center;">
+                    <!-- Crop Context Selector (Sanity Check Filter) -->
+                    <div style="display:inline-flex; align-items:center; gap:8px; background:var(--card-bg); border:1.5px solid var(--border); border-radius:12px; padding:8px 14px; box-shadow:0 2px 8px rgba(0,0,0,0.04);">
+                        <i class="fa-solid fa-seedling" style="color:#16a34a; font-size:0.95rem;"></i>
+                        <label for="leaf-crop-filter" style="font-size:0.82rem; font-weight:700; color:var(--text-sub); white-space:nowrap;">Crop Context:</label>
+                        <select id="leaf-crop-filter" style="background:transparent; border:none; color:var(--text-main); font-weight:700; font-size:0.86rem; cursor:pointer; outline:none; padding:2px 0;">
+                            <option value="auto">Auto-Detect (Any PlantVillage Crop)</option>
+                            <optgroup label="Supported Training Crops (14 Families)">
+                                <option value="Apple">Apple</option>
+                                <option value="Blueberry">Blueberry</option>
+                                <option value="Cherry">Cherry</option>
+                                <option value="Corn">Corn (Maize)</option>
+                                <option value="Grape">Grape</option>
+                                <option value="Orange">Orange</option>
+                                <option value="Peach">Peach</option>
+                                <option value="Pepper">Bell Pepper</option>
+                                <option value="Potato">Potato</option>
+                                <option value="Raspberry">Raspberry</option>
+                                <option value="Soybean">Soybean</option>
+                                <option value="Squash">Squash</option>
+                                <option value="Strawberry">Strawberry</option>
+                                <option value="Tomato">Tomato</option>
+                            </optgroup>
+                            <optgroup label="Out-of-Distribution / Common Field Crops">
+                                <option value="Wheat">Wheat (Out-of-Distribution)</option>
+                                <option value="Rice">Rice (Out-of-Distribution)</option>
+                                <option value="Cotton">Cotton (Out-of-Distribution)</option>
+                                <option value="Other">Other / Non-Leaf Sample</option>
+                            </optgroup>
+                        </select>
+                    </div>
+
                     <button class="action-btn" id="btn-capture-leaf-scan" onclick="captureAndScanLeaf()"
                         style="background:#0284c7; color:white; border:none; padding:12px 24px; font-weight:800; font-size:0.95rem; border-radius:12px; box-shadow:0 4px 14px rgba(2,132,199,0.35); cursor:pointer; display:inline-flex; align-items:center; gap:8px;">
                         <i class="fa-solid fa-camera-viewfinder"></i> Capture & Scan Leaf
@@ -5971,7 +6002,7 @@
                     style="border:1px solid var(--border); width:100%; font-weight:700; padding:16px; background:transparent; color:var(--text-main);"
                     onclick="setLanguage('bn')">বাংলা</button>
             </div>
-            <button onclick="document.getElementById('lang-modal').style.display='none'" class="ai-close">Close</button>
+            <button onclick="document.getElementById('lang-modal').style.display='none'" class="ai-close" data-i18n="close">Close</button>
         </div>
     </div>
 
@@ -6445,6 +6476,14 @@
                 bridgeEl.innerHTML = connected ? 'Active — Commands forwarded' : 'Standby — Awaiting robot';
                 bridgeEl.style.color = connected ? 'var(--success)' : 'var(--warning)';
             }
+
+            // Dynamically manage simulated badges on widgets
+            if (connected) {
+                if (typeof clearSimulated === 'function') clearSimulated('diag-card-laser');
+            } else {
+                if (typeof markSimulated === 'function') markSimulated('diag-card-laser', '⚙ COORDINATES SIMULATED');
+            }
+
             // Show toast once
             if (connected && !window._robotWasConnected) {
                 showToast('🤖 ESP32-S3 Robot connected! Live telemetry active.', 'success');

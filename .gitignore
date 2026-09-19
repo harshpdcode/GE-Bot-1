@@ -40,3 +40,7 @@ ml/**/*.bin
 # Scratch and temporary scripts
 scratch/
 
+# Hardware & Firmware Private Credentials
+secrets.h
+firmware/secrets.h
+*.secret.h
